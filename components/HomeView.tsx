@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { CategoryKey, DASHBOARD_CONFIG } from '../constants';
+import { CategoryKey, DASHBOARD_CONFIG } from '../constants.tsx';
 
 interface HomeViewProps {
   onSelectCategory: (key: CategoryKey) => void;

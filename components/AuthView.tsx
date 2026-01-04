@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User } from '../types';
+import { User } from '../types.ts';
 
 interface AuthViewProps {
   isSignup: boolean;
@@ -26,6 +26,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ isSignup, onAuthSuccess }) =
     setMessage({ type: '', text: '' });
 
     // SIMULATED: Verification logic
+    // For testing: Any name + 5 digit ID works.
     if (formData.name.length > 2 && formData.voterId.length === 5) {
       if (mode === 'forgot') {
         setMessage({ type: 'success', text: `Verification successful. A temporary password has been sent to your registered ${formData.pref === 'text' ? 'phone' : 'email'}.` });
@@ -33,15 +34,16 @@ export const AuthView: React.FC<AuthViewProps> = ({ isSignup, onAuthSuccess }) =
         setStep(2);
       }
     } else {
-      setMessage({ type: 'error', text: "Voter records not found. Please check your spelling or Voter ID#." });
+      setMessage({ type: 'error', text: "Voter records not found. Please check your spelling or Voter ID# (Try any 5-digit number for testing)." });
     }
   };
 
   const handleFinalize = (e: React.FormEvent) => {
     e.preventDefault();
+    // Logic: If username is 'admin', they get admin privileges in the App
     onAuthSuccess({
-      name: formData.name,
-      voterId: formData.voterId,
+      name: formData.name || 'Site Admin',
+      voterId: formData.voterId || '00000',
       username: formData.username,
       isVerified: true,
       notificationPref: formData.pref
@@ -52,7 +54,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ isSignup, onAuthSuccess }) =
     <div className="max-w-md mx-auto px-4 py-20">
       <div className="bg-white p-8 rounded-2xl border border-slate-200 shadow-xl">
         <h2 className="text-2xl font-bold mb-2">
-          {mode === 'forgot' ? 'Reset Password' : step === 1 ? 'Verify Your Eligibility' : 'Create Your Account'}
+          {mode === 'forgot' ? 'Reset Password' : mode === 'login' ? 'Welcome Back' : step === 1 ? 'Verify Your Eligibility' : 'Create Your Account'}
         </h2>
         
         {message.text && (
@@ -61,7 +63,7 @@ export const AuthView: React.FC<AuthViewProps> = ({ isSignup, onAuthSuccess }) =
           </div>
         )}
 
-        {mode === 'forgot' || step === 1 ? (
+        {mode === 'forgot' || (mode === 'signup' && step === 1) ? (
           <form onSubmit={handleVerify} className="space-y-4">
             <p className="text-sm text-slate-500 mb-4">
               To {mode === 'forgot' ? 'reset your password' : 'sign up'}, please provide your voter registration details.
@@ -95,14 +97,19 @@ export const AuthView: React.FC<AuthViewProps> = ({ isSignup, onAuthSuccess }) =
             
             <div className="pt-4 flex justify-between text-xs text-slate-400">
               <button type="button" onClick={() => { setMode('login'); setStep(1); setMessage({type:'', text:''}); }}>Back to Login</button>
-              {mode !== 'forgot' && <button type="button" onClick={() => setMode('forgot')}>Forgot Password?</button>}
             </div>
           </form>
         ) : mode === 'login' ? (
-          <form onSubmit={(e) => { e.preventDefault(); handleFinalize(e); }} className="space-y-4">
+          <form onSubmit={handleFinalize} className="space-y-4">
              <div>
               <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Username</label>
-              <input type="text" required className="w-full p-3 bg-slate-50 border rounded-lg outline-none" />
+              <input 
+                type="text" required 
+                value={formData.username}
+                onChange={e => setFormData({...formData, username: e.target.value})}
+                className="w-full p-3 bg-slate-50 border rounded-lg outline-none" 
+                placeholder="Use 'admin' to test admin panel"
+              />
             </div>
             <div>
               <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Password</label>
@@ -128,18 +135,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ isSignup, onAuthSuccess }) =
             <div>
               <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Set Password</label>
               <input type="password" required className="w-full p-3 bg-slate-50 border rounded-lg outline-none" />
-            </div>
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-500 mb-1">Notification Method</label>
-              <select 
-                value={formData.pref}
-                onChange={e => setFormData({...formData, pref: e.target.value as any})}
-                className="w-full p-3 bg-slate-50 border rounded-lg outline-none"
-              >
-                <option value="email">Email Only</option>
-                <option value="text">SMS / Text Only</option>
-                <option value="both">Both</option>
-              </select>
             </div>
             <button className="w-full bg-blue-600 text-white font-bold py-3 rounded-lg hover:bg-blue-700 transition">Create Account</button>
           </form>

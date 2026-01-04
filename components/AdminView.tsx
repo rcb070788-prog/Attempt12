@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Poll } from '../types';
+import { Poll } from '../types.ts';
 
 interface AdminViewProps {
   onAddPoll: (poll: Poll) => void;

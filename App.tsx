@@ -1,12 +1,12 @@
 
 import React, { useState } from 'react';
-import { DASHBOARD_CONFIG, CategoryKey } from './constants';
-import { User, Poll } from './types';
-import { HomeView } from './components/HomeView';
-import { CategoryDetail } from './components/CategoryDetail';
-import { AuthView } from './components/AuthView';
-import { PollsView } from './components/PollsView';
-import { AdminView } from './components/AdminView';
+import { DASHBOARD_CONFIG, CategoryKey } from './constants.tsx';
+import { User, Poll } from './types.ts';
+import { HomeView } from './components/HomeView.tsx';
+import { CategoryDetail } from './components/CategoryDetail.tsx';
+import { AuthView } from './components/AuthView.tsx';
+import { PollsView } from './components/PollsView.tsx';
+import { AdminView } from './components/AdminView.tsx';
 
 const App: React.FC = () => {
   const [view, setView] = useState<'home' | 'category' | 'auth' | 'polls' | 'admin'>('home');

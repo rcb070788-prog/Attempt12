@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { User, Poll } from '../types';
+import { User, Poll } from '../types.ts';
 
 interface PollsViewProps {
   user: User | null;

@@ -1,8 +1,0 @@
-
-{
-  "name": "Concerned Citizens of MC - Public Finance Portal",
-  "description": "A transparent financial dashboard for Montgomery County citizens, featuring AI-powered budget analysis and a secure voter portal.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
-}

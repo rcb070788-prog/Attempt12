@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Category, DashboardLink } from '../types';
+import { Category, DashboardLink } from '../types.ts';
 
 interface ExplanationPageProps {
   category: Category;

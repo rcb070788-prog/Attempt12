@@ -1,19 +1,17 @@
-
 import React, { useState, useEffect } from 'react';
-import { Category, User, Poll, Vote, Comment } from './types';
-import { CATEGORY_EXPLANATIONS, DASHBOARDS } from './dashboard-config';
-import Navbar from './components/Navbar';
-import Home from './components/Home';
-import ExplanationPage from './components/ExplanationPage';
-import VoterPortal from './components/VoterPortal';
-import AdminDashboard from './components/AdminDashboard';
+import { Category, User, Poll, Vote, Comment } from './types.ts';
+import { CATEGORY_EXPLANATIONS, DASHBOARDS } from './dashboard-config.ts';
+import Navbar from './components/Navbar.tsx';
+import Home from './components/Home.tsx';
+import ExplanationPage from './components/ExplanationPage.tsx';
+import VoterPortal from './components/VoterPortal.tsx';
+import AdminDashboard from './components/AdminDashboard.tsx';
 
 const App: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'home' | 'category' | 'voter' | 'admin'>('home');
   const [activeCategory, setActiveCategory] = useState<Category | null>(null);
   const [user, setUser] = useState<User | null>(null);
   
-  // Mock data for polls/votes/comments (in real world, this would be in Supabase/Firebase)
   const [polls, setPolls] = useState<Poll[]>([
     {
       id: 'poll-1',
@@ -29,7 +27,6 @@ const App: React.FC = () => {
   const [votes, setVotes] = useState<Vote[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
 
-  // Navigation handlers
   const navigateToCategory = (cat: Category) => {
     setActiveCategory(cat);
     setCurrentPage('category');
@@ -42,7 +39,6 @@ const App: React.FC = () => {
     window.scrollTo(0, 0);
   };
 
-  // Auth persistence simulation
   useEffect(() => {
     const savedUser = localStorage.getItem('ccmc_user');
     if (savedUser) {

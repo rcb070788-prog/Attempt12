@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { User, Poll, Vote, Comment } from '../types';
+import { User, Poll, Vote, Comment } from '../types.ts';
 
 interface VoterPortalProps {
   user: User | null;
@@ -17,21 +16,16 @@ const VoterPortal: React.FC<VoterPortalProps> = ({
 }) => {
   const [view, setView] = useState<'login' | 'signup' | 'reset'>('login');
   
-  // Forms State
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [signupForm, setSignupForm] = useState({ fullName: '', voterId: '', username: '', password: '', notifications: { email: true, text: false } });
   const [resetForm, setResetForm] = useState({ fullName: '', voterId: '' });
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
 
-  // Comment input
   const [newComment, setNewComment] = useState('');
   const [isAnonVote, setIsAnonVote] = useState(false);
 
-  // Mock "Voter List" CSV check
   const verifyVoter = (name: string, id: string) => {
-    // In a real app, this would hit a secure API that checks the CSV on the server.
-    // For demo purposes, we accept specific mock IDs.
     const mockVoterList = [
       { name: 'John Doe', id: '123456', district: 'District 4' },
       { name: 'Jane Smith', id: '654321', district: 'District 2' },
@@ -52,7 +46,6 @@ const VoterPortal: React.FC<VoterPortalProps> = ({
         district: voter.district,
         notifications: signupForm.notifications
       };
-      // Save locally for demo
       localStorage.setItem('ccmc_user', JSON.stringify(newUser));
       setUser(newUser);
       setMessage('Account created successfully!');
@@ -64,7 +57,6 @@ const VoterPortal: React.FC<VoterPortalProps> = ({
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    // Mock login - in reality, check stored credentials
     const savedUser = localStorage.getItem('ccmc_user');
     if (savedUser) {
       const parsed = JSON.parse(savedUser);
@@ -73,7 +65,6 @@ const VoterPortal: React.FC<VoterPortalProps> = ({
          return;
       }
     }
-    // Hardcoded admin for convenience
     if (loginForm.username === 'admin' && loginForm.password === 'admin') {
       const admin = { username: 'admin', voterId: '000000', fullName: 'Admin User', district: 'Central', notifications: { email: true, text: true } };
       setUser(admin);

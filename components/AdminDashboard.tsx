@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Poll, Comment } from '../types';
+import { Poll, Comment } from '../types.ts';
 
 interface AdminDashboardProps {
   polls: Poll[];
@@ -130,8 +129,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ polls, setPolls, commen
       <div className="bg-amber-50 border border-amber-100 p-8 rounded-3xl">
          <h4 className="text-lg font-bold text-amber-900 mb-2">Technical Administration Checklist</h4>
          <ul className="list-disc list-inside space-y-2 text-amber-800 text-sm">
-            <li>To add new dashboards: Place folder in <code>/public/dashboards/</code> and update <code>dashboard-config.ts</code>.</li>
-            <li>To update voter list: In this prototype, edit <code>verifyVoter</code> in <code>VoterPortal.tsx</code>. In production, update the Supabase 'voters' table.</li>
+            <li>To add new dashboards: Place folder in <code>/dashboards/</code> and update <code>dashboard-config.ts</code>.</li>
+            <li>To update voter list: In this prototype, edit <code>verifyVoter</code> in <code>VoterPortal.tsx</code>.</li>
             <li>Security: Ensure GitHub repository is set to <b>Private</b> to protect your configuration files.</li>
             <li>Backup: Download a 'Zip' of the site periodically via GitHub.</li>
          </ul>

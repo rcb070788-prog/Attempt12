@@ -12,6 +12,10 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
+    
+    <!-- This is the "Live Translator" (Babel) that fixes your error -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
     <script type="importmap">
     {
       "imports": {
@@ -31,7 +35,8 @@
             </div>
         </div>
     </div>
-    <!-- This line below is the missing piece that tells the browser to run your app -->
-    <script type="module" src="index.tsx"></script>
+
+    <!-- Notice the change here: type="text/babel" tells Babel to translate this file -->
+    <script type="text/babel" data-type="module" src="index.tsx"></script>
 </body>
 </html>

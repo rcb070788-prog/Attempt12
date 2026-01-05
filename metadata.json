@@ -1,8 +1,0 @@
-
-{
-  "name": "Concerned Citizens of Montgomery County",
-  "description": "A community dashboard for fiscal transparency and voter participation. Includes expense tracking, revenue reports, and secure voter polling.",
-  "requestFramePermissions": [
-    "geolocation"
-  ]
-}

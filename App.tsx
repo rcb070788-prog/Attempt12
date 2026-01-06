@@ -160,7 +160,7 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="flex-grow overflow-hidden container mx-auto px-4 flex flex-col py-4">
+      <main className="flex-grow overflow-hidden container mx-auto px-4 flex flex-col pt-4 pb-2">
         {currentPage === 'home' && !selectedCategory && (
           <div className="max-w-5xl mx-auto w-full h-full flex flex-col justify-center">
             <header className="mb-6 text-center">
@@ -190,16 +190,32 @@ export default function App() {
 
         {currentPage === 'home' && selectedCategory && (
           <div className="flex flex-col h-full">
-             <div className="flex items-center gap-2 mb-4">
+             <div className="flex items-center gap-2 mb-3 shrink-0">
                <button onClick={goHome} className="text-indigo-600 font-black text-[10px] uppercase tracking-widest hover:underline flex items-center gap-2">
-                 <i className="fa-solid fa-arrow-left"></i> Home
+                 <i className="fa-solid fa-house"></i> Home
                </button>
-               <span className="text-gray-300">/</span>
-               <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{selectedCategory}</span>
+               <span className="text-gray-300 text-[10px]">/</span>
+               <button 
+                 onClick={() => setActiveDashboard(null)} 
+                 className={`${activeDashboard ? 'text-indigo-600 hover:underline' : 'text-gray-400'} font-black text-[10px] uppercase tracking-widest transition-colors`}
+               >
+                 {selectedCategory}
+               </button>
+               {activeDashboard && (
+                 <>
+                   <span className="text-gray-300 text-[10px]">/</span>
+                   <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest truncate max-w-[200px] md:max-w-none">
+                     {activeDashboard.title}
+                   </span>
+                 </>
+               )}
              </div>
 
              <div className="flex-grow overflow-hidden flex flex-col">
-                <h2 className="text-3xl font-black mb-6 text-gray-900 uppercase">{selectedCategory} Reports</h2>
+                {/* Only show the Big Header if NOT viewing a specific dashboard */}
+                {!activeDashboard && (
+                  <h2 className="text-3xl font-black mb-6 text-gray-900 uppercase shrink-0">{selectedCategory} Reports</h2>
+                )}
                 
                 {!user ? (
                    <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center flex-grow flex flex-col justify-center items-center">
@@ -214,10 +230,13 @@ export default function App() {
                       </div>
                    </div>
                 ) : activeDashboard ? (
-                  <div className="flex-grow flex flex-col h-full relative bg-white rounded-[2rem] shadow-2xl border border-gray-100 overflow-hidden">
-                    <div className="absolute top-4 right-4 z-10">
-                       <button onClick={() => setActiveDashboard(null)} className="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-100 transition">
-                         <i className="fa-solid fa-xmark"></i> Close View
+                  <div className="flex-grow flex flex-col h-full relative bg-white rounded-[1.5rem] shadow-2xl border border-gray-100 overflow-hidden">
+                    <div className="absolute top-3 right-3 z-10">
+                       <button 
+                         onClick={() => setActiveDashboard(null)} 
+                         className="bg-white/90 backdrop-blur shadow-sm border border-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                       >
+                         <i className="fa-solid fa-xmark"></i> Close Report
                        </button>
                     </div>
                     <iframe 
@@ -323,7 +342,7 @@ export default function App() {
         )}
       </main>
 
-      <footer className="bg-white border-t border-gray-100 py-4 px-6 text-center shrink-0">
+      <footer className="bg-white border-t border-gray-100 py-3 px-6 text-center shrink-0">
         <p className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em]">© 2024 Community Finance Hub • Verified Identity Platform</p>
       </footer>
     </div>

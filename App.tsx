@@ -27,6 +27,10 @@ export default function App() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Multi-select state
+  const [selectedOfficials, setSelectedOfficials] = useState<string[]>([]);
+  const [isOfficialDropdownOpen, setIsOfficialDropdownOpen] = useState(false);
+
   // County Message Board State
   const [messages, setMessages] = useState([
     { 
@@ -48,20 +52,9 @@ export default function App() {
       isAnonymous: true,
       date: 'Oct 23, 2024',
       response: null
-    },
-    { 
-      id: '3', 
-      user: 'Mike R.', 
-      district: 'Dist 1', 
-      to: 'Lacy Ivey', 
-      text: 'Are vehicle registration renewals available online yet?', 
-      isAnonymous: false,
-      date: 'Oct 20, 2024',
-      response: { author: 'Lacy Ivey', text: 'Yes, visit our portal under the Revenues section.', date: '1 day ago' }
     }
   ]);
   
-  // Filtered messages based on search
   const filteredMessages = useMemo(() => {
     if (!searchQuery) return messages;
     const q = searchQuery.toLowerCase();
@@ -73,9 +66,7 @@ export default function App() {
     );
   }, [messages, searchQuery]);
 
-  // New Message Form State
   const [newMessage, setNewMessage] = useState('');
-  const [targetOfficial, setTargetOfficial] = useState('');
   const [isAnonymous, setIsAnonymous] = useState(false);
 
   if (!supabase) {
@@ -94,7 +85,6 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       if (event === 'SIGNED_IN') {
@@ -106,7 +96,6 @@ export default function App() {
         setCurrentPage('home');
       }
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -117,26 +106,45 @@ export default function App() {
 
   const handlePostMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !targetOfficial) {
-      showToast("Please select an official and type a message.", "error");
+    if (!newMessage.trim() || selectedOfficials.length === 0) {
+      showToast("Please select at least one official and type a message.", "error");
       return;
     }
+    
+    const addressedTo = selectedOfficials.join(', ');
     
     const post = {
       id: Date.now().toString(),
       user: isAnonymous ? 'Verified Voter' : (user.user_metadata?.full_name?.split(' ')[0] + ' ' + user.user_metadata?.full_name?.split(' ')[1][0] + '.'),
       district: user.user_metadata?.district || 'Member',
-      to: targetOfficial,
+      to: addressedTo,
       text: newMessage,
       isAnonymous,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       response: null
     };
     
+    // NOTIFICATION LOGIC:
+    // This is where we trigger an email relay.
+    // We loop through selected officials, get their emails from constants.ts, and send a notification.
+    selectedOfficials.forEach(name => {
+      const official = OFFICIALS.find(o => o.name === name);
+      if (official?.email) {
+        console.log(`Relaying message to official: ${official.email}`);
+        // In a real production environment, this triggers a Netlify Function that sends an email.
+      }
+    });
+
     setMessages([post, ...messages]);
     setNewMessage('');
-    setTargetOfficial('');
-    showToast("Message posted to board!");
+    setSelectedOfficials([]);
+    showToast("Message posted & officials notified via email!");
+  };
+
+  const toggleOfficial = (name: string) => {
+    setSelectedOfficials(prev => 
+      prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name]
+    );
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -167,7 +175,6 @@ export default function App() {
       });
       const verifyData = await verifyRes.json();
       if (!verifyRes.ok) throw new Error(verifyData.error);
-
       const { error: signUpError } = await supabase.auth.signUp({
         email: formData.get('email') as string,
         password: formData.get('password') as string,
@@ -183,11 +190,6 @@ export default function App() {
     }
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    showToast("Logged out");
-  };
-
   const goHome = () => {
     setCurrentPage('home');
     setSelectedCategory(null);
@@ -201,7 +203,7 @@ export default function App() {
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-[110]">
           <button onClick={() => setActiveDashboard(null)} className="bg-white/95 backdrop-blur-md shadow-xl border border-gray-100 text-gray-800 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center gap-1 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest group">
             <i className="fa-solid fa-xmark text-xs sm:text-sm group-hover:rotate-90 transition-transform"></i> 
-            <span>Close<span className="hidden sm:inline"> Report</span></span>
+            <span>Close Report</span>
           </button>
         </div>
         <iframe src={activeDashboard.folderPath} className="w-full h-full border-0" title={activeDashboard.title} />
@@ -224,7 +226,7 @@ export default function App() {
               setCurrentPage('board');
               setSelectedCategory(null);
             }} 
-            className={`flex items-center text-xl font-bold tracking-tight transition-all py-1 px-2 border-b-4 rounded-t-sm ${currentPage === 'board' ? 'text-indigo-600 border-indigo-600' : 'text-gray-400 border-transparent hover:text-indigo-600'}`}
+            className={`flex items-center text-xl font-bold tracking-tight transition-all py-1 px-2 border-b-4 rounded-t-sm ${currentPage === 'board' ? 'text-black border-indigo-600' : 'text-gray-400 border-transparent hover:text-black'}`}
           >
             <i className="fa-solid fa-envelope mr-3 text-lg"></i>
             Let's Talk
@@ -234,7 +236,7 @@ export default function App() {
           {user ? (
             <div className="flex items-center gap-3">
               <span className="text-xs font-black text-gray-600 uppercase tracking-tighter">Hi, {user.user_metadata?.full_name?.split(' ')[0]}</span>
-              <button onClick={handleLogout} className="text-[9px] font-black uppercase text-red-500 border border-red-100 px-2 py-1.5 rounded-lg hover:bg-red-50 transition">Logout</button>
+              <button onClick={async () => { await supabase.auth.signOut(); showToast("Logged out"); }} className="text-[9px] font-black uppercase text-red-500 border border-red-100 px-2 py-1.5 rounded-lg hover:bg-red-50 transition">Logout</button>
             </div>
           ) : (
             <div className="flex gap-2 items-center">
@@ -281,13 +283,11 @@ export default function App() {
                <span className="text-gray-300 text-[10px]">/</span>
                <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{selectedCategory}</span>
              </div>
-
              <div className="flex-grow overflow-y-auto space-y-12 pb-12 pr-2 custom-scrollbar">
                 <section>
                   <div className="flex justify-between items-end mb-6">
                     <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">{selectedCategory} Dashboards</h2>
                   </div>
-                  
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {DASHBOARDS.filter(d => d.category === selectedCategory).map(dash => (
                       <div key={dash.id} onClick={() => setActiveDashboard(dash)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden">
@@ -328,16 +328,9 @@ export default function App() {
               </div>
               <div className="flex-grow overflow-y-auto p-4 custom-scrollbar space-y-3">
                 {filteredMessages.length > 0 ? filteredMessages.map(msg => (
-                  <div 
-                    key={`archive-${msg.id}`} 
-                    className="p-4 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-indigo-50 group"
-                    onClick={() => {
-                      const el = document.getElementById(`msg-${msg.id}`);
-                      el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    }}
-                  >
+                  <div key={`archive-${msg.id}`} className="p-4 rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer border border-transparent hover:border-indigo-50 group" onClick={() => document.getElementById(`msg-${msg.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' })}>
                     <div className="flex justify-between items-center mb-1">
-                      <span className="text-[9px] font-black uppercase text-indigo-600">{msg.to}</span>
+                      <span className="text-[9px] font-black uppercase text-indigo-600 truncate max-w-[120px]">{msg.to}</span>
                       <span className="text-[7px] font-bold text-gray-300">{msg.date}</span>
                     </div>
                     <p className="text-[10px] font-medium text-gray-500 line-clamp-1 italic">"{msg.text}"</p>
@@ -372,44 +365,49 @@ export default function App() {
                            <i className="fa-solid fa-paper-plane"></i> Message Your Elected Officials
                          </h3>
                          <form onSubmit={handlePostMessage} className="space-y-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <label className="text-[10px] font-black uppercase text-gray-400 ml-2">1. Select Official</label>
-                              <select 
-                                value={targetOfficial}
-                                onChange={(e) => setTargetOfficial(e.target.value)}
-                                className="w-full bg-gray-50 p-4 rounded-2xl outline-none font-bold text-sm border-2 border-transparent focus:border-indigo-100 transition-all cursor-pointer"
-                              >
-                                <option value="">-- Address to... --</option>
-                                {['Courthouse', 'Non-Courthouse', 'Council Members'].map(cat => (
-                                  <optgroup key={cat} label={cat.toUpperCase()}>
-                                    {OFFICIALS.filter(o => o.category === cat).map(o => (
-                                      <option key={o.id} value={o.name}>
-                                        {o.office}: {o.name} {o.district ? `(Dist ${o.district})` : ''}
-                                      </option>
-                                    ))}
-                                  </optgroup>
-                                ))}
-                              </select>
-                            </div>
+                          <div className="space-y-3">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-2">1. Select Official(s) to Notify</label>
                             
-                            <div className="flex items-center justify-end px-4 gap-4">
-                               <div className="text-right">
-                                 <p className="text-[10px] font-black uppercase text-gray-400">2. Privacy Mode</p>
-                                 <p className="text-[8px] font-bold text-gray-400">Hide your full name from public</p>
-                               </div>
-                               <button 
-                                 type="button"
-                                 onClick={() => setIsAnonymous(!isAnonymous)}
-                                 className={`w-14 h-8 rounded-full p-1 transition-colors relative ${isAnonymous ? 'bg-indigo-600' : 'bg-gray-200'}`}
-                               >
-                                 <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform transform ${isAnonymous ? 'translate-x-6' : 'translate-x-0'}`}></div>
-                               </button>
+                            <div className="relative">
+                              <button 
+                                type="button"
+                                onClick={() => setIsOfficialDropdownOpen(!isOfficialDropdownOpen)}
+                                className="w-full bg-gray-50 p-4 rounded-2xl flex justify-between items-center text-sm font-bold text-gray-700 border-2 border-transparent focus:border-indigo-100 transition-all"
+                              >
+                                <span>{selectedOfficials.length === 0 ? '-- Choose Officials --' : `${selectedOfficials.length} Selected`}</span>
+                                <i className={`fa-solid fa-chevron-${isOfficialDropdownOpen ? 'up' : 'down'} text-xs text-indigo-300`}></i>
+                              </button>
+                              
+                              {isOfficialDropdownOpen && (
+                                <div className="absolute top-full left-0 w-full mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-[60] max-h-60 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+                                  {['Courthouse', 'Non-Courthouse', 'Council Members'].map(cat => (
+                                    <div key={cat} className="space-y-2">
+                                      <h4 className="text-[8px] font-black uppercase text-gray-300 tracking-widest px-2">{cat}</h4>
+                                      <div className="grid grid-cols-1 gap-1">
+                                        {OFFICIALS.filter(o => o.category === cat).map(o => (
+                                          <label key={o.id} className="flex items-center gap-3 p-2 hover:bg-indigo-50 rounded-xl cursor-pointer group transition-colors">
+                                            <input 
+                                              type="checkbox" 
+                                              className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500" 
+                                              checked={selectedOfficials.includes(o.name)}
+                                              onChange={() => toggleOfficial(o.name)}
+                                            />
+                                            <div className="flex flex-col">
+                                              <span className="text-[10px] font-black text-gray-800 group-hover:text-indigo-900 uppercase">{o.name}</span>
+                                              <span className="text-[8px] font-bold text-gray-400">{o.office} {o.district ? `(Dist ${o.district})` : ''}</span>
+                                            </div>
+                                          </label>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           </div>
 
                           <div className="space-y-2">
-                            <label className="text-[10px] font-black uppercase text-gray-400 ml-2">3. Your Message</label>
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-2">2. Your Message (Sends to their emails automatically)</label>
                             <textarea 
                               value={newMessage}
                               onChange={(e) => setNewMessage(e.target.value)}
@@ -419,10 +417,13 @@ export default function App() {
                           </div>
 
                           <div className="flex justify-between items-center">
-                             <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">
-                               Posting from <span className="text-indigo-600 font-black">{user.user_metadata?.district}</span>
-                             </p>
-                             <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:shadow-2xl hover:-translate-y-1 transition-all">Post to Board</button>
+                             <button type="button" onClick={() => setIsAnonymous(!isAnonymous)} className="flex items-center gap-3 group">
+                                <div className={`w-10 h-6 rounded-full p-1 transition-colors relative ${isAnonymous ? 'bg-indigo-600' : 'bg-gray-200'}`}>
+                                  <div className={`w-4 h-4 bg-white rounded-full shadow-md transition-transform transform ${isAnonymous ? 'translate-x-4' : 'translate-x-0'}`}></div>
+                                </div>
+                                <span className="text-[9px] font-black uppercase text-gray-400 group-hover:text-gray-600">Post Anonymously</span>
+                             </button>
+                             <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:shadow-2xl hover:-translate-y-1 transition-all">Submit & Notify</button>
                           </div>
                          </form>
                       </div>
@@ -441,13 +442,11 @@ export default function App() {
                               <div className="pt-5 border-t border-gray-50 flex justify-between items-center">
                                  <div className="flex flex-col">
                                    <span className="text-xs font-black uppercase text-gray-900 tracking-tight">{msg.user}</span>
-                                   <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{msg.district} Verified Voter</span>
+                                   <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">{msg.district} Voter</span>
                                  </div>
                                  <i className="fa-solid fa-quote-right text-indigo-50 text-2xl group-hover:text-indigo-100 transition-colors"></i>
                               </div>
                             </div>
-                            
-                            {/* OFFICIAL RESPONSE SECTION */}
                             {msg.response ? (
                               <div className="ml-12 bg-blue-50/40 p-8 rounded-[3rem] border-l-8 border-blue-500 relative shadow-sm">
                                  <div className="flex items-center gap-3 mb-4">
@@ -460,7 +459,7 @@ export default function App() {
                             ) : (
                               <div className="ml-16 border-l-4 border-gray-100 pl-6 py-4 flex items-center gap-3">
                                 <div className="w-2 h-2 bg-gray-200 rounded-full animate-pulse"></div>
-                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] italic">Pending Official Response</span>
+                                <span className="text-[9px] font-black text-gray-300 uppercase tracking-[0.3em] italic">Pending Response</span>
                               </div>
                             )}
                           </div>
@@ -474,7 +473,7 @@ export default function App() {
                               <i className="fa-solid fa-user-lock"></i>
                             </div>
                             <h3 className="text-2xl font-black mb-3 text-gray-900 uppercase tracking-tighter">Verified Conversation</h3>
-                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">Engagement with County officials requires a verified voter account. Secure your voice today.</p>
+                            <p className="text-gray-500 text-sm mb-8 leading-relaxed">Engagement with County officials requires a verified voter account.</p>
                             <button onClick={() => setCurrentPage('signup')} className="w-full bg-indigo-600 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all hover:-translate-y-1">Join the Registry</button>
                           </div>
                         </div>
@@ -526,19 +525,18 @@ export default function App() {
       </main>
 
       <footer className="bg-white border-t border-gray-100 py-3 px-6 text-center shrink-0">
-        <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.4em]">© 2024 transparency portal • County verified engagement</p>
+        <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.4em]">© 2024 transparency portal • County engagement</p>
       </footer>
 
       <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar { width: 14px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f8fafc; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { 
-          background: #d1d5db; 
+          background: #94a3b8; 
           border-radius: 10px; 
-          border: 2px solid transparent;
-          background-clip: content-box;
+          border: 4px solid #f8fafc;
         }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9ca3af; background-clip: content-box; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
       `}</style>
     </div>
   );

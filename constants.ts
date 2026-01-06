@@ -15,13 +15,13 @@ export const CATEGORIES = [
  */
 export const OFFICIALS = [
   // Courthouse Officials
-  { id: 'mayor', category: 'Courthouse', office: 'Mayor', name: 'Sloan Stewart', phone: '(931) 759-7076', email: '' },
+  { id: 'mayor', category: 'Courthouse', office: 'Mayor', name: 'Sloan Stewart', phone: '(931) 759-7076', email: 'sloan.stewart@example.gov' },
   { id: 'attorney', category: 'Courthouse', office: 'County Attorney', name: 'Bill Rieder', phone: '(931) 455-5478', email: '' },
   { id: 'clerk-master', category: 'Courthouse', office: 'Clerk & Master', name: 'Tammy Roberts', phone: '(931) 759-7028', email: '' },
   { id: 'judge', category: 'Courthouse', office: 'General Sessions Court Judge', name: 'Terry Gregory', phone: '(931) 455-5407', email: '' },
   { id: 'circuit-clerk', category: 'Courthouse', office: 'Circuit Court Clerk', name: 'Linda Wolaver', phone: '(931) 759-7208', email: '' },
   { id: 'deeds', category: 'Courthouse', office: 'Register of Deeds', name: 'Pam Wells', phone: '(931) 759-7913', email: '' },
-  { id: 'clerk', category: 'Courthouse', office: 'County Clerk', name: 'Lacy Ivey', phone: '(931) 759-7346', email: '' },
+  { id: 'clerk', category: 'Courthouse', office: 'County Clerk', name: 'Lacy Ivey', phone: '(931) 759-7346', email: 'lacy.ivey@example.gov' },
   { id: 'assessor', category: 'Courthouse', office: 'Property Assessor', name: 'Shaun Sherrill', phone: '(931) 759-7044', email: '' },
   { id: 'trustee', category: 'Courthouse', office: 'Trustee', name: 'Lynn Harrison', phone: '(931) 759-7912', email: '' },
 
@@ -61,7 +61,7 @@ export const DASHBOARDS: (DashboardConfig & { status?: string })[] = [
   {
     id: 'expenses-by-fund',
     category: 'expenses',
-    title: 'General Fund Spending',
+    title: 'Expenses by Fund',
     description: 'A detailed breakdown of County spending across various public funds including CSV data.',
     folderPath: '/dashboards/expensesbyfund/index.html',
     status: 'Official'

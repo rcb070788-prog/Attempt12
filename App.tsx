@@ -26,7 +26,7 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   
-  // County Board State
+  // County Message Board State
   const [messages, setMessages] = useState([
     { 
       id: '1', 
@@ -188,9 +188,20 @@ export default function App() {
       {toast && <Toast message={toast.message} type={toast.type} />}
       
       <nav className="bg-white shadow-sm px-6 py-3 flex justify-between items-center z-50 shrink-0">
-        <div className="flex items-center cursor-pointer" onClick={goHome}>
-          <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
-          <span className="text-lg font-bold text-gray-800 tracking-tight">County Finance Hub</span>
+        <div className="flex items-center gap-6">
+          <div className="flex items-center cursor-pointer" onClick={goHome}>
+            <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
+            <span className="text-lg font-bold text-gray-800 tracking-tight">County Finance Hub</span>
+          </div>
+          <button 
+            onClick={() => {
+              setCurrentPage('board');
+              setSelectedCategory(null);
+            }} 
+            className={`text-[10px] font-black uppercase tracking-[0.2em] transition-colors py-2 px-1 border-b-2 ${currentPage === 'board' ? 'text-indigo-600 border-indigo-600' : 'text-gray-400 border-transparent hover:text-indigo-600'}`}
+          >
+            Let's Talk
+          </button>
         </div>
         <div className="flex gap-2 items-center">
           {user ? (
@@ -265,15 +276,23 @@ export default function App() {
                     ))}
                   </div>
                 </section>
+             </div>
+          </div>
+        )}
 
+        {currentPage === 'board' && (
+          <div className="flex flex-col h-full overflow-hidden items-center">
+             <div className="w-full max-w-4xl flex-grow overflow-y-auto space-y-12 pb-12 pr-2 custom-scrollbar">
                 <section>
-                  <div className="flex items-center gap-3 mb-6">
-                    <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">County Accountability Board</h2>
-                    <span className="bg-indigo-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded-full">Public Record</span>
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center gap-3">
+                      <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">County Message Board</h2>
+                      <span className="bg-indigo-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded-full">Public Record</span>
+                    </div>
                   </div>
                   
                   {user && (
-                    <div className="mb-8 bg-white p-8 rounded-[3rem] shadow-xl border border-gray-100">
+                    <div className="mb-12 bg-white p-8 rounded-[3rem] shadow-xl border border-gray-100">
                        <h3 className="text-sm font-black uppercase text-indigo-600 mb-6 flex items-center gap-2">
                          <i className="fa-solid fa-envelope-circle-check"></i> Contact Your Elected Officials
                        </h3>
@@ -335,7 +354,7 @@ export default function App() {
                   )}
 
                   <div className="relative">
-                    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 transition-all ${!user ? 'blur-md select-none opacity-40 pointer-events-none' : ''}`}>
+                    <div className={`space-y-8 transition-all ${!user ? 'blur-md select-none opacity-40 pointer-events-none' : ''}`}>
                       {messages.map(msg => (
                         <div key={msg.id} className="flex flex-col gap-4">
                           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative group">
@@ -355,7 +374,7 @@ export default function App() {
                           
                           {/* OFFICIAL RESPONSE TAG */}
                           {msg.response ? (
-                            <div className="ml-8 bg-blue-50/50 p-6 rounded-[2rem] border-l-4 border-blue-400 relative">
+                            <div className="ml-12 bg-blue-50/50 p-6 rounded-[2rem] border-l-4 border-blue-400 relative">
                                <div className="flex items-center gap-2 mb-2">
                                  <span className="bg-blue-600 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-full">Official Response</span>
                                  <span className="text-[8px] font-black text-blue-900 uppercase tracking-tighter">{msg.response.author}</span>
@@ -364,7 +383,7 @@ export default function App() {
                                <span className="absolute bottom-2 right-4 text-[7px] font-bold text-blue-300 uppercase">{msg.response.date}</span>
                             </div>
                           ) : (
-                            <div className="ml-8 border-l-2 border-gray-100 pl-4 py-2">
+                            <div className="ml-12 border-l-2 border-gray-100 pl-4 py-2">
                               <span className="text-[8px] font-black text-gray-300 uppercase tracking-[0.2em] italic">Awaiting Official Response...</span>
                             </div>
                           )}
@@ -379,7 +398,7 @@ export default function App() {
                             <i className="fa-solid fa-user-shield"></i>
                           </div>
                           <h3 className="text-xl font-black mb-2 text-gray-800 uppercase tracking-tighter">Verified Conversation</h3>
-                          <p className="text-gray-500 text-xs mb-6">Only registered County voters can view or post to the Accountability Board.</p>
+                          <p className="text-gray-500 text-xs mb-6">Only registered County voters can view or post to the County Message Board.</p>
                           <button onClick={() => setCurrentPage('signup')} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all">Join the Registry</button>
                         </div>
                       </div>

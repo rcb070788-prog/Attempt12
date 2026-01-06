@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { GoogleGenAI } from "@google/genai";
-import { CATEGORIES, DASHBOARDS } from './constants.ts';
+import { CATEGORIES, DASHBOARDS, OFFICIALS } from './constants.ts';
 import { DashboardConfig } from './types.ts';
 
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -27,26 +26,32 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   
-  // Notice Board State
-  const [comments, setComments] = useState([
-    { id: '1', user: 'Jane D.', district: 'Dist 4', text: 'I am really concerned about the increase in utility spending this month.' },
-    { id: '2', user: 'Marcus K.', district: 'Dist 2', text: 'Where can I find the specific receipts for the park renovation?' },
-    { id: '3', user: 'Sarah L.', district: 'Dist 4', text: 'The education budget seems much clearer this year. Thanks for the transparency.' }
-  ]);
-  const [newComment, setNewComment] = useState('');
-
-  // AI Chat State
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [chatMessages, setChatMessages] = useState<{role: 'user' | 'ai', text: string}[]>([]);
-  const [aiInput, setAiInput] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
-  const chatEndRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  // County Board State
+  const [messages, setMessages] = useState([
+    { 
+      id: '1', 
+      user: 'Jane D.', 
+      district: 'Dist 4', 
+      to: 'Mayor Sloan Stewart', 
+      text: 'What is the timeline for the new courthouse roof repairs?', 
+      isAnonymous: false,
+      response: { author: 'Mayor Sloan Stewart', text: 'We have approved the contractor, work begins next Monday.', date: '2 hours ago' }
+    },
+    { 
+      id: '2', 
+      user: 'Verified Voter', 
+      district: 'Dist 2', 
+      to: 'Robert Bracewell', 
+      text: 'Thank you for looking into the District 2 drainage issues.', 
+      isAnonymous: true,
+      response: null
     }
-  }, [chatMessages]);
+  ]);
+  
+  // New Message Form State
+  const [newMessage, setNewMessage] = useState('');
+  const [targetOfficial, setTargetOfficial] = useState('');
+  const [isAnonymous, setIsAnonymous] = useState(false);
 
   if (!supabase) {
     return (
@@ -85,56 +90,27 @@ export default function App() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const handlePostComment = (e: React.FormEvent) => {
+  const handlePostMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newComment.trim()) return;
+    if (!newMessage.trim() || !targetOfficial) {
+      showToast("Please select an official and type a message.", "error");
+      return;
+    }
     
-    const comment = {
+    const post = {
       id: Date.now().toString(),
-      user: user.user_metadata?.full_name?.split(' ')[0] + ' ' + user.user_metadata?.full_name?.split(' ')[1][0] + '.',
+      user: isAnonymous ? 'Verified Voter' : (user.user_metadata?.full_name?.split(' ')[0] + ' ' + user.user_metadata?.full_name?.split(' ')[1][0] + '.'),
       district: user.user_metadata?.district || 'Member',
-      text: newComment
+      to: targetOfficial,
+      text: newMessage,
+      isAnonymous,
+      response: null
     };
     
-    setComments([comment, ...comments]);
-    setNewComment('');
-    showToast("Comment posted!");
-  };
-
-  const handleAiChat = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!aiInput.trim()) return;
-
-    const userMessage = aiInput;
-    setChatMessages(prev => [...prev, { role: 'user', text: userMessage }]);
-    setAiInput('');
-    setIsAiLoading(true);
-
-    try {
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: userMessage,
-        config: {
-          systemInstruction: `You are 'Lynchburg Ledger', a friendly AI assistant for the Metropolitan Lynchburg/Moore County Transparency Portal. 
-          Your goal is to help users find information.
-          AVAILABLE DASHBOARDS:
-          - General Fund Spending (Expenses)
-          - School District Allocation (Expenses)
-          - Property Tax Collection (Revenues)
-          
-          If asked about specific spending (like Sheriff payroll), explain that they can find that detail in the 'General Fund' report under the 'Expenses' category. 
-          Always encourage users to Register to join the community discussion. 
-          Keep answers concise and professional.`
-        }
-      });
-      
-      setChatMessages(prev => [...prev, { role: 'ai', text: response.text || "I'm sorry, I couldn't process that. Try asking about our dashboards!" }]);
-    } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'ai', text: "I'm having a little trouble connecting. Please try again in a moment." }]);
-    } finally {
-      setIsAiLoading(false);
-    }
+    setMessages([post, ...messages]);
+    setNewMessage('');
+    setTargetOfficial('');
+    showToast("Message posted to board!");
   };
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -211,61 +187,10 @@ export default function App() {
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
       
-      {/* AI CHAT BUTTON & WINDOW */}
-      <div className="fixed bottom-6 right-6 z-[60] flex flex-col items-end gap-4">
-        {isChatOpen && (
-          <div className="bg-white w-[320px] h-[450px] rounded-[2rem] shadow-2xl border border-gray-100 flex flex-col overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
-             <div className="bg-indigo-600 p-5 text-white flex justify-between items-center">
-                <div>
-                  <h3 className="font-black uppercase tracking-tighter text-sm">Lynchburg Ledger</h3>
-                  <p className="text-[9px] opacity-80 uppercase font-bold tracking-widest">Portal Assistant</p>
-                </div>
-                <button onClick={() => setIsChatOpen(false)} className="hover:rotate-90 transition-transform"><i className="fa-solid fa-xmark"></i></button>
-             </div>
-             <div className="flex-grow p-4 overflow-y-auto space-y-4 custom-scrollbar bg-gray-50/50">
-                <div className="bg-white p-3 rounded-2xl rounded-tl-none shadow-sm border border-gray-100 text-xs text-gray-700 leading-relaxed">
-                   Hi! I'm the Ledger. I can help you find reports or explain how the portal works. What are you looking for today?
-                </div>
-                {chatMessages.map((msg, i) => (
-                  <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] p-3 rounded-2xl text-xs leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-700 rounded-tl-none border border-gray-100'}`}>
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
-                {isAiLoading && (
-                  <div className="flex justify-start">
-                    <div className="bg-white p-3 rounded-2xl rounded-tl-none border border-gray-100">
-                      <i className="fa-solid fa-ellipsis animate-bounce text-indigo-400"></i>
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-             </div>
-             <form onSubmit={handleAiChat} className="p-3 bg-white border-t border-gray-100 flex gap-2">
-                <input 
-                  value={aiInput}
-                  onChange={(e) => setAiInput(e.target.value)}
-                  placeholder="Ask me anything..." 
-                  className="flex-grow bg-gray-50 rounded-xl px-4 py-2 text-xs outline-none border border-transparent focus:border-indigo-200 transition-all"
-                />
-                <button type="submit" className="bg-indigo-600 text-white w-8 h-8 rounded-xl flex items-center justify-center hover:scale-105 transition-transform"><i className="fa-solid fa-paper-plane text-[10px]"></i></button>
-             </form>
-          </div>
-        )}
-        <button 
-          onClick={() => setIsChatOpen(!isChatOpen)}
-          className="bg-indigo-600 text-white w-14 h-14 rounded-full shadow-2xl flex items-center justify-center text-xl hover:scale-110 active:scale-95 transition-all group relative"
-        >
-          <i className={`fa-solid ${isChatOpen ? 'fa-message' : 'fa-wand-magic-sparkles'} transition-transform duration-500`}></i>
-          {!isChatOpen && <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 border-2 border-white rounded-full"></span>}
-        </button>
-      </div>
-
       <nav className="bg-white shadow-sm px-6 py-3 flex justify-between items-center z-50 shrink-0">
         <div className="flex items-center cursor-pointer" onClick={goHome}>
           <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
-          <span className="text-lg font-bold text-gray-800 tracking-tight">Community Finance Hub</span>
+          <span className="text-lg font-bold text-gray-800 tracking-tight">County Finance Hub</span>
         </div>
         <div className="flex gap-2 items-center">
           {user ? (
@@ -290,7 +215,7 @@ export default function App() {
                 <i className="fa-solid fa-globe"></i> Public Transparency Portal
               </div>
               <h1 className="text-4xl md:text-6xl font-black mb-3 text-gray-900 uppercase tracking-tighter leading-none">Oops Transparency</h1>
-              <p className="text-gray-500 text-base md:text-xl max-w-2xl mx-auto">Open-source financial tracking for our Metropolitan Lynchburg/Moore County.</p>
+              <p className="text-gray-500 text-base md:text-xl max-w-2xl mx-auto">Financial tracking for Metropolitan Lynchburg/Moore County.</p>
             </header>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -301,7 +226,7 @@ export default function App() {
                   </div>
                   <div>
                     <h3 className="text-xl font-black text-gray-800 mb-1 uppercase tracking-tight">{cat.label}</h3>
-                    <p className="text-gray-400 text-sm leading-snug">Browse community records for {cat.label.toLowerCase()} reports.</p>
+                    <p className="text-gray-400 text-sm leading-snug">Browse County records for {cat.label.toLowerCase()} reports.</p>
                   </div>
                 </div>
               ))}
@@ -323,10 +248,6 @@ export default function App() {
                 <section>
                   <div className="flex justify-between items-end mb-6">
                     <h2 className="text-3xl font-black text-gray-900 uppercase tracking-tighter">{selectedCategory} Dashboards</h2>
-                    <div className="hidden sm:flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100">
-                      <i className="fa-solid fa-signal text-indigo-500 text-[10px] animate-pulse"></i>
-                      <span className="text-[8px] font-black uppercase text-indigo-600 tracking-widest">Live Updates</span>
-                    </div>
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -334,51 +255,119 @@ export default function App() {
                       <div key={dash.id} onClick={() => setActiveDashboard(dash)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group relative overflow-hidden">
                          <div className="flex justify-between items-start mb-4">
                            <span className="text-[8px] font-black uppercase tracking-widest bg-gray-50 text-gray-400 px-2 py-1 rounded-lg border border-gray-100">{dash.status || 'Official'}</span>
-                           {user && <i className="fa-solid fa-check-double text-green-500 text-xs"></i>}
                          </div>
                          <h4 className="text-xl font-black text-gray-800 mb-2 uppercase tracking-tight group-hover:text-indigo-600 transition-colors leading-tight">{dash.title}</h4>
                          <p className="text-gray-400 text-xs leading-relaxed mb-6 line-clamp-2">{dash.description}</p>
                          <span className="text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
-                           View Live Data <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                           View Data <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
                          </span>
                       </div>
                     ))}
                   </div>
                 </section>
 
-                {/* COMMUNITY NOTICE BOARD SECTION */}
                 <section>
                   <div className="flex items-center gap-3 mb-6">
-                    <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">Community Notice Board</h2>
-                    <span className="bg-indigo-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded-full">New activity</span>
+                    <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tighter">County Accountability Board</h2>
+                    <span className="bg-indigo-600 text-white text-[8px] font-black uppercase px-2 py-1 rounded-full">Public Record</span>
                   </div>
                   
                   {user && (
-                    <div className="mb-8 bg-white p-6 rounded-[2rem] border-2 border-dashed border-indigo-100 group focus-within:border-indigo-400 transition-all">
-                       <form onSubmit={handlePostComment}>
-                        <textarea 
-                          value={newComment}
-                          onChange={(e) => setNewComment(e.target.value)}
-                          placeholder="What's on your mind regarding these records?" 
-                          className="w-full h-24 bg-transparent outline-none resize-none font-bold text-gray-700 placeholder:text-gray-300 placeholder:italic"
-                        />
-                        <div className="flex justify-between items-center mt-4">
-                           <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">Posting as <span className="text-indigo-600">{user.user_metadata?.full_name}</span></p>
-                           <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest hover:shadow-xl hover:-translate-y-0.5 transition-all">Post to Board</button>
+                    <div className="mb-8 bg-white p-8 rounded-[3rem] shadow-xl border border-gray-100">
+                       <h3 className="text-sm font-black uppercase text-indigo-600 mb-6 flex items-center gap-2">
+                         <i className="fa-solid fa-envelope-circle-check"></i> Contact Your Elected Officials
+                       </h3>
+                       <form onSubmit={handlePostMessage} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] font-black uppercase text-gray-400 ml-2">1. Select Official</label>
+                            <select 
+                              value={targetOfficial}
+                              onChange={(e) => setTargetOfficial(e.target.value)}
+                              className="w-full bg-gray-50 p-4 rounded-2xl outline-none font-bold text-sm border-2 border-transparent focus:border-indigo-100 transition-all cursor-pointer"
+                            >
+                              <option value="">-- Address to... --</option>
+                              {['Courthouse', 'Non-Courthouse', 'Council Members'].map(cat => (
+                                <optgroup key={cat} label={cat.toUpperCase()}>
+                                  {OFFICIALS.filter(o => o.category === cat).map(o => (
+                                    <option key={o.id} value={o.name}>
+                                      {o.office}: {o.name} {o.district ? `(Dist ${o.district})` : ''}
+                                    </option>
+                                  ))}
+                                </optgroup>
+                              ))}
+                            </select>
+                          </div>
+                          
+                          <div className="flex items-center justify-end px-4 gap-4">
+                             <div className="text-right">
+                               <p className="text-[10px] font-black uppercase text-gray-400">2. Privacy Mode</p>
+                               <p className="text-[8px] font-bold text-gray-400">Toggle to hide your full name</p>
+                             </div>
+                             <button 
+                               type="button"
+                               onClick={() => setIsAnonymous(!isAnonymous)}
+                               className={`w-14 h-8 rounded-full p-1 transition-colors relative ${isAnonymous ? 'bg-indigo-600' : 'bg-gray-200'}`}
+                             >
+                               <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-transform transform ${isAnonymous ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                             </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="text-[10px] font-black uppercase text-gray-400 ml-2">3. Your Message</label>
+                          <textarea 
+                            value={newMessage}
+                            onChange={(e) => setNewMessage(e.target.value)}
+                            placeholder="Type your question or statement here for the official record..." 
+                            className="w-full h-32 bg-gray-50 rounded-3xl p-6 outline-none resize-none font-bold text-gray-700 placeholder:text-gray-300 border-2 border-transparent focus:border-indigo-100 transition-all"
+                          />
+                        </div>
+
+                        <div className="flex justify-between items-center">
+                           <p className="text-[9px] font-black uppercase text-gray-400 tracking-widest">
+                             Sending from <span className="text-indigo-600">{user.user_metadata?.district}</span>
+                           </p>
+                           <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:shadow-2xl hover:-translate-y-1 transition-all">Submit to Board</button>
                         </div>
                        </form>
                     </div>
                   )}
 
                   <div className="relative">
-                    <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 transition-all ${!user ? 'blur-md select-none opacity-40 pointer-events-none' : ''}`}>
-                      {comments.map(comment => (
-                        <div key={comment.id} className="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 hover:border-indigo-100 transition-colors group">
-                          <div className="flex justify-between items-start mb-3">
-                            <span className="text-[10px] font-black uppercase tracking-tighter text-indigo-600">{comment.user} • <span className="text-gray-400">{comment.district}</span></span>
-                            <span className="text-[8px] text-gray-300 font-bold uppercase">Today</span>
+                    <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 transition-all ${!user ? 'blur-md select-none opacity-40 pointer-events-none' : ''}`}>
+                      {messages.map(msg => (
+                        <div key={msg.id} className="flex flex-col gap-4">
+                          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 relative group">
+                            <div className="flex justify-between items-center mb-4">
+                              <span className="text-[9px] font-black uppercase tracking-tighter text-indigo-600 bg-indigo-50 px-2 py-1 rounded-lg">To: {msg.to}</span>
+                              <span className="text-[8px] text-gray-300 font-bold uppercase">Constituent Inquiry</span>
+                            </div>
+                            <p className="text-gray-700 text-sm italic leading-relaxed mb-6">"{msg.text}"</p>
+                            <div className="pt-4 border-t border-gray-50 flex justify-between items-center">
+                               <div className="flex flex-col">
+                                 <span className="text-[10px] font-black uppercase text-gray-900">{msg.user}</span>
+                                 <span className="text-[8px] font-bold text-gray-400 uppercase tracking-widest">{msg.district} Voter</span>
+                               </div>
+                               <i className="fa-solid fa-quote-right text-gray-100 text-xl"></i>
+                            </div>
                           </div>
-                          <p className="text-gray-600 text-sm italic leading-snug group-hover:text-gray-900 transition-colors">"{comment.text}"</p>
+                          
+                          {/* OFFICIAL RESPONSE TAG */}
+                          {msg.response ? (
+                            <div className="ml-8 bg-blue-50/50 p-6 rounded-[2rem] border-l-4 border-blue-400 relative">
+                               <div className="flex items-center gap-2 mb-2">
+                                 <span className="bg-blue-600 text-white text-[7px] font-black uppercase px-2 py-0.5 rounded-full">Official Response</span>
+                                 <span className="text-[8px] font-black text-blue-900 uppercase tracking-tighter">{msg.response.author}</span>
+                               </div>
+                               <p className="text-blue-800 text-xs font-medium leading-snug">"{msg.response.text}"</p>
+                               <span className="absolute bottom-2 right-4 text-[7px] font-bold text-blue-300 uppercase">{msg.response.date}</span>
+                            </div>
+                          ) : (
+                            <div className="ml-8 border-l-2 border-gray-100 pl-4 py-2">
+                              <span className="text-[8px] font-black text-gray-300 uppercase tracking-[0.2em] italic">Awaiting Official Response...</span>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -390,8 +379,8 @@ export default function App() {
                             <i className="fa-solid fa-user-shield"></i>
                           </div>
                           <h3 className="text-xl font-black mb-2 text-gray-800 uppercase tracking-tighter">Verified Conversation</h3>
-                          <p className="text-gray-500 text-xs mb-6">Comments are only visible to registered voters in our district.</p>
-                          <button onClick={() => setCurrentPage('signup')} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all">Join the Discussion</button>
+                          <p className="text-gray-500 text-xs mb-6">Only registered County voters can view or post to the Accountability Board.</p>
+                          <button onClick={() => setCurrentPage('signup')} className="w-full bg-indigo-600 text-white py-3 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg hover:bg-indigo-700 transition-all">Join the Registry</button>
                         </div>
                       </div>
                     )}
@@ -409,7 +398,7 @@ export default function App() {
             </div>
             {currentPage === 'signup' ? (
               <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100">
-                <h2 className="text-2xl font-black text-center mb-6 text-gray-900 uppercase tracking-tighter">Voter Registry</h2>
+                <h2 className="text-2xl font-black text-center mb-6 text-gray-900 uppercase tracking-tighter text-indigo-600">County Voter Registry</h2>
                 <form className="space-y-4" onSubmit={handleSignup}>
                   <div className="grid grid-cols-2 gap-3">
                     <input name="lastName" required placeholder="LAST NAME" className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold uppercase text-xs" />
@@ -421,18 +410,18 @@ export default function App() {
                   </div>
                   <input type="email" name="email" required placeholder="Email Address" className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-xs" />
                   <input type="password" name="password" required placeholder="Password" className="w-full p-3 bg-gray-50 rounded-xl outline-none font-bold text-xs" />
-                  <button disabled={isVerifying} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-sm uppercase shadow-lg">
+                  <button disabled={isVerifying} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-sm uppercase shadow-lg hover:bg-indigo-700 transition-all">
                     {isVerifying ? 'Verifying...' : 'Register'}
                   </button>
                 </form>
               </div>
             ) : (
               <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
-                <h2 className="text-2xl font-black text-center mb-6 text-gray-900 uppercase tracking-tighter">Voter Login</h2>
+                <h2 className="text-2xl font-black text-center mb-6 text-gray-900 uppercase tracking-tighter text-indigo-600">Verified Login</h2>
                 <form className="space-y-3" onSubmit={handleLogin}>
                   <input name="email" type="email" placeholder="Email Address" required className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold text-sm" />
                   <input name="password" type="password" placeholder="Password" required className="w-full p-4 bg-gray-50 rounded-xl outline-none font-bold text-sm" />
-                  <button className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-sm uppercase shadow-lg">Sign In</button>
+                  <button className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-sm uppercase shadow-lg hover:bg-indigo-700 transition-all">Sign In</button>
                 </form>
               </div>
             )}
@@ -441,7 +430,7 @@ export default function App() {
       </main>
 
       <footer className="bg-white border-t border-gray-100 py-3 px-6 text-center shrink-0">
-        <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em]">© 2024 transparency portal • district verified engagement</p>
+        <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.3em]">© 2024 transparency portal • County verified engagement</p>
       </footer>
 
       <style>{`

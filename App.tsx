@@ -42,12 +42,32 @@ export default function App() {
   }
 
   useEffect(() => {
+    // Check initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+    // Handle authentication state changes (including email link clicks)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUser = session?.user ?? null;
+      setUser(newUser);
+      
+      if (event === 'SIGNED_IN') {
+        // If they just confirmed their email, they land here automatically
+        showToast("Access Granted! Identity Confirmed.", "success");
+        setCurrentPage('home');
+      }
+      
+      if (event === 'USER_UPDATED') {
+        showToast("Profile Updated", "success");
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setCurrentPage('home');
+        setSelectedCategory(null);
+        setActiveDashboard(null);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -113,7 +133,7 @@ export default function App() {
 
       if (signUpError) throw signUpError;
 
-      showToast("Identity Verified! Please check your email to confirm.", "success");
+      showToast("Verification Sent! Please click the link in your email.", "success");
       setCurrentPage('login');
     } catch (err: any) {
       showToast(err.message, "error");
@@ -125,9 +145,6 @@ export default function App() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     showToast("Logged out successfully");
-    setCurrentPage('home');
-    setSelectedCategory(null);
-    setActiveDashboard(null);
   };
 
   const goHome = () => {
@@ -136,13 +153,11 @@ export default function App() {
     setActiveDashboard(null);
   };
 
-  // FULL SCREEN DASHBOARD OVERLAY
+  // IMMERSIVE FULL SCREEN VIEW
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col font-sans overflow-hidden">
         {toast && <Toast message={toast.message} type={toast.type} />}
-        
-        {/* Floating Close Button */}
         <div className="absolute top-4 right-4 z-[110]">
           <button 
             onClick={() => setActiveDashboard(null)} 
@@ -152,8 +167,6 @@ export default function App() {
             Close Report
           </button>
         </div>
-
-        {/* Immersive Graph Window */}
         <iframe 
           src={activeDashboard.folderPath} 
           className="w-full h-full border-0" 
@@ -167,7 +180,6 @@ export default function App() {
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
       {toast && <Toast message={toast.message} type={toast.type} />}
       
-      {/* HUB NAVIGATION BAR - Hidden when chart is open */}
       <nav className="bg-white shadow-sm px-6 py-3 flex justify-between items-center z-50 shrink-0">
         <div className="flex items-center cursor-pointer" onClick={goHome}>
           <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
@@ -218,7 +230,6 @@ export default function App() {
 
         {currentPage === 'home' && selectedCategory && (
           <div className="flex flex-col h-full">
-             {/* BREADCRUMBS - Only visible when not viewing a specific chart */}
              <div className="flex items-center gap-2 mb-3 shrink-0">
                <button onClick={goHome} className="text-indigo-600 font-black text-[10px] uppercase tracking-widest hover:underline flex items-center gap-2">
                  <i className="fa-solid fa-house"></i> Home
@@ -266,75 +277,64 @@ export default function App() {
           </div>
         )}
 
-        {currentPage === 'signup' && (
+        {(currentPage === 'signup' || currentPage === 'login') && !user && (
           <div className="max-w-lg mx-auto w-full">
             <div className="flex gap-2 mb-4 bg-gray-100 p-1.5 rounded-2xl">
-              <button onClick={() => setCurrentPage('signup')} className="flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest bg-white shadow-sm text-indigo-600">1. Register</button>
-              <button onClick={() => setCurrentPage('login')} className="flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:text-gray-600 transition">2. Login</button>
+              <button onClick={() => setCurrentPage('signup')} className={`flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${currentPage === 'signup' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400'}`}>1. Register</button>
+              <button onClick={() => setCurrentPage('login')} className={`flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest transition ${currentPage === 'login' ? 'bg-white shadow-sm text-indigo-600' : 'text-gray-400'}`}>2. Login</button>
             </div>
 
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 overflow-y-auto max-h-[75vh]">
-              <h2 className="text-2xl font-black text-center mb-1 text-gray-900 uppercase tracking-tighter">New Voter Registry</h2>
-              <p className="text-center text-gray-400 mb-6 text-[9px] uppercase font-bold tracking-widest px-4">Must match official records exactly</p>
-              
-              <form className="space-y-4" onSubmit={handleSignup}>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Last Name</label>
-                    <input name="lastName" required placeholder="E.G. SMITH" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold uppercase text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Voter ID #</label>
-                    <input name="voterId" required placeholder="12345678" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
-                  </div>
-                </div>
-
-                <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 grid grid-cols-2 gap-3">
+            {currentPage === 'signup' ? (
+              <div className="bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100 overflow-y-auto max-h-[75vh]">
+                <h2 className="text-2xl font-black text-center mb-1 text-gray-900 uppercase tracking-tighter">New Voter Registry</h2>
+                <p className="text-center text-gray-400 mb-6 text-[9px] uppercase font-bold tracking-widest px-4">Must match official records exactly</p>
+                <form className="space-y-4" onSubmit={handleSignup}>
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[8px] font-black text-indigo-400 mb-1 uppercase tracking-tighter">Date of Birth</label>
-                      <input type="date" name="dob" className="w-full p-3 bg-white rounded-lg border-0 shadow-sm text-xs font-bold" />
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Last Name</label>
+                      <input name="lastName" required placeholder="E.G. SMITH" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold uppercase text-sm" />
                     </div>
                     <div>
-                      <label className="block text-[8px] font-black text-indigo-400 mb-1 uppercase tracking-tighter">Street Address</label>
-                      <input name="address" placeholder="123 MAIN ST" className="w-full p-3 bg-white rounded-lg border-0 shadow-sm text-xs font-bold uppercase" />
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Voter ID #</label>
+                      <input name="voterId" required placeholder="12345678" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Email Address</label>
-                    <input type="email" name="email" required placeholder="name@email.com" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
                   </div>
-                  <div>
-                    <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Password</label>
-                    <input type="password" name="password" required placeholder="••••••••" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
+                  <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100 grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[8px] font-black text-indigo-400 mb-1 uppercase tracking-tighter">Date of Birth</label>
+                        <input type="date" name="dob" className="w-full p-3 bg-white rounded-lg border-0 shadow-sm text-xs font-bold" />
+                      </div>
+                      <div>
+                        <label className="block text-[8px] font-black text-indigo-400 mb-1 uppercase tracking-tighter">Street Address</label>
+                        <input name="address" placeholder="123 MAIN ST" className="w-full p-3 bg-white rounded-lg border-0 shadow-sm text-xs font-bold uppercase" />
+                      </div>
                   </div>
-                </div>
-                
-                <button disabled={isVerifying} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-base shadow-lg hover:bg-indigo-700 disabled:bg-indigo-300 transition-all flex items-center justify-center gap-2">
-                  {isVerifying ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-user-shield"></i>}
-                  {isVerifying ? 'Verifying...' : 'Verify & Register'}
-                </button>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {currentPage === 'login' && (
-          <div className="max-w-sm mx-auto w-full">
-            <div className="flex gap-2 mb-4 bg-gray-100 p-1.5 rounded-2xl">
-              <button onClick={() => setCurrentPage('signup')} className="flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest text-gray-400 hover:text-gray-600 transition">1. Register</button>
-              <button onClick={() => setCurrentPage('login')} className="flex-1 py-2 rounded-xl font-black text-[10px] uppercase tracking-widest bg-white shadow-sm text-indigo-600">2. Login</button>
-            </div>
-
-            <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
-              <h2 className="text-2xl font-black text-center mb-6 text-gray-900 tracking-tighter uppercase">Voter Login</h2>
-              <form className="space-y-3" onSubmit={handleLogin}>
-                <input name="email" type="email" placeholder="Email Address" required className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
-                <input name="password" type="password" placeholder="Password" required className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
-                <button className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-base hover:bg-indigo-700 shadow-lg transition-all">Sign In</button>
-              </form>
-            </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Email Address</label>
+                      <input type="email" name="email" required placeholder="name@email.com" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
+                    </div>
+                    <div>
+                      <label className="block text-[9px] font-black text-gray-400 uppercase mb-1 tracking-widest">Password</label>
+                      <input type="password" name="password" required placeholder="••••••••" className="w-full p-3 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
+                    </div>
+                  </div>
+                  <button disabled={isVerifying} className="w-full py-4 bg-indigo-600 text-white rounded-xl font-black text-base shadow-lg hover:bg-indigo-700 disabled:bg-indigo-300 transition-all flex items-center justify-center gap-2">
+                    {isVerifying ? <i className="fa-solid fa-spinner fa-spin"></i> : <i className="fa-solid fa-user-shield"></i>}
+                    {isVerifying ? 'Verifying...' : 'Verify & Register'}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <div className="bg-white p-10 rounded-[2.5rem] shadow-xl border border-gray-100">
+                <h2 className="text-2xl font-black text-center mb-6 text-gray-900 tracking-tighter uppercase">Voter Login</h2>
+                <form className="space-y-3" onSubmit={handleLogin}>
+                  <input name="email" type="email" placeholder="Email Address" required className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
+                  <input name="password" type="password" placeholder="Password" required className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 transition-all outline-none font-bold text-sm" />
+                  <button className="w-full bg-indigo-600 text-white py-4 rounded-xl font-black text-base hover:bg-indigo-700 shadow-lg transition-all">Sign In</button>
+                </form>
+              </div>
+            )}
           </div>
         )}
       </main>

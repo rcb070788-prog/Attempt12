@@ -159,14 +159,14 @@ export default function App() {
       <div className="fixed inset-0 z-[100] bg-white flex flex-col font-sans overflow-hidden">
         {toast && <Toast message={toast.message} type={toast.type} />}
         
-        {/* Floating Close Button - Adaptive for Mobile */}
+        {/* Floating Close Button - Highly Compact for Mobile */}
         <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-[110]">
           <button 
             onClick={() => setActiveDashboard(null)} 
-            className="bg-white/90 backdrop-blur-md shadow-2xl border border-gray-100 text-gray-800 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center gap-1.5 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-[0.15em] sm:tracking-[0.2em] group"
+            className="bg-white/95 backdrop-blur-md shadow-xl border border-gray-100 text-gray-800 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center gap-1 sm:gap-2 text-[9px] sm:text-[10px] font-black uppercase tracking-widest group"
           >
             <i className="fa-solid fa-xmark text-xs sm:text-sm group-hover:rotate-90 transition-transform"></i> 
-            Close Report
+            <span>Close<span className="hidden sm:inline"> Report</span></span>
           </button>
         </div>
 

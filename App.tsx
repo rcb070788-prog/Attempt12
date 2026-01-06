@@ -171,8 +171,8 @@ export default function App() {
               <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest mb-4">
                 <i className="fa-solid fa-globe"></i> Public Transparency Portal
               </div>
-              <h1 className="text-4xl md:text-6xl font-black mb-3 text-gray-900 uppercase tracking-tighter leading-none">Transparency First</h1>
-              <p className="text-gray-500 text-base md:text-xl max-w-2xl mx-auto">Open-source financial tracking for our local district.</p>
+              <h1 className="text-4xl md:text-6xl font-black mb-3 text-gray-900 uppercase tracking-tighter leading-none">Oops Transparency</h1>
+              <p className="text-gray-500 text-base md:text-xl max-w-2xl mx-auto">Open-source financial tracking for our Metropolitan Lynchburg/Moore County.</p>
             </header>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -2,16 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CATEGORIES, DASHBOARDS, TN_VOTER_LOOKUP_URL } from './constants.ts';
-import { UserProfile } from './types.ts';
 
 // 1. SAFE INITIALIZATION
-// We look for your "ENV" (Environment Variables - secret keys)
-// We use 'process.env' because that is where Netlify and other tools hide your secrets.
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 
-// We only start the "SDK" (Software Development Kit) if the keys actually exist.
-// This prevents the "supabaseUrl is required" error from crashing the whole site.
 const supabase = (supabaseUrl && supabaseAnonKey) 
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
@@ -29,8 +24,6 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // 2. CONFIGURATION GUARD
-  // If the Supabase keys are missing, we show a special "Setup Required" screen.
   if (!supabase) {
     return (
       <div className="min-h-screen bg-indigo-900 flex items-center justify-center p-6 text-white text-center font-sans">
@@ -39,16 +32,7 @@ export default function App() {
           <h1 className="text-3xl font-black mb-4">Setup Required</h1>
           <p className="text-indigo-200 mb-8 leading-relaxed">
             I can't find your <strong>Supabase URL</strong> or <strong>Anon Key</strong>. 
-            Check your <strong>ENV</strong> (Environment Variables) settings in your dashboard.
           </p>
-          <div className="bg-indigo-800 p-4 rounded-xl text-left font-mono text-sm border border-indigo-700">
-            <p className="text-indigo-400 italic">Expected Variables:</p>
-            <ul className="list-disc list-inside mt-2">
-              <li>SUPABASE_URL</li>
-              <li>SUPABASE_ANON_KEY</li>
-            </ul>
-          </div>
-          <p className="mt-8 text-xs text-indigo-400">Once added, refresh the page to continue.</p>
         </div>
       </div>
     );
@@ -92,10 +76,11 @@ export default function App() {
     setIsVerifying(true);
     
     const formData = new FormData(e.currentTarget);
-    const lastName = formData.get('lastName');
-    const voterId = formData.get('voterId');
-    const dob = formData.get('dob');
-    const address = formData.get('address');
+    // We convert everything to UPPERCASE here to match the CSV perfectly
+    const lastName = (formData.get('lastName') as string).toUpperCase();
+    const voterId = formData.get('voterId') as string;
+    const dob = formData.get('dob') as string;
+    const address = (formData.get('address') as string).toUpperCase();
     const email = formData.get('email') as string;
     const password = formData.get('password') as string;
 
@@ -166,18 +151,15 @@ export default function App() {
         {currentPage === 'home' && (
           <div className="max-w-4xl mx-auto text-center">
             <h1 className="text-4xl font-black mb-4 text-gray-900 uppercase tracking-tight">Transparency Portal</h1>
-            <p className="text-gray-500 mb-12 text-lg">Open access to community financial records and civic engagement.</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
+            <p className="text-gray-500 mb-12 text-lg">Open access to community financial records.</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {CATEGORIES.map(cat => (
-                <div key={cat.id} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-2xl hover:border-indigo-200 transition-all cursor-pointer group text-left">
-                  <div className={`${cat.color} w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg group-hover:scale-110 transition`}>
+                <div key={cat.id} className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 hover:shadow-2xl transition-all cursor-pointer group text-left">
+                  <div className={`${cat.color} w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg`}>
                     <i className={`fa-solid ${cat.icon} text-2xl`}></i>
                   </div>
                   <h3 className="text-2xl font-black text-gray-800 mb-2">{cat.label}</h3>
-                  <p className="text-gray-400 text-sm leading-relaxed">Analyze spending trends, view audits, and download raw CSV datasets for full accountability.</p>
-                  <div className="mt-6 flex items-center text-indigo-600 font-bold text-sm">
-                    View Reports <i className="fa-solid fa-arrow-right ml-2 group-hover:ml-4 transition-all"></i>
-                  </div>
+                  <p className="text-gray-400 text-sm leading-relaxed">Analyze spending and view audits for full accountability.</p>
                 </div>
               ))}
             </div>
@@ -186,38 +168,42 @@ export default function App() {
 
         {currentPage === 'signup' && (
           <div className="max-w-xl mx-auto bg-white p-10 rounded-3xl shadow-2xl border border-gray-100">
-            <h2 className="text-3xl font-black text-center mb-2 text-gray-900">Voter Registry</h2>
-            <p className="text-center text-gray-400 mb-10 text-sm px-4">This portal uses official voter data to ensure every voice is authentic and local.</p>
+            <h2 className="text-3xl font-black text-center mb-2 text-gray-900 uppercase">Voter Registry</h2>
+            <p className="text-center text-gray-400 mb-10 text-sm px-4">All entries must match your official voter registration exactly.</p>
             
             <form className="space-y-6" onSubmit={handleSignup}>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Last Name</label>
-                  <input name="lastName" required placeholder="SMITH" className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold" />
+                  <input 
+                    name="lastName" 
+                    required 
+                    placeholder="SMITH" 
+                    className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold uppercase" 
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-gray-400 uppercase mb-2 tracking-widest">Voter ID #</label>
                   <input name="voterId" required placeholder="12345678" className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold" />
-                  <a href={TN_VOTER_LOOKUP_URL} target="_blank" rel="noreferrer" className="text-[10px] text-indigo-600 mt-2 font-bold hover:underline inline-block">Forgotten your ID? Click here.</a>
                 </div>
               </div>
 
-              <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                  <i className="fa-solid fa-shield-halved text-6xl text-indigo-900"></i>
-                </div>
+              <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative">
                 <p className="text-[10px] font-black text-indigo-900 mb-4 uppercase tracking-widest flex items-center gap-2">
-                  <span className="bg-indigo-600 text-white w-5 h-5 rounded-full flex items-center justify-center text-[8px]">2</span>
                   Verification (Complete One)
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-[9px] font-black text-indigo-400 mb-1 uppercase tracking-tighter">Date of Birth</label>
-                    <input type="date" name="dob" className="w-full p-3 bg-white rounded-xl border-0 shadow-sm text-sm font-bold text-indigo-900" />
+                    <input type="date" name="dob" className="w-full p-3 bg-white rounded-xl border-0 shadow-sm text-sm font-bold" />
                   </div>
                   <div>
                     <label className="block text-[9px] font-black text-indigo-400 mb-1 uppercase tracking-tighter">Street Address</label>
-                    <input name="address" placeholder="123 Main St" className="w-full p-3 bg-white rounded-xl border-0 shadow-sm text-sm font-bold text-indigo-900" />
+                    <input 
+                      name="address" 
+                      placeholder="123 MAIN ST" 
+                      className="w-full p-3 bg-white rounded-xl border-0 shadow-sm text-sm font-bold uppercase" 
+                    />
                   </div>
                 </div>
               </div>
@@ -246,45 +232,18 @@ export default function App() {
 
         {currentPage === 'login' && (
           <div className="max-w-md mx-auto bg-white p-12 rounded-3xl shadow-2xl border border-gray-100">
-            <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 text-3xl mb-8 mx-auto">
-              <i className="fa-solid fa-fingerprint"></i>
-            </div>
             <h2 className="text-3xl font-black text-center mb-8 text-gray-900 tracking-tight">Voter Login</h2>
             <form className="space-y-4" onSubmit={handleLogin}>
               <input name="email" type="email" placeholder="Email Address" required className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold" />
               <input name="password" type="password" placeholder="Password" required className="w-full p-4 bg-gray-50 rounded-xl border-2 border-transparent focus:border-indigo-500 focus:bg-white transition-all outline-none font-bold" />
               <button className="w-full bg-indigo-600 text-white py-5 rounded-xl font-black text-lg hover:bg-indigo-700 shadow-lg transition-all transform hover:-translate-y-1">Sign In</button>
             </form>
-            <div className="mt-10 text-center border-t border-gray-50 pt-8">
-              <p className="text-gray-400 text-sm font-medium">New here or recently moved?</p>
-              <button onClick={() => setCurrentPage('signup')} className="mt-2 text-indigo-600 font-black hover:underline decoration-2 underline-offset-4 tracking-tight">Create Voter Account</button>
-            </div>
           </div>
         )}
       </main>
 
-      <footer className="bg-gray-900 text-indigo-200 p-12 mt-20">
-        <div className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-12">
-          <div>
-            <div className="flex items-center text-white mb-6">
-              <i className="fa-solid fa-landmark text-2xl mr-3 text-indigo-400"></i>
-              <span className="text-xl font-black uppercase tracking-tighter">Citizen Finance</span>
-            </div>
-            <p className="text-sm text-indigo-300 leading-relaxed">Promoting trust through radical transparency and secure community participation.</p>
-          </div>
-          <div>
-            <h4 className="text-white font-bold mb-6 uppercase tracking-widest text-xs">Resources</h4>
-            <ul className="space-y-3 text-sm">
-              <li><a href="#" className="hover:text-white transition">Financial Glossary</a></li>
-              <li><a href="#" className="hover:text-white transition">Public Audit Reports</a></li>
-              <li><a href="#" className="hover:text-white transition">Community Bylaws</a></li>
-            </ul>
-          </div>
-          <div className="text-right md:text-left">
-            <p className="text-[10px] text-indigo-500 uppercase font-black tracking-widest mb-4">Official Platform</p>
-            <p className="text-xs text-indigo-400">© 2024 Concerned Citizens Hub.<br/>Data sourced from official municipal records.</p>
-          </div>
-        </div>
+      <footer className="bg-gray-900 text-indigo-200 p-12 mt-20 text-center">
+        <p className="text-xs text-indigo-400">© 2024 Concerned Citizens Hub. Records are formatted in ALL CAPS to match official municipal data.</p>
       </footer>
     </div>
   );

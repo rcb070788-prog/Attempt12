@@ -136,10 +136,38 @@ export default function App() {
     setActiveDashboard(null);
   };
 
+  // FULL SCREEN DASHBOARD OVERLAY
+  if (activeDashboard) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-white flex flex-col font-sans overflow-hidden">
+        {toast && <Toast message={toast.message} type={toast.type} />}
+        
+        {/* Floating Close Button */}
+        <div className="absolute top-4 right-4 z-[110]">
+          <button 
+            onClick={() => setActiveDashboard(null)} 
+            className="bg-white/90 backdrop-blur-md shadow-2xl border border-gray-100 text-gray-800 px-4 py-2 rounded-xl hover:bg-red-600 hover:text-white transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] group"
+          >
+            <i className="fa-solid fa-xmark text-sm group-hover:rotate-90 transition-transform"></i> 
+            Close Report
+          </button>
+        </div>
+
+        {/* Immersive Graph Window */}
+        <iframe 
+          src={activeDashboard.folderPath} 
+          className="w-full h-full border-0" 
+          title={activeDashboard.title}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden">
       {toast && <Toast message={toast.message} type={toast.type} />}
       
+      {/* HUB NAVIGATION BAR - Hidden when chart is open */}
       <nav className="bg-white shadow-sm px-6 py-3 flex justify-between items-center z-50 shrink-0">
         <div className="flex items-center cursor-pointer" onClick={goHome}>
           <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
@@ -190,32 +218,17 @@ export default function App() {
 
         {currentPage === 'home' && selectedCategory && (
           <div className="flex flex-col h-full">
+             {/* BREADCRUMBS - Only visible when not viewing a specific chart */}
              <div className="flex items-center gap-2 mb-3 shrink-0">
                <button onClick={goHome} className="text-indigo-600 font-black text-[10px] uppercase tracking-widest hover:underline flex items-center gap-2">
                  <i className="fa-solid fa-house"></i> Home
                </button>
                <span className="text-gray-300 text-[10px]">/</span>
-               <button 
-                 onClick={() => setActiveDashboard(null)} 
-                 className={`${activeDashboard ? 'text-indigo-600 hover:underline' : 'text-gray-400'} font-black text-[10px] uppercase tracking-widest transition-colors`}
-               >
-                 {selectedCategory}
-               </button>
-               {activeDashboard && (
-                 <>
-                   <span className="text-gray-300 text-[10px]">/</span>
-                   <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest truncate max-w-[200px] md:max-w-none">
-                     {activeDashboard.title}
-                   </span>
-                 </>
-               )}
+               <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{selectedCategory}</span>
              </div>
 
              <div className="flex-grow overflow-hidden flex flex-col">
-                {/* Only show the Big Header if NOT viewing a specific dashboard */}
-                {!activeDashboard && (
-                  <h2 className="text-3xl font-black mb-6 text-gray-900 uppercase shrink-0">{selectedCategory} Reports</h2>
-                )}
+                <h2 className="text-3xl font-black mb-6 text-gray-900 uppercase shrink-0">{selectedCategory} Reports</h2>
                 
                 {!user ? (
                    <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center flex-grow flex flex-col justify-center items-center">
@@ -229,22 +242,6 @@ export default function App() {
                         <button onClick={() => setCurrentPage('signup')} className="border-2 border-indigo-50 text-indigo-600 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest">Register</button>
                       </div>
                    </div>
-                ) : activeDashboard ? (
-                  <div className="flex-grow flex flex-col h-full relative bg-white rounded-[1.5rem] shadow-2xl border border-gray-100 overflow-hidden">
-                    <div className="absolute top-3 right-3 z-10">
-                       <button 
-                         onClick={() => setActiveDashboard(null)} 
-                         className="bg-white/90 backdrop-blur shadow-sm border border-gray-100 text-gray-600 px-3 py-1.5 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                       >
-                         <i className="fa-solid fa-xmark"></i> Close Report
-                       </button>
-                    </div>
-                    <iframe 
-                      src={activeDashboard.folderPath} 
-                      className="w-full h-full border-0" 
-                      title={activeDashboard.title}
-                    />
-                  </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-8">
                     {DASHBOARDS.filter(d => d.category === selectedCategory).length > 0 ? (

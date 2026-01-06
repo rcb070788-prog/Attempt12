@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { CATEGORIES, DASHBOARDS, TN_VOTER_LOOKUP_URL } from './constants.ts';
+import { CATEGORIES, DASHBOARDS } from './constants.ts';
+import { DashboardConfig } from './types.ts';
 
 // 1. SAFE INITIALIZATION
 const supabaseUrl = process.env.SUPABASE_URL || '';
@@ -20,6 +21,8 @@ const Toast = ({ message, type }: { message: string, type: 'success' | 'error' }
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState('home');
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
   const [user, setUser] = useState<any>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
@@ -123,6 +126,14 @@ export default function App() {
     await supabase.auth.signOut();
     showToast("Logged out successfully");
     setCurrentPage('home');
+    setSelectedCategory(null);
+    setActiveDashboard(null);
+  };
+
+  const goHome = () => {
+    setCurrentPage('home');
+    setSelectedCategory(null);
+    setActiveDashboard(null);
   };
 
   return (
@@ -130,7 +141,7 @@ export default function App() {
       {toast && <Toast message={toast.message} type={toast.type} />}
       
       <nav className="bg-white shadow-sm px-6 py-3 flex justify-between items-center z-50 shrink-0">
-        <div className="flex items-center cursor-pointer" onClick={() => setCurrentPage('home')}>
+        <div className="flex items-center cursor-pointer" onClick={goHome}>
           <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
           <span className="text-lg font-bold text-gray-800 tracking-tight">Community Finance Hub</span>
         </div>
@@ -149,9 +160,9 @@ export default function App() {
         </div>
       </nav>
 
-      <main className="flex-grow overflow-y-auto md:overflow-hidden container mx-auto px-4 flex flex-col justify-center py-4">
-        {currentPage === 'home' && (
-          <div className="max-w-5xl mx-auto w-full">
+      <main className="flex-grow overflow-hidden container mx-auto px-4 flex flex-col py-4">
+        {currentPage === 'home' && !selectedCategory && (
+          <div className="max-w-5xl mx-auto w-full h-full flex flex-col justify-center">
             <header className="mb-6 text-center">
               <h1 className="text-3xl md:text-5xl font-black mb-2 text-gray-900 uppercase tracking-tight leading-none">Transparency Portal</h1>
               <p className="text-gray-500 text-base md:text-lg max-w-2xl mx-auto">Verified voter access to financial records and community oversight.</p>
@@ -159,17 +170,83 @@ export default function App() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
               {CATEGORIES.map(cat => (
-                <div key={cat.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group text-left relative overflow-hidden flex items-start gap-4">
-                  <div className={`${cat.color} w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-white shadow-lg relative z-10`}>
+                <div 
+                  key={cat.id} 
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group text-left relative overflow-hidden flex items-start gap-4"
+                >
+                  <div className={`${cat.color} w-12 h-12 shrink-0 rounded-2xl flex items-center justify-center text-white shadow-lg relative z-10 group-hover:scale-110 transition-transform`}>
                     <i className={`fa-solid ${cat.icon} text-xl`}></i>
                   </div>
                   <div className="relative z-10">
                     <h3 className="text-lg font-black text-gray-800 mb-1 uppercase tracking-tight">{cat.label}</h3>
-                    <p className="text-gray-400 text-sm leading-snug">View detailed fiscal reports and ledger data for public oversight.</p>
+                    <p className="text-gray-400 text-sm leading-snug">Click to view all {cat.label.toLowerCase()} reports and live data.</p>
                   </div>
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {currentPage === 'home' && selectedCategory && (
+          <div className="flex flex-col h-full">
+             <div className="flex items-center gap-2 mb-4">
+               <button onClick={goHome} className="text-indigo-600 font-black text-[10px] uppercase tracking-widest hover:underline flex items-center gap-2">
+                 <i className="fa-solid fa-arrow-left"></i> Home
+               </button>
+               <span className="text-gray-300">/</span>
+               <span className="text-gray-400 font-black text-[10px] uppercase tracking-widest">{selectedCategory}</span>
+             </div>
+
+             <div className="flex-grow overflow-hidden flex flex-col">
+                <h2 className="text-3xl font-black mb-6 text-gray-900 uppercase">{selectedCategory} Reports</h2>
+                
+                {!user ? (
+                   <div className="bg-white p-12 rounded-[3rem] shadow-xl text-center flex-grow flex flex-col justify-center items-center">
+                      <div className="w-20 h-20 bg-indigo-50 text-indigo-500 rounded-full flex items-center justify-center mb-6 text-3xl">
+                        <i className="fa-solid fa-lock"></i>
+                      </div>
+                      <h3 className="text-2xl font-black mb-2 text-gray-800">Verified Access Only</h3>
+                      <p className="text-gray-500 mb-8 max-w-sm">Detailed financial records are restricted to registered voters. Please login or register to continue.</p>
+                      <div className="flex gap-4">
+                        <button onClick={() => setCurrentPage('login')} className="bg-indigo-600 text-white px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest shadow-lg">Login</button>
+                        <button onClick={() => setCurrentPage('signup')} className="border-2 border-indigo-50 text-indigo-600 px-8 py-3 rounded-xl font-black text-xs uppercase tracking-widest">Register</button>
+                      </div>
+                   </div>
+                ) : activeDashboard ? (
+                  <div className="flex-grow flex flex-col h-full relative bg-white rounded-[2rem] shadow-2xl border border-gray-100 overflow-hidden">
+                    <div className="absolute top-4 right-4 z-10">
+                       <button onClick={() => setActiveDashboard(null)} className="bg-red-50 text-red-600 p-2 rounded-lg hover:bg-red-100 transition">
+                         <i className="fa-solid fa-xmark"></i> Close View
+                       </button>
+                    </div>
+                    <iframe 
+                      src={activeDashboard.folderPath} 
+                      className="w-full h-full border-0" 
+                      title={activeDashboard.title}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto pb-8">
+                    {DASHBOARDS.filter(d => d.category === selectedCategory).length > 0 ? (
+                      DASHBOARDS.filter(d => d.category === selectedCategory).map(dash => (
+                        <div key={dash.id} onClick={() => setActiveDashboard(dash)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer group">
+                           <h4 className="text-xl font-black text-gray-800 mb-3 uppercase tracking-tight group-hover:text-indigo-600 transition-colors">{dash.title}</h4>
+                           <p className="text-gray-400 text-sm leading-relaxed mb-6">{dash.description}</p>
+                           <span className="text-indigo-600 text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-2">
+                             Launch Dashboard <i className="fa-solid fa-arrow-right group-hover:translate-x-1 transition-transform"></i>
+                           </span>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="col-span-full py-20 text-center bg-gray-100 rounded-[3rem] border-2 border-dashed border-gray-200">
+                         <i className="fa-solid fa-folder-open text-4xl text-gray-300 mb-4"></i>
+                         <p className="text-gray-400 font-bold uppercase text-xs tracking-widest">No reports currently available in this category</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+             </div>
           </div>
         )}
 

@@ -1,17 +1,18 @@
 [build]
-  # This tells Netlify that your main website files are in the root folder
   publish = "."
-  # This tells Netlify where your secret "Server" code lives
   functions = "netlify/functions"
 
 [[redirects]]
-  # This ensures your dashboards folder is handled normally by the browser
   from = "/dashboards/*"
   to = "/dashboards/:splat"
   status = 200
 
 [[redirects]]
-  # This allows our modern app (SPA) to handle all other web addresses
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

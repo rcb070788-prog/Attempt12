@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CATEGORIES, DASHBOARDS } from './constants.ts';
@@ -252,6 +253,12 @@ export default function App() {
     );
   }
 
+  // Helper to check if current user has voted in a specific poll
+  const hasUserVoted = (poll: any) => {
+    if (!user) return false;
+    return (poll.poll_votes || []).some((v: any) => v.user_id === user.id);
+  };
+
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
@@ -309,15 +316,26 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter">Community Polls</h2>
             <div className="grid grid-cols-1 gap-4 md:gap-6">
-              {polls.map(poll => (
-                <div key={poll.id} onClick={() => setSelectedPoll(poll)} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div className="space-y-1">
-                    <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight">{poll.title}</h3>
-                    <p className="text-gray-400 font-bold text-[9px] uppercase">{poll.poll_votes?.length || 0} Votes Recorded</p>
+              {polls.map(poll => {
+                const voted = hasUserVoted(poll);
+                return (
+                  <div key={poll.id} onClick={() => setSelectedPoll(poll)} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <div className="space-y-1">
+                      <h3 className="text-xl md:text-2xl font-black uppercase tracking-tight">{poll.title}</h3>
+                      {voted ? (
+                        <p className="text-indigo-600 font-bold text-[9px] uppercase tracking-widest flex items-center gap-2">
+                          <i className="fa-solid fa-check-circle"></i> {poll.poll_votes?.length || 0} Votes Recorded
+                        </p>
+                      ) : (
+                        <p className="text-gray-400 font-bold text-[9px] uppercase tracking-widest">Vote to see results</p>
+                      )}
+                    </div>
+                    <button className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black uppercase text-[10px] ${voted ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white'}`}>
+                      {voted ? 'View Discussion' : 'Vote & Discuss'}
+                    </button>
                   </div>
-                  <button className="w-full sm:w-auto bg-indigo-600 text-white px-6 py-3 rounded-xl font-black uppercase text-[10px]">Vote & Discuss</button>
-                </div>
-              ))}
+                );
+              })}
               {polls.length === 0 && (
                 <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-gray-100">
                   <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No active polls found.</p>
@@ -331,32 +349,50 @@ export default function App() {
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 pb-20">
              <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
              <div className="bg-white p-6 md:p-10 rounded-[2rem] shadow-xl border border-gray-100 space-y-6 md:space-y-8">
-                <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none">{selectedPoll.title}</h2>
+                <div className="space-y-2">
+                  <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none">{selectedPoll.title}</h2>
+                  {hasUserVoted(selectedPoll) && (
+                    <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">
+                      Total: {selectedPoll.poll_votes?.length || 0} Voters
+                    </p>
+                  )}
+                </div>
                 <div className="space-y-3 md:space-y-4">
                   {selectedPoll.poll_options?.map((opt: any) => {
                     const votesList = selectedPoll.poll_votes || [];
                     const totalVotes = votesList.length;
                     const votes = votesList.filter((v: any) => v.option_id === opt.id).length;
                     const hasVotedThis = votesList.some((v: any) => v.user_id === user?.id && v.option_id === opt.id);
+                    const userHasVotedInPoll = hasUserVoted(selectedPoll);
                     const percent = totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100);
                     
                     return (
                       <button 
                         key={opt.id} 
+                        disabled={userHasVotedInPoll}
                         onClick={() => handleVote(selectedPoll.id, opt.id)} 
-                        className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all ${hasVotedThis ? 'border-indigo-600' : 'border-gray-50'}`}
+                        className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all ${hasVotedThis ? 'border-indigo-600' : 'border-gray-50'} ${userHasVotedInPoll ? 'cursor-default' : 'hover:border-indigo-200'}`}
                       >
-                        <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-500" style={{ width: `${percent}%` }}></div>
+                        {userHasVotedInPoll && (
+                          <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-500" style={{ width: `${percent}%` }}></div>
+                        )}
                         <div className="relative flex justify-between font-black uppercase text-[10px] md:text-xs">
                           <span className="flex items-center gap-2">
                             {hasVotedThis && <i className="fa-solid fa-circle-check text-indigo-600"></i>}
                             {opt.text}
                           </span>
-                          <span className="text-indigo-400">{percent}%</span>
+                          {userHasVotedInPoll && (
+                            <span className="text-indigo-400">{percent}%</span>
+                          )}
                         </div>
                       </button>
                     );
                   })}
+                  {!hasUserVoted(selectedPoll) && (
+                    <p className="text-center text-[9px] font-black uppercase text-gray-400 mt-4 tracking-widest italic">
+                      Results are hidden until you cast your vote.
+                    </p>
+                  )}
                 </div>
                 <div className="pt-8 border-t border-gray-50">
                    <h3 className="font-black uppercase text-gray-400 text-[10px] mb-6 tracking-widest">Verified Voter Discussion</h3>
@@ -401,7 +437,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ADMIN AND LOGIN SECTIONS REMAINED LARGELY UNTOUCHED BUT INCLUDED FOR FULL CONTENT */}
         {currentPage === 'admin' && profile?.is_admin && (
            <div className="max-w-5xl mx-auto space-y-12">
              <h2 className="text-4xl md:text-5xl font-black uppercase text-red-600 tracking-tighter">Admin Control</h2>

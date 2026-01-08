@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { CATEGORIES, DASHBOARDS } from './constants.ts';
@@ -70,7 +69,6 @@ export default function App() {
   };
 
   const fetchPolls = async () => {
-    console.log("Attempting Plan A: Detailed Poll Fetch...");
     try {
       const { data, error } = await supabase!
         .from('polls')
@@ -78,7 +76,6 @@ export default function App() {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.warn("Plan A Failed:", error.message);
         const { data: simpleData, error: simpleError } = await supabase!
           .from('polls')
           .select('*, poll_options(*), poll_votes(*), poll_comments(*)')
@@ -114,17 +111,26 @@ export default function App() {
   };
 
   const adminRequest = async (action: string, payload: any) => {
-    const { data: { session } } = await supabase!.auth.getSession();
+    // CRITICAL FIX: Always get a fresh session to ensure the token hasn't expired
+    const { data: { session }, error: sessionError } = await supabase!.auth.getSession();
+    
+    if (sessionError || !session) {
+      throw new Error("Session expired. Please sign out and sign back in.");
+    }
+
     const res = await fetch('/.netlify/functions/admin-actions', {
       method: 'POST',
       headers: { 
-        'Authorization': `Bearer ${session?.access_token}`,
+        'Authorization': `Bearer ${session.access_token}`,
         'Content-Type': 'application/json' 
       },
       body: JSON.stringify({ action, payload })
     });
     
     const data = await res.json();
+    if (res.status === 401) {
+       throw new Error("Authentication failed. Try logging out and back in.");
+    }
     if (!res.ok) throw new Error(data.error || "Action failed");
     return data;
   };
@@ -200,7 +206,6 @@ export default function App() {
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
       
-      {/* Updated Responsive Navigation Bar */}
       <nav className="bg-white shadow-sm px-4 py-3 flex flex-col md:flex-row justify-between items-center z-50 shrink-0 border-b border-gray-100 gap-4">
         <div className="flex flex-col md:flex-row items-center gap-4 md:gap-8 w-full md:w-auto">
           <div className="flex items-center cursor-pointer" onClick={() => { setCurrentPage('home'); setSelectedPoll(null); }}>
@@ -208,7 +213,6 @@ export default function App() {
             <span className="text-lg md:text-xl font-bold text-gray-900 tracking-tight uppercase whitespace-nowrap">Finance Hub</span>
           </div>
           
-          {/* Navigation Links - Now visible on mobile! */}
           <div className="flex flex-wrap justify-center gap-4 md:gap-6">
             <button onClick={() => { setCurrentPage('polls'); setSelectedPoll(null); fetchPolls(); }} className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${currentPage === 'polls' ? 'text-indigo-600' : 'text-gray-400'}`}>Polls</button>
             <button onClick={() => { setCurrentPage('suggestions'); setSelectedPoll(null); }} className={`text-[9px] md:text-[10px] font-black uppercase tracking-widest ${currentPage === 'suggestions' ? 'text-indigo-600' : 'text-gray-400'}`}>Suggestions</button>

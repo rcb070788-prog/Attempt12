@@ -72,23 +72,39 @@ export default function App() {
   const handleLogout = async () => {
     if (!supabase) return;
     try {
+      // Try official logout
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-      showToast("Logged out successfully");
+      
+      // If server rejects (403) or session is missing, we force a local reset
+      if (error) {
+        console.warn("Server logout failed, performing local reset:", error.message);
+        setUser(null);
+        setProfile(null);
+        setCurrentPage('home');
+        setSelectedPoll(null);
+        showToast("Session reset locally", "success");
+      } else {
+        showToast("Logged out successfully");
+      }
     } catch (err: any) {
-      showToast("Logout failed: " + err.message, "error");
+      // Catch-all to ensure the user is never stuck logged in
+      setUser(null);
+      setProfile(null);
+      setCurrentPage('home');
+      showToast("Session cleared", "success");
     }
   };
 
   const fetchPolls = async () => {
     try {
-      const { data, error } = await supabase!
+      if (!supabase) return;
+      const { data, error } = await supabase
         .from('polls')
         .select('*, poll_options(*), poll_votes(*), poll_comments(*, profiles(full_name, district))')
         .order('created_at', { ascending: false });
 
       if (error) {
-        const { data: simpleData } = await supabase!
+        const { data: simpleData } = await supabase
           .from('polls')
           .select('*, poll_options(*), poll_votes(*), poll_comments(*)')
           .order('created_at', { ascending: false });
@@ -117,7 +133,9 @@ export default function App() {
   };
 
   const adminRequest = async (action: string, payload: any) => {
-    const { data: { session }, error: sessionError } = await supabase!.auth.getSession();
+    if (!supabase) throw new Error("Database connection not ready");
+    
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
     if (sessionError || !session) {
       throw new Error("Your session has expired. Please log out and sign back in.");

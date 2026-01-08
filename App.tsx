@@ -76,13 +76,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    if (selectedPoll) {
-      const updated = polls.find(p => p.id === selectedPoll.id);
-      if (updated) setSelectedPoll(updated);
-    }
-  }, [polls]);
-
   const fetchProfile = async (userId: string) => {
     if (!supabase) return;
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
@@ -104,24 +97,26 @@ export default function App() {
   const fetchPolls = async () => {
     if (!supabase) return;
     try {
+      // Simplified query to avoid status 400. 
+      // We perform standard joins that are usually allowed in Supabase unless complex nesting is blocked.
       const { data, error } = await supabase
         .from('polls')
         .select(`
           *,
-          poll_options(*),
-          poll_votes(*, profiles(full_name, district)),
-          poll_comments(*, 
-            profiles(full_name, district),
-            comment_reactions(*)
-          )
+          poll_options (*),
+          poll_votes (*, profiles (full_name, district)),
+          poll_comments (*, profiles (full_name, district))
         `)
         .order('created_at', { ascending: false });
 
-      if (!error) {
+      if (error) {
+        console.error("Supabase error:", error);
+        showToast("Database error fetching polls", "error");
+      } else {
         setPolls(data || []);
       }
     } catch (err) { 
-      console.error("Polls fetch error:", err);
+      console.error("Polls fetch exception:", err);
     }
   };
 
@@ -163,33 +158,6 @@ export default function App() {
     else fetchPolls();
   };
 
-  const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
-    if (!user) return setCurrentPage('login');
-    if (!supabase) return;
-    
-    const updatedPolls = [...polls].map(p => ({
-      ...p,
-      poll_comments: p.poll_comments?.map((c: any) => {
-        if (c.id === commentId) {
-          const reactions = c.comment_reactions || [];
-          const filtered = reactions.filter((r: any) => r.user_id !== user.id);
-          return { ...c, comment_reactions: [...filtered, { user_id: user.id, reaction_type: type }] };
-        }
-        return c;
-      })
-    }));
-    setPolls(updatedPolls);
-
-    const { error } = await supabase.from('comment_reactions').upsert(
-      { comment_id: commentId, user_id: user.id, reaction_type: type },
-      { onConflict: 'comment_id,user_id' }
-    );
-    if (error) {
-      showToast("Reaction failed", "error");
-      fetchPolls();
-    }
-  };
-
   const initiateVote = (pollId: string, optionId: string, optionText: string) => {
     if (!user) return setCurrentPage('login');
     const currentPoll = polls.find(p => p.id === pollId);
@@ -214,7 +182,7 @@ export default function App() {
     const existingVote = currentPoll?.poll_votes?.find((v: any) => v.user_id === user.id);
     const isChange = !!existingVote;
 
-    // Optimistic Update
+    // Optimistic UI Update
     const updatedPolls = polls.map(p => {
       if (p.id === pollId) {
         const votes = p.poll_votes || [];
@@ -257,47 +225,6 @@ export default function App() {
     }
   };
 
-  const renderComments = (pollComments: any[], pollId: string, parentId: string | null = null, depth = 0) => {
-    return (pollComments || [])
-      .filter(c => c.parent_id === parentId && !c.is_hidden)
-      .map(comment => {
-        const reactions = comment.comment_reactions || [];
-        const likes = reactions.filter((r: any) => r.reaction_type === 'like').length;
-        const dislikes = reactions.filter((r: any) => r.reaction_type === 'dislike').length;
-        const userReaction = reactions.find((r: any) => r.user_id === user?.id)?.reaction_type;
-        
-        return (
-          <div key={comment.id} className={`${depth > 0 ? 'ml-6 mt-2 border-l-2 border-gray-100 pl-4' : 'bg-gray-50 p-4 rounded-2xl mb-4'}`}>
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase text-indigo-600 mb-1">
-                {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}
-              </span>
-              <div className="text-gray-800 text-sm font-medium leading-relaxed">
-                {renderTextWithLinks(comment.content)}
-              </div>
-              <div className="flex gap-4 mt-3 text-[9px] font-black uppercase tracking-tighter">
-                <button onClick={() => handleReaction(comment.id, 'like')} className={`${userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'} hover:text-indigo-600 transition-colors flex items-center gap-1`}>
-                  <i className={`fa-${userReaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i> {likes} Like
-                </button>
-                <button onClick={() => handleReaction(comment.id, 'dislike')} className={`${userReaction === 'dislike' ? 'text-red-600' : 'text-gray-400'} hover:text-red-600 transition-colors flex items-center gap-1`}>
-                  <i className={`fa-${userReaction === 'dislike' ? 'solid' : 'regular'} fa-thumbs-down`}></i> {dislikes} Dislike
-                </button>
-                <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400 hover:text-indigo-600">Reply</button>
-              </div>
-              
-              {replyTo === comment.id && (
-                <form onSubmit={(e) => handlePostComment(e, pollId, comment.id)} className="mt-3 flex gap-2">
-                  <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-xs outline-none border border-gray-100 shadow-sm" />
-                  <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[9px] font-black uppercase">Send</button>
-                </form>
-              )}
-            </div>
-            {renderComments(pollComments, pollId, comment.id, depth + 1)}
-          </div>
-        );
-      });
-  };
-
   const adminRequest = async (action: string, payload: any) => {
     if (!supabase) throw new Error("Database not ready");
     const { data: { session } } = await supabase.auth.getSession();
@@ -311,6 +238,11 @@ export default function App() {
     return data;
   };
 
+  const hasUserVoted = (poll: any) => {
+    if (!user) return false;
+    return (poll.poll_votes || []).some((v: any) => v.user_id === user.id);
+  };
+
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col font-sans overflow-hidden">
@@ -321,11 +253,6 @@ export default function App() {
       </div>
     );
   }
-
-  const hasUserVoted = (poll: any) => {
-    if (!user) return false;
-    return (poll.poll_votes || []).some((v: any) => v.user_id === user.id);
-  };
 
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
@@ -341,7 +268,7 @@ export default function App() {
               </div>
               <h3 className="text-xl font-black uppercase tracking-tight">Confirm Your Vote</h3>
               <p className="text-gray-500 text-sm">
-                You are voting for <span className="text-indigo-600 font-bold">"{pendingVote.optionText}"</span> on the poll <span className="font-bold">"{selectedPoll?.title}"</span>.
+                You are voting for <span className="text-indigo-600 font-bold">"{pendingVote.optionText}"</span> on the poll <span className="font-bold">"{polls.find(p => p.id === pendingVote.pollId)?.title}"</span>.
               </p>
             </div>
 
@@ -436,7 +363,7 @@ export default function App() {
                       )}
                     </div>
                     <button className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black uppercase text-[10px] ${voted ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white'}`}>
-                      {voted ? 'View Discussion' : 'Vote & Discuss'}
+                      {voted ? 'View Results' : 'Vote & Discuss'}
                     </button>
                   </div>
                 );
@@ -454,32 +381,6 @@ export default function App() {
                   <div className="text-gray-600 text-sm leading-relaxed border-l-4 border-indigo-100 pl-4 py-2">
                     {renderTextWithLinks(selectedPoll.description)}
                   </div>
-                  
-                  {(selectedPoll.documents || selectedPoll.relevant_documents) && (
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                      <h4 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Relevant Documents</h4>
-                      <div className="flex flex-wrap gap-3">
-                        {(selectedPoll.documents || selectedPoll.relevant_documents).map((doc: any, i: number) => (
-                          <a 
-                            key={i} 
-                            href={doc.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-400 transition-all shadow-sm"
-                          >
-                            <i className="fa-solid fa-file-pdf text-red-500"></i>
-                            <span className="text-[10px] font-black uppercase text-gray-700">{doc.title || `Document ${i+1}`}</span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {hasUserVoted(selectedPoll) && (
-                    <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest bg-indigo-50 inline-block px-3 py-1 rounded-full">
-                      <i className="fa-solid fa-check-double mr-1"></i> Vote Recorded ({selectedPoll.poll_votes?.length || 0} Total)
-                    </p>
-                  )}
                 </div>
 
                 <div className="space-y-6 md:space-y-8">
@@ -496,7 +397,7 @@ export default function App() {
                       <div key={opt.id} className="space-y-3">
                         <button 
                           onClick={() => initiateVote(selectedPoll.id, opt.id, opt.text)} 
-                          className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all group ${hasVotedThis ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-50 hover:border-indigo-200'}`}
+                          className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all group ${hasVotedThis ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-100 hover:border-indigo-200'}`}
                         >
                           {userHasVotedInPoll && (
                             <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-700" style={{ width: `${percent}%` }}></div>
@@ -520,12 +421,12 @@ export default function App() {
                              {votersForThisOption.map((vote: any, vIdx: number) => (
                                <div key={vIdx} className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded-full border border-gray-200">
                                  <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-[7px] font-black text-indigo-700 uppercase">
-                                   {vote.is_anonymous ? '?' : vote.profiles?.full_name?.charAt(0)}
+                                   {vote.is_anonymous ? '?' : (vote.profiles?.full_name?.charAt(0) || 'V')}
                                  </div>
                                  <span className="text-[8px] font-black uppercase text-gray-500">
                                    {vote.is_anonymous 
                                       ? `Anonymous Voter • Dist ${vote.profiles?.district || '?'}` 
-                                      : `${vote.profiles?.full_name} • Dist ${vote.profiles?.district || '?'}`}
+                                      : `${vote.profiles?.full_name || 'Voter'} • Dist ${vote.profiles?.district || '?'}`}
                                  </span>
                                </div>
                              ))}
@@ -540,26 +441,21 @@ export default function App() {
                       Cast your vote to see real-time results and who voted for what.
                     </p>
                   )}
-                  {hasUserVoted(selectedPoll) && (
-                    <p className="text-center text-[9px] font-black uppercase text-indigo-400 mt-4 tracking-widest">
-                      Your vote is cast. Results and voter names are visible above.
-                    </p>
-                  )}
                 </div>
 
                 <div className="pt-8 border-t border-gray-100">
-                   <div className="flex items-center justify-between mb-6">
-                     <h3 className="font-black uppercase text-gray-400 text-[10px] tracking-widest">Verified Voter Discussion</h3>
-                     <span className="text-[9px] font-black text-indigo-600 uppercase bg-indigo-50 px-2 py-1 rounded-lg">
-                       {selectedPoll.poll_comments?.length || 0} Comments
-                     </span>
-                   </div>
+                   <h3 className="font-black uppercase text-gray-400 text-[10px] tracking-widest mb-6">Discussion</h3>
                    <div className="space-y-4">
-                     {renderComments(selectedPoll.poll_comments || [], selectedPoll.id)}
+                     {(selectedPoll.poll_comments || []).map((comment: any) => (
+                       <div key={comment.id} className="bg-gray-50 p-4 rounded-2xl">
+                          <p className="text-[9px] font-black uppercase text-indigo-600 mb-1">{comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}</p>
+                          <p className="text-gray-800 text-sm">{comment.content}</p>
+                       </div>
+                     ))}
                    </div>
-                   <form onSubmit={(e) => handlePostComment(e, selectedPoll.id)} className="mt-8 flex flex-col sm:flex-row gap-3">
-                     <input name="content" required placeholder="Add your perspective..." className="flex-grow p-4 bg-gray-50 rounded-xl font-bold outline-none text-sm border border-transparent focus:border-indigo-100 transition-colors" />
-                     <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-black uppercase text-[10px] shadow-lg hover:bg-indigo-700">Post Comment</button>
+                   <form onSubmit={(e) => handlePostComment(e, selectedPoll.id)} className="mt-8 flex gap-3">
+                     <input name="content" required placeholder="Add your perspective..." className="flex-grow p-4 bg-gray-100 rounded-xl text-sm border-0 focus:ring-2 focus:ring-indigo-100" />
+                     <button type="submit" className="bg-indigo-600 text-white px-6 rounded-xl font-black uppercase text-[10px]">Post</button>
                    </form>
                 </div>
              </div>
@@ -568,26 +464,30 @@ export default function App() {
 
         {currentPage === 'suggestions' && (
           <div className="max-w-4xl mx-auto space-y-12">
-             <div className="bg-white p-6 md:p-10 rounded-[2rem] shadow-xl border-2 border-indigo-50">
-               <h2 className="text-2xl md:text-3xl font-black uppercase text-indigo-600 mb-6 leading-none">Suggestion Box</h2>
+             <div className="bg-white p-10 rounded-[2rem] shadow-xl border-2 border-indigo-50">
+               <h2 className="text-2xl font-black uppercase text-indigo-600 mb-6">Suggestion Box</h2>
                <form onSubmit={async (e) => {
                  e.preventDefault();
                  if (!supabase) return;
                  const fd = new FormData(e.currentTarget);
-                 const { error } = await supabase.from('suggestions').insert({ content: fd.get('content'), is_public: fd.get('isPublic') === 'on', user_id: user?.id });
+                 const { error } = await supabase.from('suggestions').insert({ 
+                   content: fd.get('content'), 
+                   is_public: fd.get('isPublic') === 'on', 
+                   user_id: user?.id 
+                 });
                  if (!error) { showToast("Thank you!"); fetchSuggestions(); (e.target as any).reset(); }
                }} className="space-y-6">
-                 <textarea name="content" required placeholder="Share an idea with local officials..." className="w-full h-32 md:h-40 bg-gray-50 rounded-3xl p-6 outline-none font-bold text-sm md:text-base border border-transparent focus:border-indigo-100" />
+                 <textarea name="content" required placeholder="Share an idea..." className="w-full h-32 bg-gray-50 rounded-3xl p-6 outline-none font-bold text-sm border-0" />
                  <div className="flex justify-between items-center">
                    <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" name="isPublic" defaultChecked /> <span className="text-[10px] font-black uppercase text-gray-400">Public visibility</span></label>
                    <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-2xl font-black uppercase text-xs">Submit</button>
                  </div>
                </form>
              </div>
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {suggestions.filter(s => s.is_public).map(s => (
-                 <div key={s.id} className="bg-white p-6 md:p-8 rounded-[2rem] shadow-sm border border-gray-100">
-                   <p className="text-gray-800 font-bold mb-4 italic text-sm">"{s.content}"</p>
+                 <div key={s.id} className="bg-white p-6 rounded-[2rem] shadow-sm border border-gray-100">
+                   <p className="text-gray-800 font-bold mb-4 text-sm">"{s.content}"</p>
                    <span className="text-[9px] font-black uppercase text-indigo-400">{s.profiles?.full_name || 'Voter'} • Dist {s.profiles?.district || '?'}</span>
                  </div>
                ))}
@@ -597,9 +497,9 @@ export default function App() {
 
         {currentPage === 'admin' && profile?.is_admin && (
            <div className="max-w-5xl mx-auto space-y-12">
-             <h2 className="text-4xl md:text-5xl font-black uppercase text-red-600 tracking-tighter">Admin Control</h2>
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-white p-8 rounded-[3rem] shadow-xl border-2 border-red-50">
+             <h2 className="text-4xl font-black uppercase text-red-600">Admin Control</h2>
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="bg-white p-8 rounded-[3rem] shadow-xl">
                   <h3 className="text-xl font-black uppercase mb-8">Deploy New Poll</h3>
                   <form onSubmit={async (e) => {
                     e.preventDefault();
@@ -607,7 +507,7 @@ export default function App() {
                     const options = (fd.get('options') as string).split(',').map(s => s.trim());
                     try {
                       await adminRequest('CREATE_POLL', {
-                        pollData: { title: fd.get('title'), description: fd.get('description'), closed_at: fd.get('closedAt'), is_anonymous_voting: fd.get('isAnon') === 'on' },
+                        pollData: { title: fd.get('title'), description: fd.get('description'), closed_at: fd.get('closedAt') },
                         options
                       });
                       showToast("Poll Launched!");
@@ -615,26 +515,23 @@ export default function App() {
                       (e.target as HTMLFormElement).reset();
                     } catch (err: any) { showToast(err.message, 'error'); }
                   }} className="space-y-4">
-                    <input name="title" required placeholder="Question Title" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
-                    <textarea name="description" placeholder="Details (Links are auto-detected)..." className="w-full p-4 bg-gray-50 rounded-xl font-bold h-24 text-sm" />
-                    <input name="options" required placeholder="Options (comma separated)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
-                    <input type="datetime-local" name="closedAt" required className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
-                    <button type="submit" className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase shadow-xl text-xs">Launch Poll</button>
+                    <input name="title" required placeholder="Question Title" className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
+                    <textarea name="description" placeholder="Details..." className="w-full p-4 bg-gray-50 rounded-xl font-bold h-24" />
+                    <input name="options" required placeholder="Options (comma separated)" className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
+                    <input type="datetime-local" name="closedAt" required className="w-full p-4 bg-gray-50 rounded-xl font-bold" />
+                    <button type="submit" className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase text-xs">Launch Poll</button>
                   </form>
                 </div>
-                <div className="bg-gray-900 p-8 rounded-[3rem] text-white shadow-2xl">
-                  <h3 className="text-xl font-black uppercase mb-6 text-red-500">Registry Moderation</h3>
+                <div className="bg-gray-900 p-8 rounded-[3rem] text-white">
+                  <h3 className="text-xl font-black uppercase mb-6 text-red-500">Users</h3>
                   <div className="space-y-3 max-h-[400px] overflow-y-auto">
                     {allUsers.map(u => (
-                      <div key={u.id} className="flex justify-between items-center p-4 rounded-2xl bg-white/5 border border-white/10">
-                        <div className="truncate pr-4">
-                          <p className="text-[10px] font-black uppercase truncate">{u.full_name}</p>
-                          <p className="text-[8px] text-gray-500 font-black uppercase">Dist {u.district}</p>
-                        </div>
+                      <div key={u.id} className="flex justify-between items-center p-4 bg-white/5 rounded-2xl">
+                        <span className="text-[10px] font-black uppercase">{u.full_name}</span>
                         <button onClick={async () => {
                           await adminRequest('BAN_USER', { targetUserId: u.id, isBanned: !u.is_banned });
                           fetchUsers();
-                        }} className={`shrink-0 px-4 py-1 rounded-full text-[8px] font-black uppercase ${u.is_banned ? 'bg-red-600' : 'border border-white/20'}`}>
+                        }} className={`px-4 py-1 rounded-full text-[8px] font-black uppercase ${u.is_banned ? 'bg-red-600' : 'border border-white/20'}`}>
                           {u.is_banned ? 'Unban' : 'Ban'}
                         </button>
                       </div>
@@ -650,7 +547,7 @@ export default function App() {
             {DASHBOARDS.filter(d => d.category === selectedCategory).map(dash => (
               <div key={dash.id} onClick={() => setActiveDashboard(dash)} className="bg-white p-8 rounded-[2rem] shadow-sm border border-gray-100 hover:shadow-xl transition-all cursor-pointer flex flex-col group">
                 <h4 className="text-xl font-black text-gray-800 uppercase mb-2">{dash.title}</h4>
-                <p className="text-gray-400 text-xs mb-6 leading-relaxed">{dash.description}</p>
+                <p className="text-gray-400 text-xs mb-6">{dash.description}</p>
                 <div className="mt-auto pt-6 border-t border-gray-50 flex justify-between items-center">
                   <span className="text-indigo-600 text-[10px] font-black uppercase">Open Analysis</span>
                   <i className="fa-solid fa-arrow-right text-indigo-200 group-hover:translate-x-2 transition-transform"></i>
@@ -661,18 +558,21 @@ export default function App() {
         )}
 
         {currentPage === 'login' && (
-          <div className="max-w-md mx-auto bg-white p-8 md:p-10 rounded-[3rem] shadow-2xl">
+          <div className="max-w-md mx-auto bg-white p-10 rounded-[3rem] shadow-2xl">
             <h2 className="text-3xl font-black text-center mb-8 uppercase text-indigo-600">Sign In</h2>
             <form className="space-y-4" onSubmit={async (e) => {
               e.preventDefault();
               if (!supabase) return;
               const fd = new FormData(e.currentTarget);
-              const { error } = await supabase.auth.signInWithPassword({ email: fd.get('email') as string, password: fd.get('password') as string });
+              const { error } = await supabase.auth.signInWithPassword({ 
+                email: fd.get('email') as string, 
+                password: fd.get('password') as string 
+              });
               if (error) showToast(error.message, 'error'); else setCurrentPage('home');
             }}>
-              <input name="email" type="email" required placeholder="EMAIL" className="w-full p-4 bg-gray-50 rounded-xl font-bold outline-none text-sm" />
-              <input name="password" type="password" required placeholder="PASSWORD" className="w-full p-4 bg-gray-50 rounded-xl font-bold outline-none text-sm" />
-              <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase shadow-xl text-xs">LOGIN</button>
+              <input name="email" type="email" required placeholder="EMAIL" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
+              <input name="password" type="password" required placeholder="PASSWORD" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
+              <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs">LOGIN</button>
             </form>
           </div>
         )}

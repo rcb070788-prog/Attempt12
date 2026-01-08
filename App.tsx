@@ -11,7 +11,6 @@ const supabase = (supabaseUrl && supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
-// Utility to make URLs clickable in text
 const renderTextWithLinks = (text: string) => {
   if (!text) return null;
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -50,12 +49,14 @@ export default function App() {
   const [profile, setProfile] = useState<any>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
-  // Feature Data
   const [polls, setPolls] = useState<any[]>([]);
   const [selectedPoll, setSelectedPoll] = useState<any>(null);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [replyTo, setReplyTo] = useState<string | null>(null);
+
+  // Voting Confirmation Modal State
+  const [pendingVote, setPendingVote] = useState<{pollId: string, optionId: string, optionText: string, isAnonymous: boolean} | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -108,7 +109,7 @@ export default function App() {
         .select(`
           *,
           poll_options(*),
-          poll_votes(*),
+          poll_votes(*, profiles(full_name, district)),
           poll_comments(*, 
             profiles(full_name, district),
             comment_reactions(*)
@@ -189,28 +190,61 @@ export default function App() {
     }
   };
 
-  const handleVote = async (pollId: string, optionId: string) => {
+  const initiateVote = (pollId: string, optionId: string, optionText: string) => {
     if (!user) return setCurrentPage('login');
-    if (!supabase) return;
-
-    // Check if re-voting or first time voting
     const currentPoll = polls.find(p => p.id === pollId);
     const existingVote = currentPoll?.poll_votes?.find((v: any) => v.user_id === user.id);
-    const isChange = existingVote && existingVote.option_id !== optionId;
+    
+    // If they click what they already selected, do nothing
+    if (existingVote?.option_id === optionId) return;
+
+    setPendingVote({
+      pollId,
+      optionId,
+      optionText,
+      isAnonymous: false
+    });
+  };
+
+  const confirmVote = async () => {
+    if (!pendingVote || !supabase) return;
+    const { pollId, optionId, isAnonymous } = pendingVote;
+    
+    const currentPoll = polls.find(p => p.id === pollId);
+    const existingVote = currentPoll?.poll_votes?.find((v: any) => v.user_id === user.id);
+    const isChange = !!existingVote;
 
     // Optimistic Update
     const updatedPolls = polls.map(p => {
       if (p.id === pollId) {
         const votes = p.poll_votes || [];
         const filtered = votes.filter((v: any) => v.user_id !== user.id);
-        return { ...p, poll_votes: [...filtered, { poll_id: pollId, option_id: optionId, user_id: user.id }] };
+        return { 
+          ...p, 
+          poll_votes: [
+            ...filtered, 
+            { 
+              poll_id: pollId, 
+              option_id: optionId, 
+              user_id: user.id, 
+              is_anonymous: isAnonymous,
+              profiles: profile 
+            }
+          ] 
+        };
       }
       return p;
     });
     setPolls(updatedPolls);
+    setPendingVote(null);
 
     const { error } = await supabase.from('poll_votes').upsert(
-      { poll_id: pollId, option_id: optionId, user_id: user.id }, 
+      { 
+        poll_id: pollId, 
+        option_id: optionId, 
+        user_id: user.id,
+        is_anonymous: isAnonymous
+      }, 
       { onConflict: 'poll_id,user_id' }
     );
     
@@ -219,6 +253,7 @@ export default function App() {
       fetchPolls();
     } else {
       showToast(isChange ? "Vote updated successfully" : "Vote recorded");
+      fetchPolls();
     }
   };
 
@@ -295,6 +330,45 @@ export default function App() {
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
+
+      {/* Confirmation Modal */}
+      {pendingVote && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 md:p-10 space-y-6">
+            <div className="text-center space-y-2">
+              <div className="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mx-auto text-2xl mb-4">
+                <i className="fa-solid fa-vote-yea"></i>
+              </div>
+              <h3 className="text-xl font-black uppercase tracking-tight">Confirm Your Vote</h3>
+              <p className="text-gray-500 text-sm">
+                You are voting for <span className="text-indigo-600 font-bold">"{pendingVote.optionText}"</span> on the poll <span className="font-bold">"{selectedPoll?.title}"</span>.
+              </p>
+            </div>
+
+            <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 flex items-center justify-between">
+               <div className="space-y-1">
+                 <p className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Anonymity Toggle</p>
+                 <p className="text-xs text-gray-600 font-medium">Cast vote anonymously?</p>
+               </div>
+               <button 
+                onClick={() => setPendingVote({...pendingVote, isAnonymous: !pendingVote.isAnonymous})}
+                className={`w-12 h-6 rounded-full transition-all relative ${pendingVote.isAnonymous ? 'bg-indigo-600' : 'bg-gray-300'}`}
+               >
+                 <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${pendingVote.isAnonymous ? 'left-7' : 'left-1'}`}></div>
+               </button>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <button onClick={confirmVote} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg hover:bg-indigo-700 transition-all">
+                Confirm & Cast Vote
+              </button>
+              <button onClick={() => setPendingVote(null)} className="w-full py-4 bg-white text-gray-400 rounded-2xl font-black uppercase text-[10px] border border-gray-100 hover:bg-gray-50">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <nav className="bg-white shadow-sm px-4 py-3 z-50 shrink-0 border-b border-gray-100">
         <div className="container mx-auto flex flex-col md:flex-row gap-4 md:items-center justify-between">
@@ -329,7 +403,7 @@ export default function App() {
         {currentPage === 'home' && (
           <div className="max-w-4xl mx-auto space-y-12 text-center py-10">
              <header className="space-y-4">
-               <h1 className="text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter">Moore County Transparency</h1>
+               <h1 className="text-4xl md:text-5xl font-black text-gray-900 uppercase tracking-tighter text-balance">Moore County Transparency Hub</h1>
                <p className="text-gray-500 text-lg md:text-xl font-medium px-4">Verified voter records & local budget oversight.</p>
              </header>
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -374,14 +448,13 @@ export default function App() {
         {currentPage === 'polls' && selectedPoll && (
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 pb-20">
              <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2 transition-all hover:text-indigo-600"><i className="fa-solid fa-arrow-left"></i> Back to All Polls</button>
-             <div className="bg-white p-6 md:p-10 rounded-[2rem] shadow-xl border border-gray-100 space-y-6 md:space-y-8">
+             <div className="bg-white p-6 md:p-10 rounded-[2rem] shadow-xl border border-gray-100 space-y-6 md:space-y-10">
                 <div className="space-y-4">
                   <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none">{selectedPoll.title}</h2>
                   <div className="text-gray-600 text-sm leading-relaxed border-l-4 border-indigo-100 pl-4 py-2">
                     {renderTextWithLinks(selectedPoll.description)}
                   </div>
                   
-                  {/* DOCUMENT SECTION */}
                   {(selectedPoll.documents || selectedPoll.relevant_documents) && (
                     <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
                       <h4 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Relevant Documents</h4>
@@ -409,52 +482,78 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="space-y-3 md:space-y-4">
+                <div className="space-y-6 md:space-y-8">
                   {selectedPoll.poll_options?.map((opt: any) => {
                     const votesList = selectedPoll.poll_votes || [];
                     const totalVotes = votesList.length;
-                    const votes = votesList.filter((v: any) => v.option_id === opt.id).length;
+                    const votersForThisOption = votesList.filter((v: any) => v.option_id === opt.id);
+                    const votes = votersForThisOption.length;
                     const hasVotedThis = votesList.some((v: any) => v.user_id === user?.id && v.option_id === opt.id);
                     const userHasVotedInPoll = hasUserVoted(selectedPoll);
                     const percent = totalVotes === 0 ? 0 : Math.round((votes / totalVotes) * 100);
                     
                     return (
-                      <button 
-                        key={opt.id} 
-                        onClick={() => handleVote(selectedPoll.id, opt.id)} 
-                        className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all group ${hasVotedThis ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-50 hover:border-indigo-200'}`}
-                      >
-                        {userHasVotedInPoll && (
-                          <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-700" style={{ width: `${percent}%` }}></div>
-                        )}
-                        <div className="relative flex justify-between font-black uppercase text-[10px] md:text-xs">
-                          <span className="flex items-center gap-3">
-                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${hasVotedThis ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 group-hover:border-indigo-400'}`}>
-                              {hasVotedThis && <i className="fa-solid fa-check text-white text-[8px]"></i>}
-                            </div>
-                            {opt.text}
-                          </span>
+                      <div key={opt.id} className="space-y-3">
+                        <button 
+                          onClick={() => initiateVote(selectedPoll.id, opt.id, opt.text)} 
+                          className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all group ${hasVotedThis ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-50 hover:border-indigo-200'}`}
+                        >
                           {userHasVotedInPoll && (
-                            <span className={`${hasVotedThis ? 'text-indigo-600' : 'text-indigo-300'}`}>{percent}%</span>
+                            <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-700" style={{ width: `${percent}%` }}></div>
                           )}
-                        </div>
-                      </button>
+                          <div className="relative flex justify-between font-black uppercase text-[10px] md:text-xs">
+                            <span className="flex items-center gap-3">
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${hasVotedThis ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 group-hover:border-indigo-400'}`}>
+                                {hasVotedThis && <i className="fa-solid fa-check text-white text-[8px]"></i>}
+                              </div>
+                              {opt.text}
+                            </span>
+                            {userHasVotedInPoll && (
+                              <span className={`${hasVotedThis ? 'text-indigo-600' : 'text-indigo-300'}`}>{percent}%</span>
+                            )}
+                          </div>
+                        </button>
+                        
+                        {/* Facebook-style Result Badges */}
+                        {userHasVotedInPoll && votersForThisOption.length > 0 && (
+                          <div className="flex flex-wrap gap-2 px-2">
+                             {votersForThisOption.map((vote: any, vIdx: number) => (
+                               <div key={vIdx} className="flex items-center gap-1.5 bg-gray-100 px-2 py-1 rounded-full border border-gray-200">
+                                 <div className="w-4 h-4 rounded-full bg-indigo-200 flex items-center justify-center text-[7px] font-black text-indigo-700 uppercase">
+                                   {vote.is_anonymous ? '?' : vote.profiles?.full_name?.charAt(0)}
+                                 </div>
+                                 <span className="text-[8px] font-black uppercase text-gray-500">
+                                   {vote.is_anonymous 
+                                      ? `Anonymous Voter • Dist ${vote.profiles?.district || '?'}` 
+                                      : `${vote.profiles?.full_name} • Dist ${vote.profiles?.district || '?'}`}
+                                 </span>
+                               </div>
+                             ))}
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
+
                   {!hasUserVoted(selectedPoll) && (
                     <p className="text-center text-[9px] font-black uppercase text-gray-400 mt-4 tracking-widest italic">
-                      Cast your vote to see real-time results. You can change your selection at any time while the poll is open.
+                      Cast your vote to see real-time results and who voted for what.
                     </p>
                   )}
                   {hasUserVoted(selectedPoll) && (
                     <p className="text-center text-[9px] font-black uppercase text-indigo-400 mt-4 tracking-widest">
-                      Your vote is cast. Click another option to change your choice.
+                      Your vote is cast. Results and voter names are visible above.
                     </p>
                   )}
                 </div>
 
                 <div className="pt-8 border-t border-gray-100">
-                   <h3 className="font-black uppercase text-gray-400 text-[10px] mb-6 tracking-widest">Verified Voter Discussion</h3>
+                   <div className="flex items-center justify-between mb-6">
+                     <h3 className="font-black uppercase text-gray-400 text-[10px] tracking-widest">Verified Voter Discussion</h3>
+                     <span className="text-[9px] font-black text-indigo-600 uppercase bg-indigo-50 px-2 py-1 rounded-lg">
+                       {selectedPoll.poll_comments?.length || 0} Comments
+                     </span>
+                   </div>
                    <div className="space-y-4">
                      {renderComments(selectedPoll.poll_comments || [], selectedPoll.id)}
                    </div>

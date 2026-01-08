@@ -11,6 +11,30 @@ const supabase = (supabaseUrl && supabaseAnonKey)
   ? createClient(supabaseUrl, supabaseAnonKey) 
   : null;
 
+// Utility to make URLs clickable in text
+const renderTextWithLinks = (text: string) => {
+  if (!text) return null;
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a 
+          key={i} 
+          href={part} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="text-indigo-600 hover:underline break-all"
+          onClick={(e) => e.stopPropagation()}
+        >
+          {part} <i className="fa-solid fa-external-link text-[8px] ml-1"></i>
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 const Toast = ({ message, type }: { message: string, type: 'success' | 'error' }) => (
   <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl text-white z-[100] transition-all transform animate-bounce ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
     <i className={`fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} mr-2`}></i>
@@ -51,7 +75,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Update Selected Poll whenever the main polls list changes
   useEffect(() => {
     if (selectedPoll) {
       const updated = polls.find(p => p.id === selectedPoll.id);
@@ -125,7 +148,6 @@ export default function App() {
     const fd = new FormData(e.currentTarget);
     const content = fd.get('content') as string;
     
-    // Reset UI immediately
     setReplyTo(null);
     (e.target as HTMLFormElement).reset();
 
@@ -137,14 +159,13 @@ export default function App() {
     });
     
     if (error) showToast("Error: " + error.message, "error");
-    else fetchPolls(); // Refresh to show the new comment
+    else fetchPolls();
   };
 
   const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
     if (!user) return setCurrentPage('login');
     if (!supabase) return;
     
-    // Optimistic Update: Manually adjust the local count so it feels instant
     const updatedPolls = [...polls].map(p => ({
       ...p,
       poll_comments: p.poll_comments?.map((c: any) => {
@@ -164,7 +185,7 @@ export default function App() {
     );
     if (error) {
       showToast("Reaction failed", "error");
-      fetchPolls(); // Rollback if error
+      fetchPolls();
     }
   };
 
@@ -172,7 +193,12 @@ export default function App() {
     if (!user) return setCurrentPage('login');
     if (!supabase) return;
 
-    // Optimistic Update: Mark the vote locally immediately
+    // Check if re-voting or first time voting
+    const currentPoll = polls.find(p => p.id === pollId);
+    const existingVote = currentPoll?.poll_votes?.find((v: any) => v.user_id === user.id);
+    const isChange = existingVote && existingVote.option_id !== optionId;
+
+    // Optimistic Update
     const updatedPolls = polls.map(p => {
       if (p.id === pollId) {
         const votes = p.poll_votes || [];
@@ -183,10 +209,16 @@ export default function App() {
     });
     setPolls(updatedPolls);
 
-    const { error } = await supabase.from('poll_votes').upsert({ poll_id: pollId, option_id: optionId, user_id: user.id }, { onConflict: 'poll_id,user_id' });
+    const { error } = await supabase.from('poll_votes').upsert(
+      { poll_id: pollId, option_id: optionId, user_id: user.id }, 
+      { onConflict: 'poll_id,user_id' }
+    );
+    
     if (error) {
       showToast(error.message, "error");
       fetchPolls();
+    } else {
+      showToast(isChange ? "Vote updated successfully" : "Vote recorded");
     }
   };
 
@@ -205,7 +237,9 @@ export default function App() {
               <span className="text-[9px] font-black uppercase text-indigo-600 mb-1">
                 {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}
               </span>
-              <p className="text-gray-800 text-sm font-medium leading-relaxed">{comment.content}</p>
+              <div className="text-gray-800 text-sm font-medium leading-relaxed">
+                {renderTextWithLinks(comment.content)}
+              </div>
               <div className="flex gap-4 mt-3 text-[9px] font-black uppercase tracking-tighter">
                 <button onClick={() => handleReaction(comment.id, 'like')} className={`${userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'} hover:text-indigo-600 transition-colors flex items-center gap-1`}>
                   <i className={`fa-${userReaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i> {likes} Like
@@ -253,7 +287,6 @@ export default function App() {
     );
   }
 
-  // Helper to check if current user has voted in a specific poll
   const hasUserVoted = (poll: any) => {
     if (!user) return false;
     return (poll.poll_votes || []).some((v: any) => v.user_id === user.id);
@@ -263,7 +296,6 @@ export default function App() {
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
       
-      {/* IMPROVED NAVIGATION FOR MOBILE */}
       <nav className="bg-white shadow-sm px-4 py-3 z-50 shrink-0 border-b border-gray-100">
         <div className="container mx-auto flex flex-col md:flex-row gap-4 md:items-center justify-between">
           <div className="flex items-center justify-between">
@@ -271,7 +303,6 @@ export default function App() {
               <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
               <span className="text-lg font-bold text-gray-900 tracking-tight uppercase">Finance Hub</span>
             </div>
-            {/* Mobile-only logout button if needed */}
             {!user && (
               <button onClick={() => setCurrentPage('login')} className="md:hidden bg-indigo-600 text-white px-3 py-1 rounded-lg font-black text-[9px] uppercase">Sign In</button>
             )}
@@ -327,7 +358,7 @@ export default function App() {
                           <i className="fa-solid fa-check-circle"></i> {poll.poll_votes?.length || 0} Votes Recorded
                         </p>
                       ) : (
-                        <p className="text-gray-400 font-bold text-[9px] uppercase tracking-widest">Vote to see results</p>
+                        <p className="text-gray-400 font-bold text-[9px] uppercase tracking-widest">Active • Discussion Open</p>
                       )}
                     </div>
                     <button className={`w-full sm:w-auto px-6 py-3 rounded-xl font-black uppercase text-[10px] ${voted ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white'}`}>
@@ -336,27 +367,48 @@ export default function App() {
                   </div>
                 );
               })}
-              {polls.length === 0 && (
-                <div className="text-center py-20 bg-white rounded-[2rem] border-2 border-dashed border-gray-100">
-                  <p className="text-gray-400 font-bold uppercase tracking-widest text-[10px]">No active polls found.</p>
-                </div>
-              )}
             </div>
           </div>
         )}
 
         {currentPage === 'polls' && selectedPoll && (
           <div className="max-w-4xl mx-auto space-y-6 md:space-y-8 pb-20">
-             <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2"><i className="fa-solid fa-arrow-left"></i> Back</button>
+             <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2 transition-all hover:text-indigo-600"><i className="fa-solid fa-arrow-left"></i> Back to All Polls</button>
              <div className="bg-white p-6 md:p-10 rounded-[2rem] shadow-xl border border-gray-100 space-y-6 md:space-y-8">
-                <div className="space-y-2">
+                <div className="space-y-4">
                   <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none">{selectedPoll.title}</h2>
+                  <div className="text-gray-600 text-sm leading-relaxed border-l-4 border-indigo-100 pl-4 py-2">
+                    {renderTextWithLinks(selectedPoll.description)}
+                  </div>
+                  
+                  {/* DOCUMENT SECTION */}
+                  {(selectedPoll.documents || selectedPoll.relevant_documents) && (
+                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                      <h4 className="text-[10px] font-black uppercase text-gray-400 mb-4 tracking-widest">Relevant Documents</h4>
+                      <div className="flex flex-wrap gap-3">
+                        {(selectedPoll.documents || selectedPoll.relevant_documents).map((doc: any, i: number) => (
+                          <a 
+                            key={i} 
+                            href={doc.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl border border-gray-200 hover:border-indigo-400 transition-all shadow-sm"
+                          >
+                            <i className="fa-solid fa-file-pdf text-red-500"></i>
+                            <span className="text-[10px] font-black uppercase text-gray-700">{doc.title || `Document ${i+1}`}</span>
+                          </a>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {hasUserVoted(selectedPoll) && (
-                    <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">
-                      Total: {selectedPoll.poll_votes?.length || 0} Voters
+                    <p className="text-[10px] font-black uppercase text-indigo-600 tracking-widest bg-indigo-50 inline-block px-3 py-1 rounded-full">
+                      <i className="fa-solid fa-check-double mr-1"></i> Vote Recorded ({selectedPoll.poll_votes?.length || 0} Total)
                     </p>
                   )}
                 </div>
+
                 <div className="space-y-3 md:space-y-4">
                   {selectedPoll.poll_options?.map((opt: any) => {
                     const votesList = selectedPoll.poll_votes || [];
@@ -369,20 +421,21 @@ export default function App() {
                     return (
                       <button 
                         key={opt.id} 
-                        disabled={userHasVotedInPoll}
                         onClick={() => handleVote(selectedPoll.id, opt.id)} 
-                        className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all ${hasVotedThis ? 'border-indigo-600' : 'border-gray-50'} ${userHasVotedInPoll ? 'cursor-default' : 'hover:border-indigo-200'}`}
+                        className={`w-full text-left p-5 md:p-6 rounded-2xl border-2 relative overflow-hidden transition-all group ${hasVotedThis ? 'border-indigo-600 bg-indigo-50/30' : 'border-gray-50 hover:border-indigo-200'}`}
                       >
                         {userHasVotedInPoll && (
-                          <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-500" style={{ width: `${percent}%` }}></div>
+                          <div className="absolute inset-y-0 left-0 bg-indigo-600/5 transition-all duration-700" style={{ width: `${percent}%` }}></div>
                         )}
                         <div className="relative flex justify-between font-black uppercase text-[10px] md:text-xs">
-                          <span className="flex items-center gap-2">
-                            {hasVotedThis && <i className="fa-solid fa-circle-check text-indigo-600"></i>}
+                          <span className="flex items-center gap-3">
+                            <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all ${hasVotedThis ? 'border-indigo-600 bg-indigo-600' : 'border-gray-300 group-hover:border-indigo-400'}`}>
+                              {hasVotedThis && <i className="fa-solid fa-check text-white text-[8px]"></i>}
+                            </div>
                             {opt.text}
                           </span>
                           {userHasVotedInPoll && (
-                            <span className="text-indigo-400">{percent}%</span>
+                            <span className={`${hasVotedThis ? 'text-indigo-600' : 'text-indigo-300'}`}>{percent}%</span>
                           )}
                         </div>
                       </button>
@@ -390,18 +443,24 @@ export default function App() {
                   })}
                   {!hasUserVoted(selectedPoll) && (
                     <p className="text-center text-[9px] font-black uppercase text-gray-400 mt-4 tracking-widest italic">
-                      Results are hidden until you cast your vote.
+                      Cast your vote to see real-time results. You can change your selection at any time while the poll is open.
+                    </p>
+                  )}
+                  {hasUserVoted(selectedPoll) && (
+                    <p className="text-center text-[9px] font-black uppercase text-indigo-400 mt-4 tracking-widest">
+                      Your vote is cast. Click another option to change your choice.
                     </p>
                   )}
                 </div>
-                <div className="pt-8 border-t border-gray-50">
+
+                <div className="pt-8 border-t border-gray-100">
                    <h3 className="font-black uppercase text-gray-400 text-[10px] mb-6 tracking-widest">Verified Voter Discussion</h3>
                    <div className="space-y-4">
                      {renderComments(selectedPoll.poll_comments || [], selectedPoll.id)}
                    </div>
                    <form onSubmit={(e) => handlePostComment(e, selectedPoll.id)} className="mt-8 flex flex-col sm:flex-row gap-3">
-                     <input name="content" required placeholder="Add to the conversation..." className="flex-grow p-4 bg-gray-50 rounded-xl font-bold outline-none text-sm border border-transparent focus:border-indigo-100 transition-colors" />
-                     <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-black uppercase text-[10px]">Post</button>
+                     <input name="content" required placeholder="Add your perspective..." className="flex-grow p-4 bg-gray-50 rounded-xl font-bold outline-none text-sm border border-transparent focus:border-indigo-100 transition-colors" />
+                     <button type="submit" className="bg-indigo-600 text-white px-8 py-4 rounded-xl font-black uppercase text-[10px] shadow-lg hover:bg-indigo-700">Post Comment</button>
                    </form>
                 </div>
              </div>
@@ -458,7 +517,7 @@ export default function App() {
                     } catch (err: any) { showToast(err.message, 'error'); }
                   }} className="space-y-4">
                     <input name="title" required placeholder="Question Title" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
-                    <textarea name="description" placeholder="Details..." className="w-full p-4 bg-gray-50 rounded-xl font-bold h-24 text-sm" />
+                    <textarea name="description" placeholder="Details (Links are auto-detected)..." className="w-full p-4 bg-gray-50 rounded-xl font-bold h-24 text-sm" />
                     <input name="options" required placeholder="Options (comma separated)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
                     <input type="datetime-local" name="closedAt" required className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm" />
                     <button type="submit" className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase shadow-xl text-xs">Launch Poll</button>

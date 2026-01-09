@@ -96,7 +96,6 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Update selected poll details when the main polls list is refreshed
   useEffect(() => {
     if (selectedPoll) {
       const updated = polls.find(p => p.id === selectedPoll.id);
@@ -244,7 +243,7 @@ export default function App() {
     if (!user) return setCurrentPage('login');
     const poll = polls.find(p => p.id === pollId);
     const existingVote = poll?.poll_votes?.find((v: any) => v.user_id === user.id);
-    if (existingVote?.option_id === optionId) return; // Already voted this
+    if (existingVote?.option_id === optionId) return; 
     setPendingVote({ pollId, optionId, optionText, isAnonymous: false });
   };
 
@@ -268,61 +267,79 @@ export default function App() {
     setPendingVote(null);
   };
 
+  // --- REACTION HANDLER (Like/Dislike) ---
+  const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
+    if (!user) return setCurrentPage('login');
+    if (!supabase) return;
+
+    const { error } = await supabase.from('comment_reactions').upsert(
+      { comment_id: commentId, user_id: user.id, reaction_type: type },
+      { onConflict: 'comment_id,user_id' }
+    );
+    
+    if (error) showToast("Reaction failed", "error");
+    else fetchPolls();
+  };
+
   // --- COMMENT LOGIC ---
   const renderComments = (pollComments: any[], pollId: string, parentId: string | null = null, depth = 0) => {
     return (pollComments || [])
       .filter(c => c.parent_id === parentId && !c.is_hidden)
-      .map(comment => (
-        <div key={comment.id} className={`${depth > 0 ? 'ml-6 mt-2 border-l-2 border-gray-100 pl-4' : 'bg-gray-50 p-4 rounded-2xl mb-4'}`}>
-          <div className="flex flex-col">
-            <span className="text-[9px] font-black uppercase text-indigo-600 mb-1">
-              {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}
-            </span>
-            <div className="text-gray-800 text-sm font-medium leading-relaxed">
-              {renderTextWithLinks(comment.content)}
+      .map(comment => {
+        const reactions = comment.comment_reactions || [];
+        const likes = reactions.filter((r: any) => r.reaction_type === 'like').length;
+        const dislikes = reactions.filter((r: any) => r.reaction_type === 'dislike').length;
+        const userReaction = reactions.find((r: any) => r.user_id === user?.id)?.reaction_type;
+
+        return (
+          <div key={comment.id} className={`${depth > 0 ? 'ml-6 mt-2 border-l-2 border-gray-100 pl-4' : 'bg-gray-50 p-4 rounded-2xl mb-4'}`}>
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black uppercase text-indigo-600 mb-1">
+                {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}
+              </span>
+              <div className="text-gray-800 text-sm font-medium leading-relaxed">
+                {renderTextWithLinks(comment.content)}
+              </div>
+              <div className="flex gap-4 mt-3 text-[9px] font-black uppercase tracking-widest">
+                <button 
+                  onClick={() => handleReaction(comment.id, 'like')} 
+                  className={`${userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'} hover:text-indigo-600 transition-colors flex items-center gap-1`}
+                >
+                  <i className={`fa-${userReaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i> {likes}
+                </button>
+                <button 
+                  onClick={() => handleReaction(comment.id, 'dislike')} 
+                  className={`${userReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'} hover:text-red-500 transition-colors flex items-center gap-1`}
+                >
+                  <i className={`fa-${userReaction === 'dislike' ? 'solid' : 'regular'} fa-thumbs-down`}></i> {dislikes}
+                </button>
+                <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400 hover:text-indigo-600">Reply</button>
+              </div>
+              
+              {replyTo === comment.id && (
+                <form onSubmit={async (e) => {
+                  e.preventDefault();
+                  const fd = new FormData(e.currentTarget);
+                  const content = fd.get('content') as string;
+                  await supabase?.from('poll_comments').insert({ 
+                    poll_id: pollId, 
+                    user_id: user.id, 
+                    content, 
+                    parent_id: comment.id 
+                  });
+                  setReplyTo(null); fetchPolls();
+                }} className="mt-3 flex gap-2">
+                  <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-xs outline-none border shadow-sm" />
+                  <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[9px] font-black uppercase">Send</button>
+                </form>
+              )}
             </div>
-            <div className="flex gap-4 mt-3 text-[9px] font-black uppercase">
-              <button className="text-gray-400 hover:text-indigo-600">Like</button>
-              <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400 hover:text-indigo-600">Reply</button>
-            </div>
-            
-            {replyTo === comment.id && (
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                const fd = new FormData(e.currentTarget);
-                const content = fd.get('content') as string;
-                await supabase?.from('poll_comments').insert({ 
-                  poll_id: pollId, 
-                  user_id: user.id, 
-                  content, 
-                  parent_id: comment.id 
-                });
-                setReplyTo(null); fetchPolls();
-              }} className="mt-3 flex gap-2">
-                <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-xs outline-none border shadow-sm" />
-                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[9px] font-black uppercase">Send</button>
-              </form>
-            )}
+            {renderComments(pollComments, pollId, comment.id, depth + 1)}
           </div>
-          {renderComments(pollComments, pollId, comment.id, depth + 1)}
-        </div>
-      ));
+        );
+      });
   };
 
-  // --- ADMIN ACTIONS ---
-  const adminRequest = async (action: string, payload: any) => {
-    if (!supabase) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    const res = await fetch('/.netlify/functions/admin-actions', {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload })
-    });
-    if (!res.ok) throw new Error("Action failed");
-    return res.json();
-  };
-
-  // --- RENDER HELPERS ---
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden">
@@ -338,7 +355,7 @@ export default function App() {
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
 
-      {/* --- VOTING CONFIRMATION MODAL --- */}
+      {/* --- VOTING MODAL --- */}
       {pendingVote && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
           <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 space-y-6 animate-slide-up">
@@ -366,7 +383,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- MAIN NAVIGATION --- */}
       <nav className="bg-white shadow-sm px-4 py-3 z-50 shrink-0 border-b border-gray-100 flex justify-between items-center">
         <div className="flex items-center gap-6">
           <div className="flex items-center cursor-pointer" onClick={() => { setCurrentPage('home'); setSelectedCategory(null); }}>
@@ -379,16 +395,12 @@ export default function App() {
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {!user && (
-             <button onClick={() => setCurrentPage('login')} className="md:hidden bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-[9px] font-black uppercase">Sign In</button>
-          )}
           <button onClick={() => setIsMenuOpen(true)} className="bg-gray-100 p-2.5 rounded-xl text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm">
             <i className="fa-solid fa-bars-staggered"></i>
           </button>
         </div>
       </nav>
 
-      {/* --- SLIDE-OUT MEGA MENU --- */}
       {isMenuOpen && (
         <div className="fixed inset-0 z-[100] flex justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => setIsMenuOpen(false)}></div>
@@ -436,10 +448,8 @@ export default function App() {
         </div>
       )}
 
-      {/* --- CONTENT AREA --- */}
       <main className="flex-grow overflow-y-auto container mx-auto px-4 py-8 custom-scrollbar">
         
-        {/* HOME / DASHBOARD CATEGORIES */}
         {currentPage === 'home' && !selectedCategory && (
           <div className="max-w-4xl mx-auto space-y-12 py-10">
             <header className="text-center space-y-4">
@@ -462,13 +472,12 @@ export default function App() {
           </div>
         )}
 
-        {/* DASHBOARDS LISTING */}
         {currentPage === 'home' && selectedCategory && (
           <div className="max-w-5xl mx-auto space-y-8">
             <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors flex items-center gap-2">
               <i className="fa-solid fa-arrow-left"></i> Back to Categories
             </button>
-            <h2 className="text-3xl font-black uppercase tracking-tighter">{selectedCategory} Dashboards</h2>
+            <h2 className="text-3xl font-black uppercase tracking-tighter">{selectedCategory} Reports</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {DASHBOARDS.filter(d => d.category === selectedCategory).map(dash => (
                 <div key={dash.id} onClick={() => setActiveDashboard(dash)} className="bg-white p-8 rounded-[2rem] border border-gray-100 hover:shadow-xl transition-all cursor-pointer group flex flex-col">
@@ -484,7 +493,6 @@ export default function App() {
           </div>
         )}
 
-        {/* POLLS LIST */}
         {currentPage === 'polls' && !selectedPoll && (
           <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-4xl font-black uppercase tracking-tighter">Community Polls</h2>
@@ -510,7 +518,7 @@ export default function App() {
           </div>
         )}
 
-        {/* SINGLE POLL DETAIL */}
+        {/* --- POLL DETAIL WITH VOTER REGISTRY --- */}
         {currentPage === 'polls' && selectedPoll && (
           <div className="max-w-4xl mx-auto space-y-8 pb-20">
             <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 flex items-center gap-2 transition-all">
@@ -524,7 +532,7 @@ export default function App() {
                 </div>
               </div>
 
-              <div className="space-y-4">
+              <div className="space-y-8">
                 {selectedPoll.poll_options?.map((opt: any) => {
                   const votes = selectedPoll.poll_votes?.filter((v: any) => v.option_id === opt.id) || [];
                   const totalVotes = selectedPoll.poll_votes?.length || 0;
@@ -552,11 +560,14 @@ export default function App() {
                         </div>
                       </button>
                       
+                      {/* VOTER REGISTRY: Only visible once you have voted in this poll */}
                       {hasVotedAny && votes.length > 0 && (
-                        <div className="flex flex-wrap gap-2 px-2">
+                        <div className="flex flex-wrap gap-2 px-2 mt-1">
                           {votes.map((v: any, idx: number) => (
-                            <span key={idx} className="text-[8px] font-black uppercase bg-gray-100 text-gray-500 px-3 py-1 rounded-full border border-gray-200">
-                              {v.is_anonymous ? 'Anonymous' : (v.profiles?.full_name || 'Voter')} • Dist {v.profiles?.district || '?'}
+                            <span key={idx} className="text-[8px] font-black uppercase bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5">
+                              <i className="fa-solid fa-user text-[6px]"></i>
+                              {v.is_anonymous ? 'Anonymous Voter' : (v.profiles?.full_name || 'Verified Voter')} 
+                              <span className="text-gray-300">•</span> Dist {v.profiles?.district || '?'}
                             </span>
                           ))}
                         </div>
@@ -590,10 +601,9 @@ export default function App() {
           </div>
         )}
 
-        {/* MESSAGE BOARD ("LET'S TALK") */}
+        {/* MESSAGE BOARD */}
         {currentPage === 'board' && (
           <div className="flex h-full gap-8 overflow-hidden relative">
-            {/* Archive Sidebar */}
             <aside className={`fixed md:relative top-0 left-0 h-full w-[85%] md:w-80 z-[60] transform transition-transform duration-300 ease-in-out ${isArchiveOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'} bg-white border-r border-gray-100 p-6 flex flex-col shadow-2xl md:shadow-none`}>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-[10px] font-black uppercase tracking-widest text-indigo-900 flex items-center gap-2">
@@ -626,7 +636,6 @@ export default function App() {
               </div>
             </aside>
 
-            {/* Main Board Area */}
             <div className="flex-grow flex flex-col items-center overflow-hidden">
                <div className="w-full max-w-2xl space-y-10 pb-20 overflow-y-auto custom-scrollbar pr-2">
                   <section>
@@ -852,59 +861,45 @@ export default function App() {
              </header>
 
              <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Poll Creation */}
-<div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
-  <h3 className="text-xl font-black uppercase mb-8 flex items-center gap-3">
-    <i className="fa-solid fa-plus-circle text-indigo-600"></i> Deploy New Poll
-  </h3>
-  <form onSubmit={async (e) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
-    const options = (fd.get('options') as string).split(',').map(s => s.trim());
-    
-    try {
-      // 1. Insert the Poll including the closed_at date
-      const { data: poll, error: pError } = await supabase!.from('polls').insert({ 
-        title: fd.get('title'), 
-        description: fd.get('description'),
-        is_anonymous_voting: fd.get('isAnon') === 'on',
-        closed_at: fd.get('closedAt') // <-- Added this
-      }).select().single();
-      
-      if (pError) throw pError;
+                <div className="bg-white p-10 rounded-[3rem] shadow-xl border border-gray-100">
+                  <h3 className="text-xl font-black uppercase mb-8 flex items-center gap-3">
+                    <i className="fa-solid fa-plus-circle text-indigo-600"></i> Deploy New Poll
+                  </h3>
+                  <form onSubmit={async (e) => {
+                    e.preventDefault();
+                    const fd = new FormData(e.currentTarget);
+                    const options = (fd.get('options') as string).split(',').map(s => s.trim());
+                    try {
+                      const { data: poll, error: pError } = await supabase!.from('polls').insert({ 
+                        title: fd.get('title'), 
+                        description: fd.get('description'),
+                        is_anonymous_voting: fd.get('isAnon') === 'on',
+                        closed_at: fd.get('closedAt')
+                      }).select().single();
+                      
+                      if (pError) throw pError;
+                      if (poll) {
+                        await supabase!.from('poll_options').insert(options.map(text => ({ poll_id: poll.id, text })));
+                        showToast("Poll Successfully Launched");
+                        fetchPolls();
+                        (e.target as HTMLFormElement).reset();
+                      }
+                    } catch (err: any) { showToast(err.message, 'error'); }
+                  }} className="space-y-4">
+                    <input name="title" required placeholder="Question Title" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" />
+                    <textarea name="description" placeholder="Poll Details (Supports URLs)..." className="w-full p-4 bg-gray-50 rounded-xl font-bold h-24 text-sm outline-none" />
+                    <input name="options" required placeholder="Options (comma separated: Yes, No, Maybe)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" />
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Poll Closing Date & Time</label>
+                      <input type="datetime-local" name="closedAt" required className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" />
+                    </div>
+                    <label className="flex items-center gap-3 px-2">
+                      <input type="checkbox" name="isAnon" /> <span className="text-[10px] font-black uppercase text-gray-400">Default to Anonymous?</span>
+                    </label>
+                    <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase shadow-xl text-xs hover:bg-indigo-700 transition-all">Launch Poll to Citizens</button>
+                  </form>
+                </div>
 
-      // 2. Insert the Options
-      if (poll) {
-        const { error: oError } = await supabase!.from('poll_options').insert(
-          options.map(text => ({ poll_id: poll.id, text }))
-        );
-        if (oError) throw oError;
-
-        showToast("Poll Successfully Launched");
-        fetchPolls();
-        (e.target as HTMLFormElement).reset();
-      }
-    } catch (err: any) { 
-      showToast(err.message, 'error'); 
-    }
-  }} className="space-y-4">
-    <input name="title" required placeholder="Question Title" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" />
-    <textarea name="description" placeholder="Poll Details (Supports URLs)..." className="w-full p-4 bg-gray-50 rounded-xl font-bold h-24 text-sm outline-none" />
-    <input name="options" required placeholder="Options (comma separated: Yes, No, Maybe)" className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" />
-    
-    <div className="space-y-1">
-      <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Poll Closing Date & Time</label>
-      <input type="datetime-local" name="closedAt" required className="w-full p-4 bg-gray-50 rounded-xl font-bold text-sm outline-none" />
-    </div>
-
-    <label className="flex items-center gap-3 px-2">
-      <input type="checkbox" name="isAnon" /> <span className="text-[10px] font-black uppercase text-gray-400">Default to Anonymous?</span>
-    </label>
-    <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase shadow-xl text-xs hover:bg-indigo-700 transition-all">Launch Poll to Citizens</button>
-  </form>
-</div>
-
-                {/* Registry Moderation */}
                 <div className="bg-gray-900 p-10 rounded-[3rem] text-white shadow-2xl">
                   <h3 className="text-xl font-black uppercase mb-8 flex items-center gap-3">
                     <i className="fa-solid fa-users-gear text-red-500"></i> Registry Moderation
@@ -937,7 +932,6 @@ export default function App() {
 
       </main>
 
-      {/* --- SITE FOOTER --- */}
       <footer className="bg-white border-t border-gray-100 py-3 px-6 text-center shrink-0">
         <p className="text-[8px] font-black text-gray-400 uppercase tracking-[0.4em]">© 2024 Moore Transparency Portal • Verified Public Records</p>
       </footer>

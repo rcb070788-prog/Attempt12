@@ -238,7 +238,7 @@ export default function App() {
     }
   };
 
-  // --- VOTING LOGIC ---
+  // --- FIX 3: VOTING LOGIC (STRICT BOOLEAN CASTING) ---
   const initiateVote = (pollId: string, optionId: string, optionText: string) => {
     if (!user) return setCurrentPage('login');
     const poll = polls.find(p => p.id === pollId);
@@ -249,12 +249,13 @@ export default function App() {
 
   const confirmVote = async () => {
     if (!pendingVote || !supabase) return;
+    
     const { error } = await supabase.from('poll_votes').upsert(
       { 
         poll_id: pendingVote.pollId, 
         option_id: pendingVote.optionId, 
         user_id: user.id, 
-        is_anonymous: pendingVote.isAnonymous 
+        is_anonymous: Boolean(pendingVote.isAnonymous) // Strict cast
       },
       { onConflict: 'poll_id,user_id' }
     );
@@ -267,18 +268,35 @@ export default function App() {
     setPendingVote(null);
   };
 
-  // --- REACTION HANDLER (Like/Dislike) ---
+  // --- FIX 2: REACTION HANDLER (WIRED TO DB & TOGGLE LOGIC) ---
   const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
     if (!user) return setCurrentPage('login');
     if (!supabase) return;
 
-    const { error } = await supabase.from('comment_reactions').upsert(
-      { comment_id: commentId, user_id: user.id, reaction_type: type },
-      { onConflict: 'comment_id,user_id' }
-    );
-    
-    if (error) showToast("Reaction failed", "error");
-    else fetchPolls();
+    // Check if user already has this specific reaction to allow toggling off
+    const poll = polls.find(p => p.poll_comments.some((c: any) => c.id === commentId));
+    const comment = poll?.poll_comments.find((c: any) => c.id === commentId);
+    const existingReaction = comment?.comment_reactions?.find((r: any) => r.user_id === user.id);
+
+    if (existingReaction?.reaction_type === type) {
+      // If user clicks the same button, remove the reaction
+      const { error } = await supabase.from('comment_reactions')
+        .delete()
+        .eq('comment_id', commentId)
+        .eq('user_id', user.id);
+      
+      if (error) showToast("Could not remove reaction", "error");
+      else fetchPolls();
+    } else {
+      // Otherwise, upsert the new reaction (swaps like to dislike or adds new)
+      const { error } = await supabase.from('comment_reactions').upsert(
+        { comment_id: commentId, user_id: user.id, reaction_type: type },
+        { onConflict: 'comment_id,user_id' }
+      );
+      
+      if (error) showToast("Reaction failed", "error");
+      else fetchPolls();
+    }
   };
 
   // --- COMMENT LOGIC ---
@@ -560,13 +578,14 @@ export default function App() {
                         </div>
                       </button>
                       
-                      {/* VOTER REGISTRY: Only visible once you have voted in this poll */}
+                      {/* FIX 1: VOTER REGISTRY (ANONYMOUS BUG FIX) */}
                       {hasVotedAny && votes.length > 0 && (
                         <div className="flex flex-wrap gap-2 px-2 mt-1">
                           {votes.map((v: any, idx: number) => (
                             <span key={idx} className="text-[8px] font-black uppercase bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full border border-gray-200 shadow-sm flex items-center gap-1.5">
                               <i className="fa-solid fa-user text-[6px]"></i>
-                              {v.is_anonymous ? 'Anonymous Voter' : (v.profiles?.full_name || 'Verified Voter')} 
+                              {/* Strict check for boolean true */}
+                              {v.is_anonymous === true ? 'Anonymous Voter' : (v.profiles?.full_name || 'Verified Voter')} 
                               <span className="text-gray-300">•</span> Dist {v.profiles?.district || '?'}
                             </span>
                           ))}
@@ -697,7 +716,7 @@ export default function App() {
                                 </div>
                                 <span className="text-[9px] font-black uppercase text-gray-400">Post Anonymously</span>
                              </label>
-                             <button type="submit" className="w-full sm:w-auto bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all">Publish Message</button>
+                             <button type="submit" className="w-full sm:w-auto bg-indigo-600 text-white px-10 py-4 rounded-2xl font-black text-11px] uppercase tracking-widest shadow-xl hover:bg-indigo-700 transition-all">Publish Message</button>
                            </div>
                          </form>
                       </div>

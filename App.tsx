@@ -778,32 +778,73 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
         {/* AUTH PAGES */}
         {currentPage === 'signup' && (
-          <div className="max-w-lg mx-auto py-10 bg-white p-8 rounded-[3rem] shadow-2xl">
-            <h2 className="text-2xl font-black uppercase text-indigo-600 text-center mb-2">Voter Verification</h2>
-            <p className="text-[9px] font-black uppercase text-gray-400 text-center mb-8 tracking-widest">Verify identity to participate</p>
+          <div className="max-w-2xl mx-auto py-10 bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl">
+            <h2 className="text-3xl font-black uppercase text-indigo-600 text-center mb-2">Voter Verification</h2>
+            <p className="text-xs font-black uppercase text-gray-400 text-center mb-10 tracking-widest">Verify identity to participate</p>
             
-            <form className="space-y-4" onSubmit={handleSignup}>
-              <div className="grid grid-cols-1 gap-4">
-                <input name="voterId" required placeholder="VOTER ID # (MANDATORY)" className="p-5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 outline-none rounded-2xl font-bold text-[11px] transition-all" />
+            <form className="space-y-6" onSubmit={handleSignup}>
+              {/* Voter ID Section */}
+              <div className="flex flex-col md:flex-row md:items-center gap-4 bg-indigo-50/30 p-2 rounded-[2rem]">
+                <div className="flex-grow">
+                  <input 
+                    name="voterId" 
+                    required 
+                    placeholder="VOTER ID # (MANDATORY)" 
+                    className="w-full p-6 bg-white border-2 border-transparent focus:border-indigo-600 outline-none rounded-2xl font-black text-sm shadow-sm transition-all placeholder:text-gray-300" 
+                  />
+                </div>
+                <div className="px-4 py-2 md:w-48">
+                  <p className="text-[11px] font-black uppercase text-gray-400 leading-tight">
+                    Don't know your Voter ID number? Click <a href="https://tnmap.tn.gov/voterlookup/" target="_blank" rel="noreferrer" className="text-indigo-600 underline decoration-2 underline-offset-2">HERE</a>.
+                  </p>
+                </div>
               </div>
               
-              <div className="bg-gray-50 p-6 rounded-[2rem] space-y-4 border border-gray-100">
-                <p className="text-[10px] font-black uppercase text-gray-400 text-center">Provide Name OR Date of Birth</p>
-                <input name="lastName" placeholder="LAST NAME" className="w-full p-4 bg-white rounded-xl uppercase text-[10px] font-bold border border-gray-100" />
+              {/* Optional Verification Block */}
+              <div className="bg-gray-50 p-8 rounded-[2.5rem] space-y-5 border border-gray-100">
+                <p className="text-xs font-black uppercase text-gray-400 text-center tracking-tighter">Provide Name <span className="text-indigo-600 mx-1">OR</span> Date of Birth</p>
+                <input 
+                  name="lastName" 
+                  placeholder="LAST NAME" 
+                  className="w-full p-5 bg-white rounded-xl uppercase text-xs font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
+                />
                 <div className="relative">
-                  <span className="absolute -top-2 left-4 bg-white px-2 text-[8px] font-black text-indigo-400 uppercase">Date of Birth</span>
-                  <input type="date" name="dob" className="w-full p-4 bg-white rounded-xl text-[10px] font-bold border border-gray-100" />
+                  <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-black text-indigo-400 uppercase">Date of Birth</span>
+                  <input 
+                    type="date" 
+                    name="dob" 
+                    className="w-full p-5 bg-white rounded-xl text-xs font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
+                  />
                 </div>
               </div>
 
-              <div className="space-y-3 pt-4">
-                <input type="email" name="email" required placeholder="EMAIL ADDRESS" className="w-full p-4 bg-gray-50 rounded-xl text-[10px] font-bold" />
-                <input type="password" name="password" required placeholder="CREATE PASSWORD" className="w-full p-4 bg-gray-50 rounded-xl text-[10px] font-bold" />
+              {/* Account Credentials */}
+              <div className="space-y-4 pt-4 border-t border-gray-100">
+                <input 
+                  type="email" 
+                  name="email" 
+                  required 
+                  placeholder="EMAIL ADDRESS" 
+                  className="w-full p-5 bg-gray-50 rounded-xl text-xs font-black focus:bg-white border-2 border-transparent focus:border-gray-200 outline-none transition-all" 
+                />
+                <input 
+                  type="password" 
+                  name="password" 
+                  required 
+                  placeholder="CREATE PASSWORD" 
+                  className="w-full p-5 bg-gray-50 rounded-xl text-xs font-black focus:bg-white border-2 border-transparent focus:border-gray-200 outline-none transition-all" 
+                />
               </div>
 
-              <button disabled={isVerifying} className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-xs uppercase shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100">
-                {isVerifying ? <i className="fa-solid fa-spinner animate-spin mr-2"></i> : null}
-                {isVerifying ? ' Verifying Registry...' : 'Verify & Register'}
+              <button 
+                disabled={isVerifying} 
+                className="w-full py-7 bg-indigo-600 text-white rounded-[2rem] font-black text-sm uppercase shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
+              >
+                {isVerifying ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <i className="fa-solid fa-spinner animate-spin"></i> Verifying Registry...
+                  </span>
+                ) : 'Verify & Register'}
               </button>
             </form>
           </div>

@@ -24,7 +24,16 @@ const renderTextWithLinks = (text: string) => {
     return part;
   });
 };
-
+const formatDate = (dateString: string) => {
+  if (!dateString) return "";
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).toUpperCase();
+};
 const UserAvatar = ({ url, isAnonymous, size = "md" }: { url?: string, isAnonymous?: boolean, size?: "sm" | "md" | "lg" }) => {
   const dims = size === "sm" ? "w-6 h-6 text-[8px]" : size === "lg" ? "w-16 h-16 text-xl" : "w-10 h-10 text-xs";
   if (isAnonymous) {
@@ -201,7 +210,7 @@ export default function App() {
             <div className="flex items-center gap-2 mb-1">
                <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
                <span className="text-[9px] font-black uppercase text-indigo-600">
-                {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}
+                {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'} • {formatDate(comment.created_at)}
                </span>
             </div>
             <div className="text-gray-800 text-sm leading-relaxed break-words whitespace-pre-wrap">{renderTextWithLinks(comment.content)}</div>
@@ -345,7 +354,17 @@ export default function App() {
                 const voted = poll.poll_votes?.some((v: any) => v.user_id === user?.id);
                 return (
                   <div key={poll.id} onClick={() => setSelectedPoll(poll)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border hover:shadow-lg transition-all cursor-pointer flex flex-col sm:flex-row justify-between items-center gap-6">
-                    <div><h3 className="text-2xl font-black uppercase">{poll.title}</h3><p className="text-gray-400 text-[10px] uppercase">{poll.poll_votes?.length || 0} Votes</p></div>
+                    <div>
+  <h3 className="text-2xl font-black uppercase">{poll.title}</h3>
+  <div className="flex items-center gap-2">
+    <p className="text-gray-400 text-[10px] font-black uppercase">{poll.poll_votes?.length || 0} Votes</p>
+    <span className="text-gray-300 text-[10px]">•</span>
+    <p className="text-red-500 text-[10px] font-black uppercase">
+      <i className="fa-regular fa-clock mr-1"></i>
+      Ends {formatDate(poll.expires_at)}
+    </p>
+  </div>
+</div>
                     <button className={`px-8 py-4 rounded-xl font-black uppercase text-[10px] ${voted ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white'}`}>{voted ? 'View Results' : 'Vote & Discuss'}</button>
                   </div>
                 );
@@ -442,8 +461,12 @@ export default function App() {
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       <UserAvatar url={msg.profiles?.avatar_url} size="md" />
-                      <div><p className="text-xs font-black uppercase leading-none">{msg.profiles?.full_name}</p><p className="text-[9px] font-bold text-indigo-600 uppercase">District {msg.profiles?.district}</p></div>
-                    </div>
+                      <div>
+  <p className="text-xs font-black uppercase leading-none">{msg.profiles?.full_name}</p>
+  <p className="text-[9px] font-bold text-indigo-600 uppercase">
+    District {msg.profiles?.district} • {formatDate(msg.created_at)}
+  </p>
+</div>                    </div>
                     <div className="text-right flex flex-wrap gap-1 justify-end max-w-[200px]">
                       {msg.recipient_names?.split(', ').map((name: string) => (
                         <span key={name} className="px-2 py-1 bg-gray-100 rounded text-[7px] font-black uppercase text-gray-500">{name}</span>
@@ -484,7 +507,10 @@ export default function App() {
                   <span className="px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full text-[8px] font-black uppercase mb-3 inline-block">{sug.category}</span>
                   <h4 className="text-lg font-black uppercase mb-2 leading-tight">{sug.title}</h4>
                   <p className="text-gray-500 text-xs mb-4 line-clamp-3">{sug.description}</p>
-                  <div className="pt-4 border-t border-gray-50 text-[9px] font-black uppercase text-gray-400">By {sug.profiles?.full_name} • Dist {sug.profiles?.district}</div>
+                  <div className="pt-4 border-t border-gray-50 text-[9px] font-black uppercase text-gray-400 flex justify-between">
+  <span>By {sug.profiles?.full_name} • Dist {sug.profiles?.district}</span>
+  <span className="text-indigo-400">{formatDate(sug.created_at)}</span>
+</div>
                 </div>
               ))}
             </div>

@@ -754,25 +754,108 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
         {/* ADMIN PAGE */}
         {currentPage === 'admin' && profile?.is_admin && (
-          <div className="max-w-6xl mx-auto space-y-8 animate-slide-up">
-            <h2 className="text-4xl font-black uppercase">Admin Oversight</h2>
-            <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[10px]">
-                  <tr><th className="p-6">Voter Name</th><th className="p-6">District</th><th className="p-6">Voter ID</th><th className="p-6">Status</th></tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {allUsers.map(u => (
-                    <tr key={u.id} className="hover:bg-gray-50/50">
-                      <td className="p-6 flex items-center gap-3 font-bold uppercase text-xs">{u.full_name}</td>
-                      <td className="p-6 text-xs font-bold text-gray-500 uppercase">District {u.district}</td>
-                      <td className="p-6 text-xs font-mono text-gray-400">{u.voter_id}</td>
-                      <td className="p-6"><span className="px-3 py-1 bg-green-100 text-green-600 rounded-full text-[8px] font-black uppercase">Verified</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="max-w-6xl mx-auto space-y-12 pb-20 animate-slide-up">
+            
+            {/* --- POLL CREATOR SECTION --- */}
+            <section className="bg-white p-10 rounded-[3rem] shadow-xl border-4 border-indigo-600">
+              <div className="mb-8">
+                <h2 className="text-3xl font-black uppercase tracking-tighter">Create New Poll</h2>
+                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Publish a new community decision point</p>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                const fd = new FormData(e.currentTarget);
+                const options = [fd.get('opt1'), fd.get('opt2'), fd.get('opt3'), fd.get('opt4')].filter(o => o && o.toString().trim() !== "");
+                
+                if (options.length < 2) return showToast("Provide at least 2 options", "error");
+
+                try {
+                  showToast("Publishing Poll...", "success");
+                  // 1. Insert the Poll
+                  const { data: poll, error: pErr } = await supabase!.from('polls').insert({ 
+                    title: fd.get('title'), 
+                    expires_at: new Date(fd.get('expires') as string).toISOString() 
+                  }).select().single();
+                  
+                  if (pErr) throw pErr;
+
+                  // 2. Insert the Options
+                  const optData = options.map(text => ({ poll_id: poll.id, text }));
+                  const { error: oErr } = await supabase!.from('poll_options').insert(optData);
+                  
+                  if (oErr) throw oErr;
+
+                  showToast("Poll Published Successfully!");
+                  (e.target as HTMLFormElement).reset();
+                  fetchPolls();
+                } catch (err: any) {
+                  showToast(err.message, "error");
+                }
+              }} className="space-y-6">
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Poll Question / Title</label>
+                    <input name="title" required placeholder="Ex: SHOULD WE REZONE DISTRICT 2?" className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold uppercase text-xs transition-all" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Expiration Date</label>
+                    <input name="expires" type="datetime-local" required className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold text-xs transition-all" />
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Poll Options (Min 2)</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input name="opt1" required placeholder="OPTION 1" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
+                    <input name="opt2" required placeholder="OPTION 2" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
+                    <input name="opt3" placeholder="OPTION 3 (OPTIONAL)" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
+                    <input name="opt4" placeholder="OPTION 4 (OPTIONAL)" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
+                  </div>
+                </div>
+
+                <button type="submit" className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black uppercase text-xs shadow-xl hover:bg-indigo-700 transition-all">
+                  Post Poll to Public Portal
+                </button>
+              </form>
+            </section>
+
+            {/* --- USER REGISTRY SECTION --- */}
+            <section className="space-y-6">
+              <div className="flex justify-between items-end px-4">
+                <div>
+                  <h2 className="text-4xl font-black uppercase tracking-tighter">Voter Registry</h2>
+                  <p className="text-gray-400 font-bold text-[10px] uppercase">Verified Moore County Users</p>
+                </div>
+                <div className="bg-indigo-100 px-4 py-2 rounded-full">
+                  <span className="text-indigo-600 font-black text-[10px] uppercase">{allUsers.length} TOTAL VOTERS</span>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[10px]">
+                    <tr><th className="p-8">Voter Name</th><th className="p-8">District</th><th className="p-8">Voter ID</th><th className="p-8 text-right">Status</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {allUsers.map(u => (
+                      <tr key={u.id} className="hover:bg-indigo-50/30 transition-colors group">
+                        <td className="p-8 flex items-center gap-4">
+                          <UserAvatar url={u.avatar_url} size="md" />
+                          <span className="font-black uppercase text-sm text-gray-900">{u.full_name}</span>
+                        </td>
+                        <td className="p-8 text-xs font-bold text-gray-500 uppercase tracking-widest">District {u.district}</td>
+                        <td className="p-8 text-xs font-mono text-gray-400 font-bold">{u.voter_id}</td>
+                        <td className="p-8 text-right">
+                          <span className="px-4 py-1.5 bg-green-100 text-green-600 rounded-full text-[9px] font-black uppercase ring-2 ring-white">Verified</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
           </div>
         )}
 

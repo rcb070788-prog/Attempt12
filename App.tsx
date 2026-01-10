@@ -482,7 +482,7 @@ export default function App() {
                       <i className="fa-solid fa-chevron-down"></i>
                     </button>
                     {isOfficialDropdownOpen && (
-                      <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl z-[60] p-4 grid grid-cols-2 gap-2 border border-gray-100">
+                      <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl z-[60] p-4 grid grid-cols-2 md:grid-cols-3 gap-2 border border-gray-100 max-h-[400px] md:max-h-none overflow-y-auto">
                         {OFFICIALS.map(off => (
   <label key={off.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
     <input 
@@ -500,7 +500,7 @@ export default function App() {
     </div>
   </label>
 ))}
-                        <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="col-span-2 mt-2 py-2 bg-gray-900 text-white rounded-lg text-[8px] font-black uppercase">Done</button>
+                        <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="col-span-2 md:col-span-3 mt-2 py-2 bg-gray-900 text-white rounded-lg text-[8px] font-black uppercase">Done</button>
                       </div>
                     )}
                   </div>

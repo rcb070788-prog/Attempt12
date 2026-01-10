@@ -24,20 +24,35 @@ export const OFFICIALS = [
   { id: 'trustee', category: 'Courthouse', office: 'Trustee', name: 'Lynn Harrison', phone: '(931) 759-7912', email: '' },
 
   // Non-Courthouse Officials
-  { id: 'highway', category: 'Non-Courthouse', office: 'Highway Superintendent', name: 'Shannon Cauble', phone: '(931) 759-7800', email: '' },
+  { id: 'highway', category: 'Non-Courthouse', office: 'Highway Department Superintendent', name: 'Shannon Cauble', phone: '(931) 759-7800', email: '' },
   { id: 'sheriff', category: 'Non-Courthouse', office: 'Sheriff', name: 'Tyler Hatfield', phone: '(931) 759-6464', email: '' },
   { id: 'schools', category: 'Non-Courthouse', office: 'Director of Schools', name: 'Chad Moorehead', phone: '(931) 759-7303', email: '' },
   { id: 'elections', category: 'Non-Courthouse', office: 'Administrator of Elections', name: 'Jim Sanders', phone: '(931) 759-4532', email: '' },
 
   // Council Members (District 1)
-  { id: 'c-d1-1', category: 'Council Members', district: '1', office: 'Council Member', name: 'Amy Cashion', phone: '(931) 607-4526', email: '' },
-  { id: 'c-d1-2', category: 'Council Members', district: '1', office: 'Council Member', name: 'Sunny Rae Moorehead', phone: '', email: '' },
-  { id: 'c-d1-3', category: 'Council Members', district: '1', office: 'Council Member', name: 'Shane Taylor', phone: '(931) 224-5763', email: '' },
+  { id: 'c-d1-1', category: 'Council Members', district: '1', office: 'Council Member District 1', name: 'Amy Cashion', phone: '(931) 607-4526', email: '' },
+  { id: 'c-d1-2', category: 'Council Members', district: '1', office: 'Council Member District 1', name: 'Sunny Rae Moorehead', phone: '', email: '' },
+  { id: 'c-d1-3', category: 'Council Members', district: '1', office: 'Council Member District 1', name: 'Shane Taylor', phone: '(931) 224-5763', email: '' },
 
   // Council Members (District 2)
-  { id: 'c-d2-1', category: 'Council Members', district: '2', office: 'Council Member', name: 'Robert Bracewell', phone: '(931) 434-0384', email: 'moorecotnd2@gmail.com' },
-  { id: 'c-d2-2', category: 'Council Members', district: '2', office: 'Council Member', name: 'Douglas Carson II', phone: '(931) 307-9267', email: '' },
-  { id: 'c-d2-3', category: 'Council Members', district: '2', office: 'Council Member', name: 'John Taylor', phone: '(931) 928-1653', email: '' },
+  { id: 'c-d2-1', category: 'Council Members', district: '2', office: 'Council Member District 2', name: 'Robert Bracewell', phone: '(931) 434-0384', email: 'moorecotnd2@gmail.com' },
+  { id: 'c-d2-2', category: 'Council Members', district: '2', office: 'Council Member District 2', name: 'Douglas Carson II', phone: '(931) 307-9267', email: '' },
+  { id: 'c-d2-3', category: 'Council Members', district: '2', office: 'Council Member District 2', name: 'John Taylor', phone: '(931) 928-1653', email: '' },
+
+  // Council Members (District 3)
+  { id: 'c-d3-1', category: 'Council Members', district: '3', office: 'Council Member District 3', name: 'Marty Cashion', phone: '(931) 307-9355', email: '' },
+  { id: 'c-d3-2', category: 'Council Members', district: '3', office: 'Council Member District 3', name: 'Dexter Golden', phone: '(931) 703-6506', email: '' },
+  { id: 'c-d3-3', category: 'Council Members', district: '3', office: 'Council Member District 3', name: 'Houston Lindsey', phone: '(931) 632-3005', email: '' },
+
+  // Council Members (District 4)
+  { id: 'c-d4-1', category: 'Council Members', district: '4', office: 'Council Member District 4', name: 'Peggy Sue Blackburn', phone: '(615) 504-8574', email: '' },
+  { id: 'c-d4-2', category: 'Council Members', district: '4', office: 'Council Member District 4', name: 'Arvis Bobo', phone: '(931) 581-1264', email: '' },
+  { id: 'c-d4-3', category: 'Council Members', district: '4', office: 'Council Member District 4', name: 'Bradley Dye', phone: '(931) 307-9201', email: '' },
+
+  // Council Members (District 5)
+  { id: 'c-d5-1', category: 'Council Members', district: '5', office: 'Council Member District 5', name: 'Gerald Burnett', phone: '(931) 632-2081', email: '' },
+  { id: 'c-d5-2', category: 'Council Members', district: '5', office: 'Council Member District 5', name: 'Greg Guinn', phone: '(931) 224-7976', email: '' },
+  { id: 'c-d5-3', category: 'Council Members', district: '5', office: 'Council Member District 5', name: 'Jimmy Hammond', phone: '(931) 247-2138', email: '' },
 ];
 
 export const DASHBOARDS: (DashboardConfig & { status?: string })[] = [

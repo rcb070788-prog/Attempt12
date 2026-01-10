@@ -484,11 +484,22 @@ export default function App() {
                     {isOfficialDropdownOpen && (
                       <div className="absolute top-full mt-2 w-full bg-white rounded-2xl shadow-2xl z-[60] p-4 grid grid-cols-2 gap-2 border border-gray-100">
                         {OFFICIALS.map(off => (
-                          <label key={off.id} className="flex items-center gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
-                            <input type="checkbox" checked={selectedOfficials.includes(off.name)} onChange={(e) => { if (e.target.checked) setSelectedOfficials([...selectedOfficials, off.name]); else setSelectedOfficials(selectedOfficials.filter(n => n !== off.name)); }} />
-                            <span className="text-[10px] font-black uppercase text-gray-900">{off.name}</span>
-                          </label>
-                        ))}
+  <label key={off.id} className="flex items-start gap-3 p-3 hover:bg-gray-50 rounded-xl cursor-pointer">
+    <input 
+      type="checkbox" 
+      className="mt-1"
+      checked={selectedOfficials.includes(off.name)} 
+      onChange={(e) => { 
+        if (e.target.checked) setSelectedOfficials([...selectedOfficials, off.name]); 
+        else setSelectedOfficials(selectedOfficials.filter(n => n !== off.name)); 
+      }} 
+    />
+    <div className="flex flex-col">
+      <span className="text-[10px] font-black uppercase text-gray-900 leading-none">{off.name}</span>
+      <span className="text-[8px] font-bold uppercase text-indigo-600 mt-0.5">{off.office}</span>
+    </div>
+  </label>
+))}
                         <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="col-span-2 mt-2 py-2 bg-gray-900 text-white rounded-lg text-[8px] font-black uppercase">Done</button>
                       </div>
                     )}

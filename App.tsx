@@ -477,7 +477,7 @@ export default function App() {
                   if (error) showToast(error.message, 'error'); else { showToast("Message Posted"); setSelectedOfficials([]); (e.target as HTMLFormElement).reset(); fetchBoardMessages(); }
                 }} className="space-y-4">
                   <div className="relative">
-                    <button type="button" onClick={() => setIsOfficialDropdownOpen(!isOfficialDropdownOpen)} className="w-full p-4 bg-indigo-700 text-white rounded-2xl text-left text-[10px] font-black uppercase flex justify-between items-center">
+                    <button type="button" onClick={() => setIsOfficialDropdownOpen(!isOfficialDropdownOpen)} className="w-full p-5 bg-indigo-700 text-white rounded-2xl text-left text-xs md:text-sm font-black uppercase flex justify-between items-center shadow-inner">
                       <span>{selectedOfficials.length > 0 ? `To: ${selectedOfficials.join(', ')}` : "Select Officials to Address"}</span>
                       <i className="fa-solid fa-chevron-down"></i>
                     </button>
@@ -495,12 +495,12 @@ export default function App() {
       }} 
     />
     <div className="flex flex-col">
-      <span className="text-[10px] font-black uppercase text-gray-900 leading-none">{off.name}</span>
-      <span className="text-[8px] font-bold uppercase text-indigo-600 mt-0.5">{off.office}</span>
+      <span className="text-xs md:text-base font-black uppercase text-gray-900 leading-tight">{off.name}</span>
+      <span className="text-[10px] md:text-xs font-bold uppercase text-indigo-600 mt-1">{off.office}</span>
     </div>
   </label>
 ))}
-                        <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="col-span-2 md:col-span-3 mt-2 py-2 bg-gray-900 text-white rounded-lg text-[8px] font-black uppercase">Done</button>
+                        <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="col-span-2 md:col-span-3 mt-4 py-4 bg-gray-900 text-white rounded-xl text-xs md:text-sm font-black uppercase tracking-widest shadow-lg">Done</button>
                       </div>
                     )}
                   </div>

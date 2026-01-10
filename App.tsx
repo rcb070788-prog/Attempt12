@@ -345,7 +345,50 @@ export default function App() {
             </div>
           </div>
         )}
+{/* --- NEW SECTION: REPORT SELECTION LIST --- */}
+        {currentPage === 'home' && selectedCategory && (
+          <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
+            <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
+              <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
+            </button>
+            
+            <div className="flex flex-col">
+              <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">
+                {CATEGORIES.find(c => c.id === selectedCategory)?.label}
+              </h2>
+              <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Select a report to view official records</p>
+            </div>
 
+            <div className="grid grid-cols-1 gap-4 mt-8">
+              {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (
+                <div 
+                  key={dash.id} 
+                  onClick={() => setActiveDashboard(dash as any)}
+                  className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-indigo-600 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-xl font-black uppercase text-gray-900 group-hover:text-indigo-600">{dash.title}</h3>
+                      {dash.status && <span className="px-2 py-0.5 bg-gray-100 text-[8px] font-black uppercase rounded text-gray-500">{dash.status}</span>}
+                    </div>
+                    <p className="text-gray-400 text-xs font-medium">{dash.description}</p>
+                  </div>
+                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                    <i className="fa-solid fa-chevron-right"></i>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Message if no reports exist in this category */}
+              {DASHBOARDS.filter(dash => dash.category === selectedCategory).length === 0 && (
+                <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+                  <i className="fa-solid fa-folder-open text-gray-200 text-4xl mb-4"></i>
+                  <p className="text-gray-400 font-black uppercase text-xs">No reports have been uploaded for this category yet.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         {currentPage === 'polls' && !selectedPoll && (
           <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-4xl font-black uppercase">Community Polls</h2>

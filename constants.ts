@@ -45,25 +45,25 @@ export const DASHBOARDS: (DashboardConfig & { status?: string })[] = [
     id: 'expenses-by-fund',
     category: 'expenses',
     title: 'Expenses by Fund',
-    description: 'A detailed breakdown of County spending across various public funds including CSV data.',
-    folderPath: '/dashboards/expensesbyfund/index.html',
+    description: 'A detailed breakdown of County spending across various public funds.',
+    folderPath: '/dashboards/expenses/expensesbyfund/index.html',
     status: 'Official'
   },
   {
     id: 'education-budget',
     category: 'expenses',
     title: 'School District Allocation',
-    description: 'Transparency report on how local taxes are being used for school infrastructure and staffing.',
-    folderPath: '/dashboards/education/index.html',
-    status: 'Updated Today'
+    description: 'Transparency report on how local taxes are being used for school infrastructure.',
+    folderPath: '/dashboards/expenses/education/index.html',
+    status: 'Planned'
   },
   {
     id: 'property-tax-revenue',
     category: 'revenues',
     title: 'Property Tax Collection',
-    description: 'Visualization of tax revenue trends over the last 10 years for our district.',
-    folderPath: '/dashboards/property-tax/index.html',
-    status: 'Official'
+    description: 'Visualization of tax revenue trends.',
+    folderPath: '/dashboards/revenues/property-tax/index.html',
+    status: 'Planned'
   }
 ];
 

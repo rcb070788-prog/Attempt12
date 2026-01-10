@@ -192,20 +192,50 @@ const handleBoardFileUpload = async (files: FileList) => {
     return uploadedUrls;
   };
   const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
+  
+const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsVerifying(true);
     const fd = new FormData(e.currentTarget);
+    
+    const lastName = fd.get('lastName') as string;
+    const voterId = fd.get('voterId') as string;
+    const dob = fd.get('dob') as string;
+
+    // Logic: Voter ID is mandatory. User must also provide EITHER Last Name OR DOB.
+    if (!voterId) return showToast("Voter ID is required", "error");
+    if (!lastName && !dob) return showToast("Please provide Last Name or Date of Birth", "error");
+
     try {
-      const verifyRes = await fetch('/.netlify/functions/verify-voter', { method: 'POST', body: JSON.stringify({ lastName: fd.get('lastName'), voterId: fd.get('voterId'), dob: fd.get('dob'), address: fd.get('address') }) });
+      const verifyRes = await fetch('/.netlify/functions/verify-voter', { 
+        method: 'POST', 
+        body: JSON.stringify({ lastName, voterId, dob }) 
+      });
+      
       const verifyData = await verifyRes.json();
       if (!verifyRes.ok) throw new Error(verifyData.error);
-      const { error } = await supabase!.auth.signUp({ email: fd.get('email') as string, password: fd.get('password') as string, options: { data: { full_name: verifyData.fullName, district: verifyData.district, voter_id: fd.get('voterId') } } });
+      
+      const { error } = await supabase!.auth.signUp({ 
+        email: fd.get('email') as string, 
+        password: fd.get('password') as string, 
+        options: { 
+          data: { 
+            full_name: verifyData.fullName, 
+            district: verifyData.district, 
+            voter_id: voterId 
+          } 
+        } 
+      });
+
       if (error) throw error;
       showToast("Verification Successful! Check email.");
       setCurrentPage('login');
-    } catch (err: any) { showToast(err.message, "error"); } finally { setIsVerifying(false); }
+    } catch (err: any) { 
+      showToast(err.message, "error"); 
+    } finally { 
+      setIsVerifying(false); 
+    }
   };
-
   const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
     if (!user || !supabase) return setCurrentPage('login');
     const { error } = await supabase.from('comment_reactions').upsert({ comment_id: commentId, user_id: user.id, reaction_type: type }, { onConflict: 'comment_id,user_id' });
@@ -750,17 +780,32 @@ const handleBoardFileUpload = async (files: FileList) => {
         {/* AUTH PAGES */}
         {currentPage === 'signup' && (
           <div className="max-w-lg mx-auto py-10 bg-white p-8 rounded-[3rem] shadow-2xl">
-            <h2 className="text-2xl font-black uppercase text-indigo-600 text-center mb-8">Voter Verification</h2>
+            <h2 className="text-2xl font-black uppercase text-indigo-600 text-center mb-2">Voter Verification</h2>
+            <p className="text-[9px] font-black uppercase text-gray-400 text-center mb-8 tracking-widest">Verify identity to participate</p>
+            
             <form className="space-y-4" onSubmit={handleSignup}>
-              <div className="grid grid-cols-2 gap-4">
-                <input name="lastName" required placeholder="LAST NAME" className="p-4 bg-gray-50 rounded-xl uppercase text-[10px]" />
-                <input name="voterId" required placeholder="VOTER ID #" className="p-4 bg-gray-50 rounded-xl text-[10px]" />
+              <div className="grid grid-cols-1 gap-4">
+                <input name="voterId" required placeholder="VOTER ID # (MANDATORY)" className="p-5 bg-gray-50 border-2 border-transparent focus:border-indigo-600 outline-none rounded-2xl font-bold text-[11px] transition-all" />
               </div>
-              <input type="date" name="dob" required className="w-full p-4 bg-gray-50 rounded-xl" />
-              <input name="address" required placeholder="STREET NAME (Ex: Main St)" className="w-full p-4 bg-gray-50 rounded-xl uppercase" />
-              <input type="email" name="email" required placeholder="EMAIL" className="w-full p-4 bg-gray-50 rounded-xl" />
-              <input type="password" name="password" required placeholder="PASSWORD" className="w-full p-4 bg-gray-50 rounded-xl" />
-              <button disabled={isVerifying} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl">{isVerifying ? 'Validating...' : 'Register Securely'}</button>
+              
+              <div className="bg-gray-50 p-6 rounded-[2rem] space-y-4 border border-gray-100">
+                <p className="text-[10px] font-black uppercase text-gray-400 text-center">Provide Name OR Date of Birth</p>
+                <input name="lastName" placeholder="LAST NAME" className="w-full p-4 bg-white rounded-xl uppercase text-[10px] font-bold border border-gray-100" />
+                <div className="relative">
+                  <span className="absolute -top-2 left-4 bg-white px-2 text-[8px] font-black text-indigo-400 uppercase">Date of Birth</span>
+                  <input type="date" name="dob" className="w-full p-4 bg-white rounded-xl text-[10px] font-bold border border-gray-100" />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-4">
+                <input type="email" name="email" required placeholder="EMAIL ADDRESS" className="w-full p-4 bg-gray-50 rounded-xl text-[10px] font-bold" />
+                <input type="password" name="password" required placeholder="CREATE PASSWORD" className="w-full p-4 bg-gray-50 rounded-xl text-[10px] font-bold" />
+              </div>
+
+              <button disabled={isVerifying} className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-xs uppercase shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100">
+                {isVerifying ? <i className="fa-solid fa-spinner animate-spin mr-2"></i> : null}
+                {isVerifying ? 'Verifying Registry...' : 'Verify & Register'}
+              </button>
             </form>
           </div>
         )}

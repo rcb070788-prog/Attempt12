@@ -377,21 +377,25 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             </div>
             <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
               {registryModal.voters.map((v, i) => {
-                const isAnon = !!v.is_anonymous;
+                // STRICT CHECK: Only treat as anonymous if explicitly true
+                const isExplicitlyAnonymous = v.is_anonymous === true;
+                const displayName = isExplicitlyAnonymous ? "Verified Voter" : (v.profiles?.full_name || "Verified Voter");
+                const avatarUrl = isExplicitlyAnonymous ? undefined : v.profiles?.avatar_url;
+
                 return (
                   <div key={i} className="flex items-center gap-4 p-4 bg-gray-50 rounded-[1.5rem] border border-transparent hover:border-indigo-100 transition-all">
-                    <UserAvatar url={isAnon ? undefined : v.profiles?.avatar_url} isAnonymous={isAnon} size="md" />
+                    <UserAvatar url={avatarUrl} isAnonymous={isExplicitlyAnonymous} size="md" />
                     <div className="flex flex-col">
                       <span className="text-sm font-black text-gray-900 uppercase">
-                        {isAnon ? "Verified Voter" : (v.profiles?.full_name || "Unknown Voter")}
+                        {displayName}
                       </span>
                       <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-tight">
-                        District {v.profiles?.district || "N/A"}
+                        District {v.profiles?.district || "Unknown"}
                       </span>
                     </div>
-                    {isAnon && (
+                    {isExplicitlyAnonymous && (
                       <div className="ml-auto">
-                        <i className="fa-solid fa-shield-halved text-gray-300 text-xs"></i>
+                        <i className="fa-solid fa-user-shield text-gray-300 text-xs"></i>
                       </div>
                     )}
                   </div>
@@ -399,7 +403,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               })}
               {registryModal.voters.length === 0 && (
                 <div className="text-center py-10">
-                  <p className="text-[10px] font-black uppercase text-gray-400">No votes recorded for this option.</p>
+                  <p className="text-[10px] font-black uppercase text-gray-400">No public records for this option.</p>
                 </div>
               )}
             </div>
@@ -692,7 +696,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           pollId: selectedPoll.id, 
                           optionId: opt.id, 
                           optionText: opt.text, 
-                          isAnonymous: existingVote?.is_anonymous ?? false,
+                          // Strictly default to false for new votes; respect existing choice only if it exists
+                          isAnonymous: existingVote ? !!existingVote.is_anonymous : false,
                           isChanging: !!existingVote 
                         } as any)} 
                         className={`w-full text-left p-6 rounded-2xl border-2 relative overflow-hidden flex justify-between items-start gap-4 transition-all ${isCurrentSelection ? 'border-indigo-600 ring-2 ring-indigo-600/20' : 'border-gray-100'}`}

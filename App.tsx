@@ -204,7 +204,7 @@ export default function App() {
                 {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'}
                </span>
             </div>
-            <div className="text-gray-800 text-sm leading-relaxed">{renderTextWithLinks(comment.content)}</div>
+            <div className="text-gray-800 text-sm leading-relaxed break-words whitespace-pre-wrap">{renderTextWithLinks(comment.content)}</div>
             <div className="flex gap-4 mt-3 text-[9px] font-black uppercase tracking-widest">
               <button onClick={() => handleReaction(comment.id, 'like')} className={userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}>
                 <i className={`fa-${userReaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i> {likes}
@@ -450,7 +450,7 @@ export default function App() {
                       ))}
                     </div>
                   </div>
-                  <div className="text-gray-700 text-sm leading-relaxed">{renderTextWithLinks(msg.content)}</div>
+                  <div className="text-gray-700 text-sm leading-relaxed break-words whitespace-pre-wrap">{renderTextWithLinks(msg.content)}</div>
                 </div>
               ))}
             </div>

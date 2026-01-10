@@ -772,10 +772,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
                 try {
                   showToast("Publishing Poll...", "success");
-                  // 1. Insert the Poll
+                  // 1. Insert the Poll (Fixed to include closed_at)
+                  const expiryDate = new Date(fd.get('expires') as string).toISOString();
                   const { data: poll, error: pErr } = await supabase!.from('polls').insert({ 
                     title: fd.get('title'), 
-                    expires_at: new Date(fd.get('expires') as string).toISOString() 
+                    expires_at: expiryDate,
+                    closed_at: expiryDate // Adding this to satisfy the database constraint
                   }).select().single();
                   
                   if (pErr) throw pErr;

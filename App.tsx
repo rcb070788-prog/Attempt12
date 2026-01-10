@@ -867,8 +867,22 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               <form onSubmit={async (e) => {
                 e.preventDefault();
                 const fd = new FormData(e.currentTarget);
-                const { error } = await supabase!.from('suggestions').insert({ user_id: user.id, title: fd.get('title'), description: fd.get('description'), category: fd.get('category') });
-                if (error) showToast(error.message, 'error'); else { showToast("Suggestion Submitted"); fetchSuggestions(); (e.target as HTMLFormElement).reset(); }
+                const suggestionData = {
+                  user_id: user.id,
+                  title: fd.get('title') as string,
+                  description: fd.get('description') as string,
+                  category: fd.get('category') as string
+                };
+
+                const { error } = await supabase!.from('suggestions').insert(suggestionData);
+                
+                if (error) {
+                  showToast(error.message, 'error');
+                } else {
+                  showToast("Suggestion Submitted Successfully!");
+                  fetchSuggestions();
+                  (e.target as HTMLFormElement).reset();
+                }
               }} className="bg-white p-8 rounded-[2.5rem] shadow-xl border-2 border-dashed border-indigo-100 space-y-4">
                 <input name="title" required placeholder="PROJECT TITLE" className="w-full p-4 bg-gray-50 rounded-xl text-xs font-black uppercase" />
                 <textarea name="description" required placeholder="Explain why this project matters..." className="w-full p-4 bg-gray-50 rounded-xl text-xs min-h-[100px]" />

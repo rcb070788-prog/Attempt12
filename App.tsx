@@ -199,7 +199,9 @@ const handleBoardFileUpload = async (files: FileList) => {
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const filePath = `polls/${Date.now()}_${file.name}`;
+      // Clean the filename and add a timestamp to prevent duplicates
+      const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
+      const filePath = `${Date.now()}_${cleanFileName}`;
       
       const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, file);
       

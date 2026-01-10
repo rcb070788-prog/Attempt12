@@ -804,13 +804,13 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
               <button disabled={isVerifying} className="w-full py-6 bg-indigo-600 text-white rounded-[2rem] font-black text-xs uppercase shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:scale-100">
                 {isVerifying ? <i className="fa-solid fa-spinner animate-spin mr-2"></i> : null}
-                {isVerifying ? 'Verifying Registry...' : 'Verify & Register'}
+                {isVerifying ? ' Verifying Registry...' : 'Verify & Register'}
               </button>
             </form>
           </div>
         )}
 
-{currentPage === 'login' && (
+        {currentPage === 'login' && (
           <div className="max-w-lg mx-auto py-10 bg-white p-8 rounded-[3rem] shadow-2xl text-center">
             <h2 className="text-2xl font-black uppercase text-indigo-600 mb-8">Secure Access</h2>
             <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); const { error } = await supabase!.auth.signInWithPassword({ email: fd.get('email') as string, password: fd.get('password') as string }); if (error) showToast(error.message, 'error'); else setCurrentPage('home'); }}>

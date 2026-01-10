@@ -191,6 +191,21 @@ const handleBoardFileUpload = async (files: FileList) => {
     }
     return uploadedUrls;
   };
+
+  const handlePollFileUpload = async (files: FileList) => {
+    if (!files || !user || !supabase) return [];
+    const uploadedUrls = [];
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const filePath = `polls/${Date.now()}_${file.name}`;
+      const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, file);
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage.from('poll_attachments').getPublicUrl(filePath);
+        uploadedUrls.push(publicUrl);
+      }
+    }
+    return uploadedUrls;
+  };
   
 const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -514,9 +529,21 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               <div className="space-y-4">
                 <h2 className="text-3xl md:text-5xl font-black uppercase leading-tight tracking-tighter text-gray-900">{selectedPoll.title}</h2>
                 {selectedPoll.description && (
-                  <p className="text-gray-500 text-sm md:text-base leading-relaxed font-medium bg-gray-50 p-6 rounded-[2rem]">
-                    {selectedPoll.description}
-                  </p>
+                  <div className="space-y-4">
+                    <p className="text-gray-500 text-sm md:text-base leading-relaxed font-medium bg-gray-50 p-8 rounded-[2.5rem]">
+                      {selectedPoll.description}
+                    </p>
+                    {selectedPoll.attachment_urls?.length > 0 && (
+                      <div className="flex flex-wrap gap-3">
+                        {selectedPoll.attachment_urls.map((url: string, i: number) => (
+                          <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-100 rounded-2xl hover:border-indigo-600 transition-all group">
+                            <i className="fa-solid fa-file-invoice text-indigo-600"></i>
+                            <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">View Reference {i + 1}</span>
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
               </div>
               <div className="space-y-8">
@@ -778,12 +805,20 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 if (options.length < 2) return showToast("Provide at least 2 options", "error");
 
                 try {
+                  const fileInput = e.currentTarget.querySelector('input[name="poll_files"]') as HTMLInputElement;
+                  let attachmentUrls: string[] = [];
+                  
+                  if (fileInput?.files && fileInput.files.length > 0) {
+                    showToast("Uploading attachments...", "success");
+                    attachmentUrls = await handlePollFileUpload(fileInput.files);
+                  }
+
                   showToast("Publishing Poll...", "success");
-                  // 1. Insert the Poll (Includes Title, Description/Context, and Expiry)
                   const expiryDate = new Date(fd.get('expires') as string).toISOString();
                   const { data: poll, error: pErr } = await supabase!.from('polls').insert({ 
                     title: fd.get('title'), 
                     description: fd.get('description'),
+                    attachment_urls: attachmentUrls,
                     expires_at: expiryDate,
                     closed_at: expiryDate 
                   }).select().single();
@@ -808,13 +843,32 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Poll Question / Title</label>
-                      <input name="title" required placeholder="Ex: Should we rezone District 2?" className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold text-xs transition-all" />
+                      <input name="title" required placeholder="Ex: Proposed Rezoning of District 2" className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold text-xs transition-all" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Expiration Date</label>
                       <input name="expires" type="datetime-local" required className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold text-xs transition-all" />
                     </div>
                   </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Context / Description</label>
+                    <textarea name="description" placeholder="Provide background information, links, or context for this poll..." className="w-full p-6 bg-gray-50 rounded-[2rem] border-2 border-transparent focus:border-indigo-600 outline-none font-medium text-xs min-h-[150px] transition-all" />
+                  </div>
+
+                  <div className="bg-indigo-50 p-6 rounded-[2rem] border-2 border-dashed border-indigo-200">
+                    <label className="flex items-center gap-4 cursor-pointer">
+                      <div className="bg-indigo-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg">
+                        <i className="fa-solid fa-cloud-arrow-up"></i>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase text-indigo-900">Upload Supporting Documents</span>
+                        <span className="text-[9px] font-bold text-indigo-400 uppercase">Photos, PDFs, or site plans</span>
+                      </div>
+                      <input type="file" name="poll_files" multiple className="hidden" />
+                    </label>
+                  </div>
+                </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Context / Description</label>
                     <textarea name="description" placeholder="Provide background information or context for this poll..." className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-medium text-xs min-h-[120px] transition-all" />

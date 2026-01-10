@@ -533,9 +533,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     <p className="text-gray-500 text-sm md:text-base leading-relaxed font-medium bg-gray-50 p-8 rounded-[2.5rem]">
                       {selectedPoll.description}
                     </p>
-                    {selectedPoll.attachment_urls?.length > 0 && (
+                    {selectedPoll.attachments?.length > 0 && (
                       <div className="flex flex-wrap gap-3">
-                        {selectedPoll.attachment_urls.map((url: string, i: number) => (
+                        {selectedPoll.attachments.map((url: string, i: number) => (
                           <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-100 rounded-2xl hover:border-indigo-600 transition-all group">
                             <i className="fa-solid fa-file-invoice text-indigo-600"></i>
                             <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">View Reference {i + 1}</span>
@@ -818,7 +818,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   const { data: poll, error: pErr } = await supabase!.from('polls').insert({ 
                     title: fd.get('title'), 
                     description: fd.get('description'),
-                    attachment_urls: attachmentUrls,
+                    attachments: attachmentUrls,
                     expires_at: expiryDate,
                     closed_at: expiryDate 
                   }).select().single();

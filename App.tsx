@@ -191,7 +191,6 @@ const handleBoardFileUpload = async (files: FileList) => {
     }
     return uploadedUrls;
   };
-  const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   
 const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();

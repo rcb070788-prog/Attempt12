@@ -394,22 +394,33 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             </div>
             <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
               {registryModal.voters.map((v: any, i: number) => {
-                // Determine privacy state
+                // 1. Determine privacy state
                 const isShielded = !!v.is_anonymous;
                 
+                // 2. Extract profile data (Handling both Object and Array join styles from Supabase)
+                const voterProfile = Array.isArray(v.profiles) ? v.profiles[0] : v.profiles;
+                
+                // 3. Define display name based on privacy
+                const displayName = isShielded 
+                  ? "Verified Voter" 
+                  : (voterProfile?.full_name || "Public Voter");
+
+                const avatarUrl = isShielded ? undefined : voterProfile?.avatar_url;
+                const district = voterProfile?.district || "???";
+
                 return (
                   <div key={i} className="flex items-center gap-4 p-5 bg-gray-50 rounded-[2rem] border border-transparent hover:border-indigo-100 transition-all group">
                     <UserAvatar 
-                      url={isShielded ? undefined : v.profiles?.avatar_url} 
+                      url={avatarUrl} 
                       isAnonymous={isShielded} 
                       size="md" 
                     />
                     <div className="flex flex-col">
                       <span className="text-sm font-black text-gray-900 uppercase tracking-tight">
-                        {isShielded ? "Verified Voter" : (v.profiles?.full_name || "Verified Voter")}
+                        {displayName}
                       </span>
                       <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest opacity-70">
-                        District {v.profiles?.district || "???"}
+                        District {district}
                       </span>
                     </div>
                     {isShielded && (

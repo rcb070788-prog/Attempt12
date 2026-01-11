@@ -139,16 +139,27 @@ export default function App() {
 
   const fetchSuggestions = async () => {
     if (!supabase) return;
-    // Fetch suggestions with profiles, comments (threaded), and reactions
-    const { data } = await supabase
-      .from('suggestions')
-      .select(`
-        *, 
-        profiles(full_name, district, avatar_url),
-        suggestion_comments(*, profiles(full_name, district, avatar_url), suggestion_reactions(*))
-      `)
-      .order('created_at', { ascending: false });
-    setSuggestions(data || []);
+    try {
+      const { data, error } = await supabase
+        .from('suggestions')
+        .select(`
+          *, 
+          profiles(full_name, district, avatar_url),
+          suggestion_comments(*, profiles(full_name, district, avatar_url), suggestion_reactions(*))
+        `)
+        .order('created_at', { ascending: false });
+      
+      if (error) {
+        console.error("Suggestion Fetch Error:", error.message);
+        // Fallback: try fetching without comments if the join is the problem
+        const { data: fallbackData } = await supabase.from('suggestions').select('*, profiles(full_name, district, avatar_url)').order('created_at', { ascending: false });
+        setSuggestions(fallbackData || []);
+      } else {
+        setSuggestions(data || []);
+      }
+    } catch (err) {
+      console.error("Critical Fetch Error:", err);
+    }
   };
 
   const fetchBoardMessages = async () => {

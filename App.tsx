@@ -349,6 +349,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     if (error) showToast(error.message, "error"); else { showToast("Poll Closed Early"); fetchPolls(); }
   };
 
+  const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
+    if (!supabase) return;
+    const { error } = await supabase.from('suggestions').update({ status }).eq('id', suggestionId);
+    if (error) showToast(error.message, "error"); else { showToast(`Suggestion marked as ${status}`); fetchSuggestions(); }
+  };
+
   const handleDeletePoll = async (pollId: string) => {
     if (!supabase || !window.confirm("Permanently delete this poll and all its data?")) return;
     const { error } = await supabase.from('polls').delete().eq('id', pollId);
@@ -1356,6 +1362,53 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     </div>
                   );
                 })}
+              </div>
+            </section>
+
+            {/* --- MANAGE SUGGESTIONS SECTION --- */}
+            <section className="space-y-6">
+              <div className="px-4">
+                <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Manage Suggestions</h2>
+                <p className="text-gray-400 font-bold text-[10px] uppercase mt-1">Update status of community proposals</p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4">
+                {suggestions.map(sug => (
+                  <div key={sug.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3 mb-1">
+                        <h4 className="font-black uppercase text-sm truncate">{sug.title}</h4>
+                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
+                          sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
+                          sug.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 
+                          'bg-gray-100 text-gray-400'
+                        }`}>
+                          {sug.status || 'Under Review'}
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-bold text-gray-400 uppercase">By {sug.profiles?.full_name || 'Verified Voter'} • {formatDate(sug.created_at)}</p>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => (
+                        <button
+                          key={statusOption}
+                          onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
+                          className={`px-3 py-2 rounded-xl text-[8px] font-black uppercase transition-all ${
+                            (sug.status || 'Under Review') === statusOption 
+                              ? 'bg-indigo-600 text-white shadow-lg' 
+                              : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                          }`}
+                        >
+                          {statusOption}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+                {suggestions.length === 0 && (
+                  <p className="text-center py-10 text-[10px] font-black uppercase text-gray-300">No suggestions to manage.</p>
+                )}
               </div>
             </section>
           </div>

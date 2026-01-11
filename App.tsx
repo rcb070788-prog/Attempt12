@@ -179,21 +179,31 @@ export default function App() {
     if (!file || !user || !supabase) return;
     try {
       setIsUploading(true);
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/avatar.${fileExt}`;
-      // Explicitly set contentType so the browser knows it's an image
+      // We use a fixed filename 'avatar_image' so upsert always replaces the same file
+      const filePath = `${user.id}/avatar_image`;
+      
       const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { 
         upsert: true,
         contentType: file.type 
       });
       if (uploadError) throw uploadError;
+
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
       const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
-      const { error: updateError } = await supabase.from('profiles').update({ avatar_url: urlWithCacheBuster }).eq('id', user.id);
-      if (updateError) throw updateError;
-      // Manually sync local state immediately so the UI reflects the change without waiting for the fetch
+      
+      // Use UPSERT instead of UPDATE to ensure the record is created if it doesn't exist
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .upsert({ 
+          id: user.id, 
+          avatar_url: urlWithCacheBuster,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (dbError) throw dbError;
+      
       setProfile((prev: any) => ({ ...prev, avatar_url: urlWithCacheBuster }));
-      showToast("Photo Updated");
+      showToast("Photo Updated Successfully");
     } catch (err: any) { showToast(err.message, "error"); } finally { setIsUploading(false); }
   };
 const handleBoardFileUpload = async (files: FileList) => {

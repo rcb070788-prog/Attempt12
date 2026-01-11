@@ -192,12 +192,12 @@ export default function App() {
       const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
       
       // Use UPSERT instead of UPDATE to ensure the record is created if it doesn't exist
+      // Removed updated_at to prevent schema cache errors
       const { error: dbError } = await supabase
         .from('profiles')
         .upsert({ 
           id: user.id, 
-          avatar_url: urlWithCacheBuster,
-          updated_at: new Date().toISOString()
+          avatar_url: urlWithCacheBuster
         }, { onConflict: 'id' });
 
       if (dbError) throw dbError;

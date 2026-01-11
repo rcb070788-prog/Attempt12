@@ -280,12 +280,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   const confirmVote = async () => {
     if (!pendingVote || !supabase || !user) return;
     
-    // Explicitly cast to boolean to ensure DB consistency
+    // Ensure we are sending a strict primitive boolean to the database
     const cleanVotePayload = {
       poll_id: pendingVote.pollId,
       option_id: pendingVote.optionId,
       user_id: user.id,
-      is_anonymous: !!pendingVote.isAnonymous 
+      is_anonymous: pendingVote.isAnonymous === true
     };
 
     const { error } = await supabase
@@ -296,7 +296,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
       showToast(error.message, 'error');
     } else {
       showToast("Vote recorded successfully");
-      fetchPolls();
+      // Wait for fetchPolls to complete to ensure UI state is fresh
+      await fetchPolls();
     }
     setPendingVote(null);
   };
@@ -394,16 +395,16 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             </div>
             <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
               {registryModal.voters.map((v: any, i: number) => {
-                // 1. Determine privacy state
-                const isShielded = !!v.is_anonymous;
+                // 1. Robust privacy check: handle booleans or stringified booleans from DB
+                const isShielded = v.is_anonymous === true || v.is_anonymous === 'true';
                 
-                // 2. Extract profile data (Handling both Object and Array join styles from Supabase)
+                // 2. Extract profile data
                 const voterProfile = Array.isArray(v.profiles) ? v.profiles[0] : v.profiles;
                 
-                // 3. Define display name based on privacy
+                // 3. Determine Display Attributes
                 const displayName = isShielded 
                   ? "Verified Voter" 
-                  : (voterProfile?.full_name || "Public Voter");
+                  : (voterProfile?.full_name || "Verified Voter");
 
                 const avatarUrl = isShielded ? undefined : voterProfile?.avatar_url;
                 const district = voterProfile?.district || "???";
@@ -752,7 +753,14 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       {(hasVotedAny || isExpired) && votes.length > 0 && (
                         <div className="flex items-center gap-2 px-2 cursor-pointer" onClick={() => setRegistryModal({ optionText: opt.text, voters: votes })}>
                           <div className="flex -space-x-2">
-                            {votes.slice(0, 5).map((v: any, i: number) => <UserAvatar key={i} url={v.profiles?.avatar_url} isAnonymous={v.is_anonymous} size="sm" />)}
+                            {votes.slice(0, 5).map((v: any, i: number) => (
+                              <UserAvatar 
+                                key={i} 
+                                url={(v.is_anonymous === true || v.is_anonymous === 'true') ? undefined : v.profiles?.avatar_url} 
+                                isAnonymous={v.is_anonymous === true || v.is_anonymous === 'true'} 
+                                size="sm" 
+                              />
+                            ))}
                           </div>
                           {votes.length > 5 && <span className="text-[9px] font-black text-gray-400">+ {votes.length - 5} More</span>}
                           <span className="text-[8px] font-black text-indigo-400 uppercase ml-auto">View Registry</span>

@@ -83,6 +83,7 @@ export default function App() {
   const [pendingVote, setPendingVote] = useState<{pollId: string, optionId: string, optionText: string, isAnonymous: boolean} | null>(null);
   const [registryModal, setRegistryModal] = useState<{optionText: string, voters: any[]} | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
 
@@ -1046,40 +1047,62 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* --- LEFT COLUMN: THE BOX --- */}
-              <div className="lg:col-span-4 sticky top-8">
-                {user ? (
-                  <form onSubmit={async (e) => {
-                    e.preventDefault();
-                    const fd = new FormData(e.currentTarget);
-                    const suggestionText = fd.get('description');
-                    const { error } = await supabase!.from('suggestions').insert({
-                      user_id: user.id,
-                      title: fd.get('title'),
-                      description: suggestionText,
-                      content: suggestionText, // Map to both columns for backward compatibility
-                      category: 'General'
-                    });
-                    
-                    if (error) showToast(error.message, 'error');
-                    else { showToast("Proposal Submitted!"); fetchSuggestions(); (e.target as HTMLFormElement).reset(); }
-                  }} className="bg-indigo-600 p-8 rounded-[3rem] shadow-2xl space-y-4 border-4 border-indigo-500">
-                    <h3 className="text-white font-black uppercase text-xl mb-4">New Proposal</h3>
-                    <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase outline-none shadow-inner resize-none h-20" />
-                    <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-5 bg-white rounded-2xl text-xs min-h-[150px] outline-none shadow-inner" />
-                    <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
-                  </form>
-                ) : (
-                  <div className="bg-white p-10 rounded-[3rem] border-4 border-dashed border-gray-100 text-center">
-                    <p className="text-gray-400 font-black uppercase text-xs">Login to submit suggestions</p>
-                    <button onClick={() => setCurrentPage('login')} className="mt-4 px-8 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase">Login</button>
-                  </div>
-                )}
-              </div>
+            <div className="relative">
+              {/* --- FLOATING TRIGGER BUTTON (Top Left Peeking) --- */}
+              <button 
+                onClick={() => setIsSuggestionModalOpen(true)}
+                className="fixed bottom-8 right-8 lg:bottom-auto lg:right-auto lg:top-24 lg:left-4 z-[100] bg-indigo-600 text-white w-16 h-16 rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
+              >
+                <i className="fa-solid fa-plus text-2xl group-hover:rotate-90 transition-transform"></i>
+                <span className="absolute left-20 bg-gray-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden lg:block">New Proposal</span>
+              </button>
 
-              {/* --- RIGHT COLUMN: THE FEED --- */}
-              <div className="lg:col-span-8 space-y-6">
+              {/* --- MODAL OVERLAY FOR NEW PROPOSAL --- */}
+              {isSuggestionModalOpen && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+                  <div className="bg-indigo-600 w-full max-w-lg rounded-[3rem] shadow-2xl p-8 border-4 border-indigo-500 animate-slide-up">
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-white font-black uppercase text-xl">New Proposal</h3>
+                      <button onClick={() => setIsSuggestionModalOpen(false)} className="text-indigo-200 hover:text-white transition-colors">
+                        <i className="fa-solid fa-circle-xmark text-2xl"></i>
+                      </button>
+                    </div>
+                    {user ? (
+                      <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        const suggestionText = fd.get('description');
+                        const { error } = await supabase!.from('suggestions').insert({
+                          user_id: user.id,
+                          title: fd.get('title'),
+                          description: suggestionText,
+                          content: suggestionText,
+                          category: 'General'
+                        });
+                        if (error) showToast(error.message, 'error');
+                        else { 
+                          showToast("Proposal Submitted!"); 
+                          fetchSuggestions(); 
+                          setIsSuggestionModalOpen(false);
+                          (e.target as HTMLFormElement).reset(); 
+                        }
+                      }} className="space-y-4">
+                        <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase outline-none shadow-inner resize-none h-20" />
+                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-5 bg-white rounded-2xl text-xs min-h-[150px] outline-none shadow-inner" />
+                        <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
+                      </form>
+                    ) : (
+                      <div className="bg-white p-10 rounded-[2rem] text-center">
+                        <p className="text-gray-400 font-black uppercase text-xs mb-4">Verification Required</p>
+                        <button onClick={() => { setCurrentPage('login'); setIsSuggestionModalOpen(false); }} className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase">Login</button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* --- CENTERED FEED --- */}
+              <div className="max-w-4xl mx-auto space-y-6">
                 {suggestions.filter(s => (s.suggestion_comments?.length || 0) >= 0).map(sug => (
                   <div key={sug.id} className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
                     <div className="p-8 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">

@@ -1066,7 +1066,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     else { showToast("Proposal Submitted!"); fetchSuggestions(); (e.target as HTMLFormElement).reset(); }
                   }} className="bg-indigo-600 p-8 rounded-[3rem] shadow-2xl space-y-4 border-4 border-indigo-500">
                     <h3 className="text-white font-black uppercase text-xl mb-4">New Proposal</h3>
-                    <input name="title" required placeholder="SUMMARY / TITLE" className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase outline-none shadow-inner" />
+                    <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase outline-none shadow-inner resize-none h-20" />
                     <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-5 bg-white rounded-2xl text-xs min-h-[150px] outline-none shadow-inner" />
                     <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
                   </form>
@@ -1090,7 +1090,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           <p className="text-[8px] font-bold text-indigo-400 uppercase mt-1">Dist {sug.profiles?.district} • {formatDate(sug.created_at)}</p>
                         </div>
                       </div>
-                      <h4 className="text-xl font-black uppercase mb-3 leading-tight text-indigo-600">{sug.title}</h4>
+                      <h4 className="text-xl font-black uppercase mb-3 leading-tight text-indigo-600 break-words whitespace-normal">{sug.title}</h4>
                       <p className="text-gray-600 text-xs font-medium leading-relaxed mb-6 break-words whitespace-pre-wrap">{sug.description}</p>
                       
                       <div className="mt-auto flex items-center gap-2">

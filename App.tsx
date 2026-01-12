@@ -1290,11 +1290,11 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               </button>
 
               {isAdminSections.poll && (
-                <div className="p-10 pt-0 border-t border-indigo-50"></div>
-              <div className="mb-8">
-                <h2 className="text-3xl font-black uppercase tracking-tighter">Create New Poll</h2>
-                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Publish a new community decision point</p>
-              </div>
+                <div className="p-10 pt-0 border-t border-indigo-50">
+                  <div className="mb-8 mt-8">
+                    <h2 className="text-3xl font-black uppercase tracking-tighter">Create New Poll</h2>
+                    <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Publish a new community decision point</p>
+                  </div>
 
               <form onSubmit={async (e) => {
                 e.preventDefault();
@@ -1404,6 +1404,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   Post Poll to Public Portal
                 </button>
               </form>
+              </div>
+              )}
             </section>
 
             {/* --- USER REGISTRY SECTION --- */}
@@ -1423,10 +1425,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               </button>
 
               {isAdminSections.registry && (
-                <div className="border-t border-gray-50"></div>
-
-              <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
-                <table className="w-full text-left border-collapse">
+                <div className="border-t border-gray-50 p-4">
+                  <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
+                    <table className="w-full text-left border-collapse">
                   <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[10px]">
                     <tr><th className="p-8">Voter Name</th><th className="p-8">District</th><th className="p-8">Voter ID</th><th className="p-8 text-right">Status</th></tr>
                   </thead>
@@ -1447,6 +1448,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   </tbody>
                 </table>
               </div>
+              </div>
+              )}
             </section>
 
             {/* --- MANAGE EXISTING POLLS SECTION --- */}
@@ -1466,10 +1469,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               </button>
 
               {isAdminSections.managePolls && (
-                <div className="p-8 grid grid-cols-1 gap-4 border-t border-gray-50 bg-gray-50/30"></div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {polls.map(poll => {
+                <div className="p-8 border-t border-gray-50 bg-gray-50/30">
+                  <div className="grid grid-cols-1 gap-4">
+                    {polls.map(poll => {
                   const isExpired = new Date(poll.expires_at) < new Date();
                   return (
                     <div key={poll.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
@@ -1503,6 +1505,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   );
                 })}
               </div>
+              </div>
+              )}
             </section>
 
             {/* --- MANAGE SUGGESTIONS SECTION --- */}
@@ -1525,10 +1529,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               </button>
 
               {isAdminSections.manageSuggestions && (
-                <div className="p-8 grid grid-cols-1 gap-4 border-t border-gray-50 bg-gray-50/30"></div>
-
-              <div className="grid grid-cols-1 gap-4">
-                {suggestions.map(sug => (
+                <div className="p-8 border-t border-gray-50 bg-gray-50/30">
+                  <div className="grid grid-cols-1 gap-4">
+                    {suggestions.map(sug => (
                   <div key={sug.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3 mb-1">
@@ -1565,6 +1568,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   <p className="text-center py-10 text-[10px] font-black uppercase text-gray-300">No suggestions to manage.</p>
                 )}
               </div>
+              </div>
+              )}
             </section>
           </div>
         )}

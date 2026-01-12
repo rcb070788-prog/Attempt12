@@ -91,6 +91,18 @@ export default function App() {
   const [isAdminSections, setIsAdminSections] = useState({ poll: true, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false });
   const [notFoundModal, setNotFoundModal] = useState(false);
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
+  const [clearedItems, setClearedItems] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('admin_cleared_items') || '[]'); } catch { return []; }
+  });
+
+  const toggleClearItem = (id: string) => {
+    const newCleared = clearedItems.includes(id) 
+      ? clearedItems.filter(i => i !== id) 
+      : [...clearedItems, id];
+    setClearedItems(newCleared);
+    localStorage.setItem('admin_cleared_items', JSON.stringify(newCleared));
+    showToast(clearedItems.includes(id) ? "Item restored to view" : "Item cleared from view");
+  };
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -1487,32 +1499,35 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               >
                 <div className="text-left flex items-center gap-4">
                   <div>
-                    <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Voter Registry</h2>
-                    <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Verified Moore County Users</p>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">Voter Registry</h2>
+                    <p className="text-gray-400 font-bold text-base uppercase mt-1">Verified Moore County Users</p>
                   </div>
-                  <span className="px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full font-black text-[9px] uppercase">{allUsers.length}</span>
+                  <span className="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-full font-black text-base uppercase">{allUsers.filter(u => !clearedItems.includes(u.id)).length}</span>
                 </div>
-                <i className={`fa-solid fa-chevron-${isAdminSections.registry ? 'up' : 'down'} text-gray-300`}></i>
+                <div className="flex items-center gap-4">
+                  {clearedItems.length > 0 && <button onClick={(e) => { e.stopPropagation(); setClearedItems([]); }} className="text-base font-black text-indigo-600 uppercase underline">Restore All</button>}
+                  <i className={`fa-solid fa-chevron-${isAdminSections.registry ? 'up' : 'down'} text-gray-300 text-xl`}></i>
+                </div>
               </button>
 
               {isAdminSections.registry && (
                 <div className="border-t border-gray-50 p-4">
                   <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[10px]">
-                    <tr><th className="p-8">Voter Name</th><th className="p-8">District</th><th className="p-8">Voter ID</th><th className="p-8 text-right">Status</th></tr>
+                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-base">
+                    <tr><th className="p-8">Voter Name</th><th className="p-8">District</th><th className="p-8">Voter ID</th><th className="p-8 text-right">Actions</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {allUsers.map(u => (
+                    {allUsers.filter(u => !clearedItems.includes(u.id)).map(u => (
                       <tr key={u.id} className="hover:bg-indigo-50/30 transition-colors group">
                         <td className="p-8 flex items-center gap-4">
                           <UserAvatar url={u.avatar_url} size="md" />
-                          <span className="font-black uppercase text-sm text-gray-900">{u.full_name}</span>
+                          <span className="font-black uppercase text-lg text-gray-900">{u.full_name}</span>
                         </td>
-                        <td className="p-8 text-xs font-bold text-gray-500 uppercase tracking-widest">District {u.district}</td>
-                        <td className="p-8 text-xs font-mono text-gray-400 font-bold">{u.voter_id}</td>
+                        <td className="p-8 text-base font-bold text-gray-500 uppercase tracking-widest">District {u.district}</td>
+                        <td className="p-8 text-base font-mono text-gray-400 font-bold">{u.voter_id}</td>
                         <td className="p-8 text-right">
-                          <span className="px-4 py-1.5 bg-green-100 text-green-600 rounded-full text-[9px] font-black uppercase ring-2 ring-white">Verified</span>
+                          <button onClick={() => toggleClearItem(u.id)} className="px-4 py-2 bg-gray-100 text-gray-500 rounded-xl text-base font-black uppercase hover:bg-gray-200">Clear</button>
                         </td>
                       </tr>
                     ))}
@@ -1541,35 +1556,31 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
               {isAdminSections.managePolls && (
                 <div className="p-8 border-t border-gray-50 bg-gray-50/30">
-                  <div className="grid grid-cols-1 gap-4">
-                    {polls.map(poll => {
+                  <div className="grid grid-cols-1 gap-6">
+                    {polls.filter(p => !clearedItems.includes(p.id)).map(poll => {
                   const isExpired = new Date(poll.expires_at) < new Date();
                   return (
-                    <div key={poll.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div key={poll.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-3 mb-1">
-                          <h4 className="font-black uppercase text-sm truncate">{poll.title}</h4>
-                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${isExpired ? 'bg-gray-100 text-gray-400' : 'bg-green-100 text-green-600'}`}>
+                        <div className="flex items-center gap-4 mb-2">
+                          <h4 className="font-black uppercase text-lg truncate">{poll.title}</h4>
+                          <span className={`px-3 py-1 rounded text-base font-black uppercase ${isExpired ? 'bg-gray-100 text-gray-400' : 'bg-green-100 text-green-600'}`}>
                             {isExpired ? 'Closed' : 'Active'}
                           </span>
                         </div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase">Created {formatDate(poll.created_at)} • {poll.poll_votes?.length || 0} Total Votes</p>
+                        <p className="text-base font-bold text-gray-400 uppercase">Created {formatDate(poll.created_at)} • {poll.poll_votes?.length || 0} Total Votes</p>
                       </div>
                       
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-3">
                         {!isExpired && (
-                          <button 
-                            onClick={() => handleClosePoll(poll.id)}
-                            className="px-4 py-2 bg-gray-900 text-white rounded-xl text-[9px] font-black uppercase hover:bg-gray-800 transition-all"
-                          >
-                            Close Early
-                          </button>
+                          <button onClick={() => handleClosePoll(poll.id)} className="px-6 py-3 bg-gray-900 text-white rounded-2xl text-base font-black uppercase hover:bg-gray-800">Close Early</button>
                         )}
+                        <button onClick={() => toggleClearItem(poll.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
                         <button 
                           onClick={() => handleDeletePoll(poll.id)}
-                          className="w-10 h-10 bg-red-50 text-red-500 rounded-xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
+                          className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
                         >
-                          <i className="fa-solid fa-trash-can text-xs"></i>
+                          <i className="fa-solid fa-trash-can text-lg"></i>
                         </button>
                       </div>
                     </div>
@@ -1601,37 +1612,40 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
               {isAdminSections.manageSuggestions && (
                 <div className="p-8 border-t border-gray-50 bg-gray-50/30">
-                  <div className="grid grid-cols-1 gap-4">
-                    {suggestions.map(sug => (
-                  <div key={sug.id} className="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                  <div className="grid grid-cols-1 gap-6">
+                    {suggestions.filter(s => !clearedItems.includes(s.id)).map(sug => (
+                  <div key={sug.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h4 className="font-black uppercase text-sm truncate">{sug.title}</h4>
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase ${
-                          sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
-                          sug.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 
-                          'bg-gray-100 text-gray-400'
+                      <div className="flex items-center gap-4 mb-2">
+                        <h4 className="font-black uppercase text-lg truncate">{sug.title}</h4>
+                        <span className={`px-3 py-1 rounded text-base font-black uppercase ${
+                          sug.status === 'Completed' ? 'bg-green-600 text-white shadow-md' : 
+                          sug.status === 'Scheduled' ? 'bg-blue-600 text-white shadow-md' : 
+                          sug.status === 'Closed' ? 'bg-red-600 text-white shadow-md' :
+                          'bg-amber-500 text-white shadow-md'
                         }`}>
                           {sug.status || 'Under Review'}
                         </span>
                       </div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase">By {sug.profiles?.full_name || 'Verified Voter'} • {formatDate(sug.created_at)}</p>
+                      <p className="text-base font-bold text-gray-400 uppercase">By {sug.profiles?.full_name || 'Verified Voter'} • {formatDate(sug.created_at)}</p>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2 justify-center">
+                    <div className="flex flex-wrap gap-3 justify-center items-center">
                       {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => (
                         <button
                           key={statusOption}
                           onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
-                          className={`px-3 py-2 rounded-xl text-[8px] font-black uppercase transition-all ${
-                            (sug.status || 'Under Review') === statusOption 
-                              ? 'bg-indigo-600 text-white shadow-lg' 
-                              : 'bg-gray-50 text-gray-400 hover:bg-gray-100'
+                          className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all ${
+                            (sug.status === statusOption || (!sug.status && statusOption === 'Under Review')) 
+                              ? 'ring-4 ring-indigo-600 bg-indigo-50 text-indigo-600' 
+                              : 'bg-white border border-gray-200 text-gray-400 hover:border-indigo-600 hover:text-indigo-600'
                           }`}
                         >
                           {statusOption}
                         </button>
                       ))}
+                      <div className="h-10 w-px bg-gray-100 mx-2"></div>
+                      <button onClick={() => toggleClearItem(sug.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
                     </div>
                   </div>
                 ))}
@@ -1680,26 +1694,32 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-50">
-                        {manualRequests.map(req => (
+                        {manualRequests.filter(r => !clearedItems.includes(r.id)).map(req => (
                           <tr key={req.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="p-6">
-                              <p className="font-black uppercase text-xs text-gray-900">{req.first_name} {req.last_name}</p>
-                              <p className="text-[8px] font-bold text-gray-400 uppercase">{formatDate(req.created_at)}</p>
+                            <td className="p-8">
+                              <p className="font-black uppercase text-lg text-gray-900 leading-none">{req.first_name} {req.last_name}</p>
+                              <p className="text-base font-bold text-gray-400 uppercase mt-1">{formatDate(req.created_at)}</p>
                             </td>
-                            <td className="p-6 text-[10px] font-bold text-gray-500">{req.dob}</td>
-                            <td className="p-6 text-[10px] font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>
-                            <td className="p-6 text-right">
-                              <div className="flex justify-end gap-2">
+                            <td className="p-8 text-base font-bold text-gray-500">{req.dob}</td>
+                            <td className="p-8 text-base font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>
+                            <td className="p-8 text-right">
+                              <div className="flex justify-end items-center gap-4">
                                 <button 
                                   onClick={async () => {
+                                    if (req.status === 'Processed') return;
                                     await supabase?.from('manual_access_requests').update({ status: 'Processed' }).eq('id', req.id);
                                     fetchManualRequests();
                                     showToast("Request marked as processed");
                                   }}
-                                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[8px] font-black uppercase"
+                                  className={`px-6 py-3 rounded-2xl text-base font-black uppercase transition-all shadow-md ${
+                                    req.status === 'Processed' 
+                                      ? 'bg-green-600 text-white' 
+                                      : 'bg-red-500 text-black hover:scale-105 active:scale-95'
+                                  }`}
                                 >
-                                  Mark Processed
+                                  {req.status === 'Processed' ? 'Processed' : 'Mark Processed'}
                                 </button>
+                                <button onClick={() => toggleClearItem(req.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
                               </div>
                             </td>
                           </tr>

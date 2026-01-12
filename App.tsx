@@ -87,6 +87,9 @@ export default function App() {
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
+  const [isAdminSections, setIsAdminSections] = useState({ poll: true, registry: false, managePolls: false, manageSuggestions: false });
+  const [notFoundModal, setNotFoundModal] = useState(false);
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -285,7 +288,11 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
       });
       
       const verifyData = await verifyRes.json();
-      if (!verifyRes.ok) throw new Error(verifyData.error);
+      if (!verifyRes.ok) {
+        setNotFoundModal(true);
+        setIsVerifying(false);
+        return;
+      }
       
       const { error } = await supabase!.auth.signUp({ 
         email: fd.get('email') as string, 
@@ -471,6 +478,70 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
+
+      {/* --- VOTER NOT FOUND / MANUAL REQUEST MODAL --- */}
+      {notFoundModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-md z-[400] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-xl rounded-[3rem] shadow-2xl overflow-hidden animate-slide-up">
+            <div className="p-10 text-center space-y-6">
+              <div className="w-20 h-20 bg-amber-50 text-amber-500 rounded-full flex items-center justify-center mx-auto border-4 border-dashed border-amber-100">
+                <i className="fa-solid fa-user-magnifying-glass text-3xl"></i>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-2xl font-black uppercase text-gray-900">Information Not Found</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">
+                  We're sorry. Your information was not found in our current copy of the voter registry. 
+                  This application is maintained by an all volunteer group of Moore County citizens and we have to manually update the voter registry.
+                </p>
+                <p className="text-indigo-600 font-black uppercase text-[10px] tracking-widest bg-indigo-50 py-3 rounded-2xl">
+                  Send us your contact information and we'll be happy to get you full access.
+                </p>
+              </div>
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSubmittingRequest(true);
+                const fd = new FormData(e.currentTarget);
+                const { error } = await supabase!.from('manual_access_requests').insert({
+                  first_name: fd.get('fname'),
+                  last_name: fd.get('lname'),
+                  dob: fd.get('dob'),
+                  ssn_last_four: fd.get('ssn')
+                });
+                if (error) showToast(error.message, 'error');
+                else {
+                  showToast("Verification Request Sent Successfully");
+                  setNotFoundModal(false);
+                }
+                setIsSubmittingRequest(false);
+              }} className="grid grid-cols-2 gap-4 text-left">
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">First Name</label>
+                  <input name="fname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Last Name</label>
+                  <input name="lname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Date of Birth</label>
+                  <input name="dob" type="date" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Last 4 SSN</label>
+                  <input name="ssn" maxLength={4} pattern="\d{4}" placeholder="0000" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                </div>
+                <div className="col-span-2 pt-4 flex gap-3">
+                  <button type="submit" disabled={isSubmittingRequest} className="flex-grow py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-indigo-100">
+                    {isSubmittingRequest ? <i className="fa-solid fa-spinner animate-spin"></i> : "Send Request"}
+                  </button>
+                  <button type="button" onClick={() => setNotFoundModal(false)} className="px-8 py-5 bg-gray-100 text-gray-400 rounded-2xl font-black uppercase text-xs">Cancel</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* --- POLL LOGIN REDIRECT MODAL --- */}
       {showPollLoginModal && (
@@ -1203,10 +1274,23 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
         {/* ADMIN PAGE */}
         {currentPage === 'admin' && profile?.is_admin && (
-          <div className="max-w-6xl mx-auto space-y-12 pb-20 animate-slide-up">
+          <div className="max-w-6xl mx-auto space-y-6 pb-20 animate-slide-up">
             
             {/* --- POLL CREATOR SECTION --- */}
-            <section className="bg-white p-10 rounded-[3rem] shadow-xl border-4 border-indigo-600">
+            <section className="bg-white rounded-[2.5rem] shadow-xl border-4 border-indigo-600 overflow-hidden transition-all">
+              <button 
+                onClick={() => setIsAdminSections(prev => ({...prev, poll: !prev.poll}))}
+                className="w-full p-8 flex justify-between items-center hover:bg-indigo-50 transition-colors"
+              >
+                <div className="text-left">
+                  <h2 className="text-2xl font-black uppercase tracking-tighter">Create New Poll</h2>
+                  <p className="text-indigo-600 font-bold text-[9px] uppercase tracking-widest">Publish community decision points</p>
+                </div>
+                <i className={`fa-solid fa-chevron-${isAdminSections.poll ? 'up' : 'down'} text-indigo-600 text-xl`}></i>
+              </button>
+
+              {isAdminSections.poll && (
+                <div className="p-10 pt-0 border-t border-indigo-50"></div>
               <div className="mb-8">
                 <h2 className="text-3xl font-black uppercase tracking-tighter">Create New Poll</h2>
                 <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Publish a new community decision point</p>
@@ -1323,16 +1407,23 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             </section>
 
             {/* --- USER REGISTRY SECTION --- */}
-            <section className="space-y-6">
-              <div className="flex justify-between items-end px-4">
-                <div>
-                  <h2 className="text-4xl font-black uppercase tracking-tighter">Voter Registry</h2>
-                  <p className="text-gray-400 font-bold text-[10px] uppercase">Verified Moore County Users</p>
+            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+              <button 
+                onClick={() => setIsAdminSections(prev => ({...prev, registry: !prev.registry}))}
+                className="w-full p-8 flex justify-between items-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="text-left flex items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Voter Registry</h2>
+                    <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Verified Moore County Users</p>
+                  </div>
+                  <span className="px-3 py-1 bg-indigo-100 text-indigo-600 rounded-full font-black text-[9px] uppercase">{allUsers.length}</span>
                 </div>
-                <div className="bg-indigo-100 px-4 py-2 rounded-full">
-                  <span className="text-indigo-600 font-black text-[10px] uppercase">{allUsers.length} TOTAL VOTERS</span>
-                </div>
-              </div>
+                <i className={`fa-solid fa-chevron-${isAdminSections.registry ? 'up' : 'down'} text-gray-300`}></i>
+              </button>
+
+              {isAdminSections.registry && (
+                <div className="border-t border-gray-50"></div>
 
               <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
@@ -1359,11 +1450,23 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             </section>
 
             {/* --- MANAGE EXISTING POLLS SECTION --- */}
-            <section className="space-y-6">
-              <div className="px-4">
-                <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Manage Polls</h2>
-                <p className="text-gray-400 font-bold text-[10px] uppercase mt-1">Archive or delete live community polls</p>
-              </div>
+            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+              <button 
+                onClick={() => setIsAdminSections(prev => ({...prev, managePolls: !prev.managePolls}))}
+                className="w-full p-8 flex justify-between items-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="text-left flex items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Manage Polls</h2>
+                    <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Archive or delete live community polls</p>
+                  </div>
+                  <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full font-black text-[9px] uppercase">{polls.length}</span>
+                </div>
+                <i className={`fa-solid fa-chevron-${isAdminSections.managePolls ? 'up' : 'down'} text-gray-300`}></i>
+              </button>
+
+              {isAdminSections.managePolls && (
+                <div className="p-8 grid grid-cols-1 gap-4 border-t border-gray-50 bg-gray-50/30"></div>
 
               <div className="grid grid-cols-1 gap-4">
                 {polls.map(poll => {
@@ -1403,11 +1506,26 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             </section>
 
             {/* --- MANAGE SUGGESTIONS SECTION --- */}
-            <section className="space-y-6">
-              <div className="px-4">
-                <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">Manage Suggestions</h2>
-                <p className="text-gray-400 font-bold text-[10px] uppercase mt-1">Update status of community proposals</p>
-              </div>
+            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+              <button 
+                onClick={() => setIsAdminSections(prev => ({...prev, manageSuggestions: !prev.manageSuggestions}))}
+                className="w-full p-8 flex justify-between items-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="text-left flex items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Manage Suggestions</h2>
+                    <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Update proposal status</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full font-black text-[9px] uppercase">{suggestions.length}</span>
+                    <span className="px-2 py-0.5 bg-red-500 text-white rounded text-[8px] font-black animate-pulse">NEW</span>
+                  </div>
+                </div>
+                <i className={`fa-solid fa-chevron-${isAdminSections.manageSuggestions ? 'up' : 'down'} text-gray-300`}></i>
+              </button>
+
+              {isAdminSections.manageSuggestions && (
+                <div className="p-8 grid grid-cols-1 gap-4 border-t border-gray-50 bg-gray-50/30"></div>
 
               <div className="grid grid-cols-1 gap-4">
                 {suggestions.map(sug => (

@@ -110,6 +110,12 @@ export default function App() {
 
     fetchAllData();
 
+    // Refresh admin data whenever switching to admin page
+    if (currentPage === 'admin' && profile?.is_admin) {
+      fetchUsers();
+      fetchManualRequests();
+    }
+
     // REAL-TIME SUBSCRIPTION: Listen for new votes to update progress bars
     const votesSubscription = supabase
       .channel('schema-db-changes')
@@ -129,6 +135,51 @@ export default function App() {
       if (updated) setSelectedPoll(updated);
     }
   }, [polls]);
+
+  useEffect(() => {
+    if (currentPage === 'admin' && profile?.is_admin) {
+      fetchUsers();
+      fetchManualRequests();
+    }
+  }, [currentPage, profile]);
+
+  // --- BROWSER HISTORY SYNC ---
+  useEffect(() => {
+    const handlePopState = (event: PopStateEvent) => {
+      if (event.state) {
+        setCurrentPage(event.state.page || 'home');
+        setSelectedCategory(event.state.category || null);
+        setSelectedPoll(event.state.poll || null);
+        setActiveDashboard(event.state.dashboard || null);
+      }
+    };
+    window.addEventListener('popstate', handlePopState);
+    
+    // Replace initial state so the first 'home' load is in the stack
+    if (!window.history.state) {
+      window.history.replaceState({ page: 'home', category: null, poll: null, dashboard: null }, '');
+    }
+    
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  useEffect(() => {
+    const hState = window.history.state;
+    const isNewState = !hState || 
+      hState.page !== currentPage || 
+      hState.category !== selectedCategory || 
+      hState.poll?.id !== selectedPoll?.id ||
+      hState.dashboard?.id !== activeDashboard?.id;
+
+    if (isNewState) {
+      window.history.pushState({ 
+        page: currentPage, 
+        category: selectedCategory, 
+        poll: selectedPoll, 
+        dashboard: activeDashboard 
+      }, '');
+    }
+  }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
 
   // --- DATA FETCHING ---
   const fetchProfile = async (userId: string) => {
@@ -197,7 +248,8 @@ export default function App() {
 
   const fetchManualRequests = async () => {
     if (!supabase) return;
-    const { data } = await supabase.from('manual_access_requests').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('manual_access_requests').select('*').order('created_at', { ascending: false });
+    if (error) console.error("Manual Request Fetch Error:", error.message);
     setManualRequests(data || []);
   };
 
@@ -205,7 +257,8 @@ export default function App() {
     fetchPolls(); 
     fetchSuggestions(); 
     fetchBoardMessages(); 
-    if (profile?.is_admin) { fetchUsers(); fetchManualRequests(); }
+    fetchUsers(); 
+    fetchManualRequests(); 
   };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -518,12 +571,18 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   first_name: fd.get('fname'),
                   last_name: fd.get('lname'),
                   dob: fd.get('dob'),
-                  ssn_last_four: fd.get('ssn')
+                  ssn_last_four: fd.get('ssn'),
+                  status: 'Pending'
                 });
-                if (error) showToast(error.message, 'error');
-                else {
+                if (error) {
+                  showToast(error.message, 'error');
+                } else {
                   showToast("Verification Request Sent Successfully");
+                  // Explicitly close modal and reset verifying state
                   setNotFoundModal(false);
+                  setIsVerifying(false);
+                  // Refresh data in case an admin is viewing
+                  if (profile?.is_admin) fetchManualRequests();
                 }
                 setIsSubmittingRequest(false);
               }} className="grid grid-cols-2 gap-4 text-left">
@@ -1595,14 +1654,15 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Access Requests</h2>
                     <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Manual registry verification needed</p>
                   </div>
-                  {manualRequests.filter(r => r.status === 'Pending').length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full font-black text-[9px] uppercase">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full font-black text-[9px] uppercase">{manualRequests.length}</span>
+                    {manualRequests.some(r => r.status === 'Pending') && (
+                      <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full font-black text-[9px] uppercase animate-pulse">
                         {manualRequests.filter(r => r.status === 'Pending').length} Pending
                       </span>
-                      <span className="px-2 py-0.5 bg-red-500 text-white rounded text-[8px] font-black animate-pulse">NEW</span>
-                    </div>
-                  )}
+                    )}
+                    <span className="px-2 py-0.5 bg-red-500 text-white rounded text-[8px] font-black animate-pulse">NEW</span>
+                  </div>
                 </div>
                 <i className={`fa-solid fa-chevron-${isAdminSections.manualRequests ? 'up' : 'down'} text-gray-300`}></i>
               </button>

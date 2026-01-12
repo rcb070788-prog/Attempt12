@@ -73,6 +73,7 @@ export default function App() {
   const [boardMessages, setBoardMessages] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [manualRequests, setManualRequests] = useState<any[]>([]);
+  const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);
@@ -584,6 +585,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   last_name: fd.get('lname'),
                   dob: fd.get('dob'),
                   ssn_last_four: fd.get('ssn'),
+                  email: fd.get('email'),
                   status: 'Pending'
                 });
                 if (error) {
@@ -613,6 +615,10 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="space-y-1">
                   <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Last 4 SSN</label>
                   <input name="ssn" maxLength={4} pattern="\d{4}" placeholder="0000" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                </div>
+                <div className="col-span-2 space-y-1">
+                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Email Address</label>
+                  <input name="email" type="email" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="col-span-2 pt-4 flex gap-3">
                   <button type="submit" disabled={isSubmittingRequest} className="flex-grow py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-indigo-100">
@@ -1718,21 +1724,26 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                             <td className="p-8 text-base font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>
                             <td className="p-8 text-right">
                               <div className="flex justify-end items-center gap-4">
-                                <button 
-                                  onClick={async () => {
-                                    if (req.status === 'Processed') return;
-                                    await supabase?.from('manual_access_requests').update({ status: 'Processed' }).eq('id', req.id);
-                                    fetchManualRequests();
-                                    showToast("Request marked as processed");
-                                  }}
-                                  className={`px-6 py-3 rounded-2xl text-base font-black uppercase transition-all shadow-md ${
-                                    req.status === 'Processed' 
-                                      ? 'bg-green-600 text-white' 
-                                      : 'bg-red-500 text-black hover:scale-105 active:scale-95'
-                                  }`}
-                                >
-                                  {req.status === 'Processed' ? 'Processed' : 'Mark Processed'}
-                                </button>
+                                {req.status === 'Pending' ? (
+                                  <>
+                                    <button 
+                                      onClick={() => setPendingAction({ req, type: 'Confirm' })}
+                                      className="px-6 py-3 bg-green-600 text-white rounded-2xl text-base font-black uppercase hover:scale-105 transition-all shadow-md"
+                                    >
+                                      Confirm
+                                    </button>
+                                    <button 
+                                      onClick={() => setPendingAction({ req, type: 'Deny' })}
+                                      className="px-6 py-3 bg-red-600 text-white rounded-2xl text-base font-black uppercase hover:scale-105 transition-all shadow-md"
+                                    >
+                                      Deny
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className={`px-6 py-3 rounded-2xl text-base font-black uppercase ${req.status === 'Confirmed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {req.status}
+                                  </span>
+                                )}
                                 <button onClick={() => toggleClearItem(req.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
                               </div>
                             </td>
@@ -1743,6 +1754,53 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         )}
                       </tbody>
                     </table>
+                  </div>
+                </div>
+              )}
+
+              {/* --- ACTION CONFIRMATION MODAL --- */}
+              {pendingAction && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[600] flex items-center justify-center p-4">
+                  <div className={`w-full max-w-lg bg-white rounded-[3rem] shadow-2xl overflow-hidden animate-slide-up border-8 ${pendingAction.type === 'Confirm' ? 'border-green-500' : 'border-red-500'}`}>
+                    <div className="p-10 text-center space-y-8">
+                      <div className={`w-24 h-24 rounded-full flex items-center justify-center mx-auto text-4xl ${pendingAction.type === 'Confirm' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                        <i className={`fa-solid ${pendingAction.type === 'Confirm' ? 'fa-user-check' : 'fa-user-xmark'}`}></i>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <h3 className="text-3xl font-black uppercase text-gray-900 tracking-tighter">Identity Verification</h3>
+                        <p className="text-lg text-gray-500 font-medium leading-relaxed">
+                          You are about to <span className={pendingAction.type === 'Confirm' ? 'text-green-600 font-black' : 'text-red-600 font-black'}>{pendingAction.type.toUpperCase()}</span> that 
+                          <br/><span className="text-2xl font-black text-gray-900 block my-2">"{pendingAction.req.first_name} {pendingAction.req.last_name}"</span> 
+                          is a registered Moore County voter.
+                        </p>
+                        <p className="text-base text-gray-400 font-bold uppercase tracking-widest">An automated email will be sent to: <br/>{pendingAction.req.email}</p>
+                      </div>
+
+                      <div className="flex flex-col gap-3 pt-4">
+                        <button 
+                          onClick={async () => {
+                            const newStatus = pendingAction.type === 'Confirm' ? 'Confirmed' : 'Denied';
+                            const { error } = await supabase!.from('manual_access_requests').update({ status: newStatus }).eq('id', pendingAction.req.id);
+                            if (error) {
+                              showToast(error.message, 'error');
+                            } else {
+                              showToast(`Account ${newStatus} Successfully`);
+                              // PLACEHOLDER: Trigger Email Notification logic here
+                              console.log(`Email Service: Sending ${newStatus} notification to ${pendingAction.req.email}`);
+                              fetchManualRequests();
+                            }
+                            setPendingAction(null);
+                          }}
+                          className={`w-full py-6 rounded-3xl font-black uppercase text-lg shadow-xl ${pendingAction.type === 'Confirm' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}
+                        >
+                          Continue & Notify User
+                        </button>
+                        <button onClick={() => setPendingAction(null)} className="w-full py-4 text-gray-400 font-black uppercase text-base hover:text-gray-900 transition-colors">
+                          Cancel Action
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

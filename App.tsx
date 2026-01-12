@@ -1786,8 +1786,21 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                               showToast(error.message, 'error');
                             } else {
                               showToast(`Account ${newStatus} Successfully`);
-                              // PLACEHOLDER: Trigger Email Notification logic here
-                              console.log(`Email Service: Sending ${newStatus} notification to ${pendingAction.req.email}`);
+                              
+                              // Trigger the Supabase Edge Function to send email via Resend
+                              try {
+                                const fullName = `${pendingAction.req.first_name} ${pendingAction.req.last_name}`;
+                                await supabase!.functions.invoke('send-confirmation', {
+                                  body: { 
+                                    email: pendingAction.req.email, 
+                                    fullName: fullName,
+                                    status: newStatus 
+                                  }
+                                });
+                              } catch (emailErr) {
+                                console.error("Email notification failed to queue:", emailErr);
+                              }
+
                               fetchManualRequests();
                             }
                             setPendingAction(null);

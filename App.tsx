@@ -86,6 +86,7 @@ export default function App() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
+  const [showPollLoginModal, setShowPollLoginModal] = useState(false);
 
   // --- INITIALIZATION ---
   useEffect(() => {
@@ -471,6 +472,38 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
 
+      {/* --- POLL LOGIN REDIRECT MODAL --- */}
+      {showPollLoginModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[300] flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-md rounded-[3rem] shadow-2xl p-10 text-center relative animate-slide-up">
+            <button onClick={() => setShowPollLoginModal(false)} className="absolute top-6 right-6 text-gray-300 hover:text-red-500 transition-colors">
+              <i className="fa-solid fa-circle-xmark text-2xl"></i>
+            </button>
+            <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-200 text-3xl border-4 border-dashed border-gray-100">
+              <i className="fa-solid fa-lock"></i>
+            </div>
+            <h3 className="text-xl font-black uppercase text-gray-900 mb-2">Verification Required</h3>
+            <p className="text-gray-400 font-bold uppercase text-[10px] mb-8 tracking-widest leading-relaxed px-4">
+              You must be a verified Moore County voter to participate in community polls.
+            </p>
+            <div className="space-y-3">
+              <button 
+                onClick={() => { setShowPollLoginModal(false); setCurrentPage('login'); }}
+                className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-indigo-100 hover:scale-[1.02] active:scale-[0.98] transition-all"
+              >
+                Login to Vote
+              </button>
+              <button 
+                onClick={() => { setShowPollLoginModal(false); setCurrentPage('signup'); }}
+                className="w-full py-2 text-gray-400 font-black uppercase text-[10px] hover:text-indigo-600 transition-colors"
+              >
+                Register as a Voter
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* --- VOTER REGISTRY MODAL --- */}
       {registryModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[250] flex items-center justify-center p-4">
@@ -816,6 +849,10 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       <button 
                         disabled={isExpired || isCurrentSelection}
                         onClick={() => {
+                          if (!user) {
+                            setShowPollLoginModal(true);
+                            return;
+                          }
                           // Find the user's current vote for THIS poll (regardless of which option)
                           const userExistingVote = selectedPoll.poll_votes?.find((v: any) => v.user_id === user?.id);
                           

@@ -30,7 +30,7 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Moore County Transparency <onboarding@resend.dev>', // Change this to your domain later
+        from: 'Concerned Citizens of MC <verification@concernedcitizensofmc.com>', 
         to: [email],
         subject: subject,
         html: `

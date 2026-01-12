@@ -571,7 +571,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   This application is maintained by an all volunteer group of Moore County citizens and we have to manually update the voter registry.
                 </p>
                 <p className="text-indigo-600 font-black uppercase text-[10px] tracking-widest bg-indigo-50 py-3 rounded-2xl">
-                  Send us your contact information and we'll be happy to get you full access.
+                  Send us your contact information and we'll be happy to get you full access. You'll receive an email confirmation once we have verified that you are registered to vote in Moore County, TN.
                 </p>
               </div>
 
@@ -1665,20 +1665,34 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               >
                 <div className="text-left flex items-center gap-4">
                   <div>
-                    <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Access Requests</h2>
-                    <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Manual registry verification needed</p>
+                    <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">Access Requests</h2>
+                    <p className="text-gray-400 font-bold text-base uppercase mt-1">Manual registry verification needed</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 bg-gray-100 text-gray-500 rounded-full font-black text-[9px] uppercase">{manualRequests.length}</span>
-                    {manualRequests.some(r => r.status === 'Pending') && (
-                      <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full font-black text-[9px] uppercase animate-pulse">
-                        {manualRequests.filter(r => r.status === 'Pending').length} Pending
+                  <div className="flex items-center gap-3">
+                    {/* Filter badge count by clearedItems */}
+                    <span className="px-4 py-2 bg-gray-100 text-gray-500 rounded-full font-black text-base uppercase">
+                      {manualRequests.filter(r => !clearedItems.includes(r.id)).length}
+                    </span>
+                    
+                    {/* Only show 'Pending' count if visible (not cleared) */}
+                    {manualRequests.filter(r => !clearedItems.includes(r.id) && r.status === 'Pending').length > 0 && (
+                      <span className="px-4 py-2 bg-amber-100 text-amber-600 rounded-full font-black text-base uppercase animate-pulse">
+                        {manualRequests.filter(r => !clearedItems.includes(r.id) && r.status === 'Pending').length} Pending
                       </span>
                     )}
-                    <span className="px-2 py-0.5 bg-red-500 text-white rounded text-[8px] font-black animate-pulse">NEW</span>
+                    
+                    {/* Only show 'NEW' badge if visible items exist */}
+                    {manualRequests.filter(r => !clearedItems.includes(r.id)).length > 0 && (
+                      <span className="px-3 py-1 bg-red-500 text-white rounded text-base font-black animate-pulse uppercase">NEW</span>
+                    )}
                   </div>
                 </div>
-                <i className={`fa-solid fa-chevron-${isAdminSections.manualRequests ? 'up' : 'down'} text-gray-300`}></i>
+                <div className="flex items-center gap-4">
+                  {manualRequests.some(r => clearedItems.includes(r.id)) && (
+                    <button onClick={(e) => { e.stopPropagation(); setClearedItems(prev => prev.filter(id => !manualRequests.some(r => r.id === id))); }} className="text-base font-black text-indigo-600 uppercase underline">Restore All</button>
+                  )}
+                  <i className={`fa-solid fa-chevron-${isAdminSections.manualRequests ? 'up' : 'down'} text-gray-300 text-2xl`}></i>
+                </div>
               </button>
 
               {isAdminSections.manualRequests && (

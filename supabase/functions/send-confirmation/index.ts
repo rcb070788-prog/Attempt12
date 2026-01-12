@@ -30,9 +30,10 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Concerned Citizens of MC <verification@concernedcitizensofmc.com>', 
+        from: 'Moore County Portal <verification@concernedcitizensofmc.com>', 
         to: [email],
         subject: subject,
+        reply_to: 'admin@concernedcitizensofmc.com',
         html: `
           <div style="font-family: sans-serif; padding: 20px;">
             <h2 style="color: #4f46e5;">Hello ${fullName},</h2>

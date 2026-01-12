@@ -72,6 +72,7 @@ export default function App() {
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [boardMessages, setBoardMessages] = useState<any[]>([]);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [manualRequests, setManualRequests] = useState<any[]>([]);
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);
@@ -87,7 +88,7 @@ export default function App() {
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
-  const [isAdminSections, setIsAdminSections] = useState({ poll: true, registry: false, managePolls: false, manageSuggestions: false });
+  const [isAdminSections, setIsAdminSections] = useState({ poll: true, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false });
   const [notFoundModal, setNotFoundModal] = useState(false);
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
@@ -194,7 +195,18 @@ export default function App() {
     setAllUsers(data || []);
   };
 
-  const fetchAllData = () => { fetchPolls(); fetchSuggestions(); fetchBoardMessages(); };
+  const fetchManualRequests = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('manual_access_requests').select('*').order('created_at', { ascending: false });
+    setManualRequests(data || []);
+  };
+
+  const fetchAllData = () => { 
+    fetchPolls(); 
+    fetchSuggestions(); 
+    fetchBoardMessages(); 
+    if (profile?.is_admin) { fetchUsers(); fetchManualRequests(); }
+  };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
   // --- HANDLERS ---
@@ -1569,6 +1581,76 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 )}
               </div>
               </div>
+              )}
+            </section>
+
+            {/* --- MANUAL VERIFICATION REQUESTS SECTION --- */}
+            <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
+              <button 
+                onClick={() => setIsAdminSections(prev => ({...prev, manualRequests: !prev.manualRequests}))}
+                className="w-full p-8 flex justify-between items-center hover:bg-gray-50 transition-colors"
+              >
+                <div className="text-left flex items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-black uppercase tracking-tighter leading-none">Access Requests</h2>
+                    <p className="text-gray-400 font-bold text-[9px] uppercase mt-1">Manual registry verification needed</p>
+                  </div>
+                  {manualRequests.filter(r => r.status === 'Pending').length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="px-3 py-1 bg-amber-100 text-amber-600 rounded-full font-black text-[9px] uppercase">
+                        {manualRequests.filter(r => r.status === 'Pending').length} Pending
+                      </span>
+                      <span className="px-2 py-0.5 bg-red-500 text-white rounded text-[8px] font-black animate-pulse">NEW</span>
+                    </div>
+                  )}
+                </div>
+                <i className={`fa-solid fa-chevron-${isAdminSections.manualRequests ? 'up' : 'down'} text-gray-300`}></i>
+              </button>
+
+              {isAdminSections.manualRequests && (
+                <div className="border-t border-gray-50">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[8px]">
+                        <tr>
+                          <th className="p-6">Applicant</th>
+                          <th className="p-6">DOB</th>
+                          <th className="p-6">Last 4 SSN</th>
+                          <th className="p-6 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {manualRequests.map(req => (
+                          <tr key={req.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="p-6">
+                              <p className="font-black uppercase text-xs text-gray-900">{req.first_name} {req.last_name}</p>
+                              <p className="text-[8px] font-bold text-gray-400 uppercase">{formatDate(req.created_at)}</p>
+                            </td>
+                            <td className="p-6 text-[10px] font-bold text-gray-500">{req.dob}</td>
+                            <td className="p-6 text-[10px] font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>
+                            <td className="p-6 text-right">
+                              <div className="flex justify-end gap-2">
+                                <button 
+                                  onClick={async () => {
+                                    await supabase?.from('manual_access_requests').update({ status: 'Processed' }).eq('id', req.id);
+                                    fetchManualRequests();
+                                    showToast("Request marked as processed");
+                                  }}
+                                  className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-[8px] font-black uppercase"
+                                >
+                                  Mark Processed
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                        {manualRequests.length === 0 && (
+                          <tr><td colSpan={4} className="p-10 text-center text-[10px] font-black uppercase text-gray-300">No pending requests</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
             </section>
           </div>

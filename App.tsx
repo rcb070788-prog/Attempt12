@@ -1785,20 +1785,29 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                             if (error) {
                               showToast(error.message, 'error');
                             } else {
-                              showToast(`Account ${newStatus} Successfully`);
-                              
                               // Trigger the Supabase Edge Function to send email via Resend
-                              try {
-                                const fullName = `${pendingAction.req.first_name} ${pendingAction.req.last_name}`;
-                                await supabase!.functions.invoke('send-confirmation', {
-                                  body: { 
-                                    email: pendingAction.req.email, 
-                                    fullName: fullName,
-                                    status: newStatus 
-                                  }
-                                });
-                              } catch (emailErr) {
-                                console.error("Email notification failed to queue:", emailErr);
+                              let emailResult = { error: null };
+                              if (pendingAction.req.email) {
+                                try {
+                                  const fullName = `${pendingAction.req.first_name} ${pendingAction.req.last_name}`;
+                                  const { error: invokeError } = await supabase!.functions.invoke('send-confirmation', {
+                                    body: { 
+                                      email: pendingAction.req.email, 
+                                      fullName: fullName,
+                                      status: newStatus 
+                                    }
+                                  });
+                                  if (invokeError) emailResult.error = invokeError as any;
+                                } catch (emailErr: any) {
+                                  emailResult.error = emailErr;
+                                }
+                              }
+
+                              if (emailResult.error) {
+                                console.error("Email Service Error:", emailResult.error);
+                                showToast(`Saved as ${newStatus}, but email failed.`, "error");
+                              } else {
+                                showToast(`Account ${newStatus} & User Notified`);
                               }
 
                               fetchManualRequests();

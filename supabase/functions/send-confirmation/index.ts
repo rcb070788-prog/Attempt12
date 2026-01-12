@@ -8,20 +8,17 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  // Handle CORS for browser requests
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
   }
 
   try {
     const { email, fullName, status } = await req.json()
-
-    // Determine message content
     const isConfirmed = status === 'Confirmed';
     const subject = isConfirmed ? "Moore County Portal: Access Granted" : "Moore County Portal: Access Denied";
     const message = isConfirmed 
-      ? `Your voter verification was successful. You now have full access to vote in polls and message officials.`
-      : `We were unable to verify your voter registration with the details provided. Please contact an admin if you believe this is an error.`;
+      ? `Your voter verification was successful. You now have full access to participate in polls and message officials.`
+      : `We were unable to verify your voter registration. Please contact an admin if you believe this is an error.`;
 
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -30,15 +27,15 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Concerned Citizens of MC <verification@concernedcitizensofmc.com>', 
+        from: 'Moore County Transparency <onboarding@resend.dev>', 
         to: [email],
         subject: subject,
         html: `
           <div style="font-family: sans-serif; padding: 20px;">
             <h2 style="color: #4f46e5;">Hello ${fullName},</h2>
-            <p style="font-size: 16px; color: #374151;">${message}</p>
-            <hr style="border: 1px solid #e5e7eb; margin: 20px 0;" />
-            <p style="font-size: 12px; color: #9ca3af; text-transform: uppercase;">© Moore County Transparency Portal</p>
+            <p style="font-size: 16px;">${message}</p>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+            <p style="font-size: 12px; color: #666;">Moore County Transparency Portal</p>
           </div>
         `,
       }),
@@ -49,7 +46,6 @@ serve(async (req) => {
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
     })
-
   } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), { 
       status: 500, 

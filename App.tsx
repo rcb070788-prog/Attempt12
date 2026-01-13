@@ -446,6 +446,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
     if (!supabase) return;
     try {
+      // 1. Perform the update
       const { error } = await supabase
         .from('suggestions')
         .update({ status: status })
@@ -453,13 +454,17 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
       if (error) throw error;
 
-      // Patch local state immediately for instant UI feedback in both Admin and Suggestions views
+      // 2. Update local state ONLY. We do not call fetchSuggestions() immediately 
+      // to prevent the database "read-after-write" lag from reverting the UI.
       setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
       
       showToast(`Status updated to ${status}`);
       
-      // Re-fetch to ensure all joined data (comments, profiles) is fully synced
-      await fetchSuggestions();
+      // 3. Optional: Trigger a background refresh after a delay to ensure sync without the flash
+      setTimeout(() => {
+        fetchSuggestions();
+      }, 2000);
+      
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -1718,16 +1723,21 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     </div>
                     
                     <div className="flex flex-wrap gap-3 justify-center items-center">
-                      {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => (
-                        <button
-                          key={statusOption}
-                          onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
-                          className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all ${
-                            (sug.status === statusOption || (!sug.status && statusOption === 'Under Review')) 
-                              ? 'ring-4 ring-indigo-600 bg-indigo-600 text-white shadow-lg' 
-                              : 'bg-white border border-gray-200 text-gray-400 hover:border-indigo-600 hover:text-indigo-600'
-                          }`}
-                        >
+                      {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => {
+                        const isActive = sug.status === statusOption || (!sug.status && statusOption === 'Under Review');
+                        return (
+                          <button
+                            key={statusOption}
+                            onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
+                            className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all duration-200 ${
+                              isActive 
+                                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2' 
+                                : 'bg-gray-50 border border-gray-200 text-gray-400 hover:bg-white hover:text-indigo-600'
+                            }`}
+                          >
+                        {statusOption}
+                        </button>
+                      )})}
                           {statusOption}
                         </button>
                       ))}

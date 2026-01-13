@@ -24,53 +24,49 @@ serve(async (req) => {
     // Resend provides 'from', 'subject', 'text' (body), and 'attachments'
     // Depending on the version, data might be at the root or under 'data'
     const payload = body.data || body;
-    const { from, subject, text, html, attachments } = payload;
+    const fromRaw = payload.from || payload.headers?.from || "";
+    const fromEmail = fromRaw.match(/<(.+?)>/)?.[1] || fromRaw;
+    const subject = payload.subject || "";
+    const text = payload.text || "";
+    const html = payload.html || "";
+    const attachments = payload.attachments || [];
 
-    // Helper to strip email thread boilerplate/replies
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
+      let source = val.replace(/<style[^>]*>.*<\/style>/gms, '').replace(/<[^>]*>?/gm, ' ');
       const delimiters = [
         /\n\s*On\s.*wrote:/i,
+        /On\s.*at\s.*wrote/i,
         /\n\s*---+\s*Original Message\s*---+/i,
         /\n\s*From:\s*/i,
         /\n\s*Sent from my/i,
-        /\n\s*_+/i // Outlook separator
+        /\n\s*_+/i
       ];
-      let cleaned = val.replace(/<[^>]*>?/gm, ''); // Strip HTML tags if html was used
       for (const pattern of delimiters) {
-        const match = cleaned.match(pattern);
-        if (match && match.index) {
-          cleaned = cleaned.substring(0, match.index);
-        }
+        const match = source.match(pattern);
+        if (match && match.index) source = source.substring(0, match.index);
       }
-      return cleaned.trim();
+      return source.trim();
     };
 
-    const finalContent = cleanEmailBody(text || html || "");
-    console.log(`Received email from ${from}. Parsed length: ${finalContent.length}`);
-
-    // 2. Identify the Parent Message ID from the subject line
-    // We expect the subject to contain: [MSG-uuid-here]
-    const match = subject.match(/\[MSG-(.*?)\]/);
+    const finalContent = cleanEmailBody(text || html);
+    const match = subject.match(/\[MSG-([\w-]+)\]/i);
     const parentId = match ? match[1] : null;
 
-    if (!parentId) {
-      console.error("No MSG ID found in subject line. Ignoring email.");
-      return new Response(JSON.stringify({ error: "No parent ID found in subject" }), { 
-        status: 400, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
-    }
+    if (!parentId || !finalContent) throw new Error("Missing ID or Content");
 
-    // 3. Insert the official response into your board_messages table
-    const { error: insertError } = await supabase
-      .from('board_messages')
-      .insert({
-        content: finalContent || "Official Response received (Text could not be parsed)",
-        parent_id: parentId,
-        recipient_names: 'Constituent (Official Response)', 
-        attachment_urls: attachments?.map((a: any) => a.url).filter(Boolean) || [],
-      });
+    // Logic: Identify if this is the Official or the Voter
+    const { data: parentMsg } = await supabase.from('board_messages').select('user_id, profiles(email)').eq('id', parentId).single();
+    const isVoter = fromEmail.toLowerCase() === parentMsg?.profiles?.email?.toLowerCase();
+
+    const { error: insertError } = await supabase.from('board_messages').insert({
+      content: finalContent,
+      parent_id: parentId,
+      user_id: isVoter ? parentMsg.user_id : null, // If voter follow-up, link to their ID
+      recipient_names: isVoter ? 'Officials' : 'Constituent',
+      is_official: !isVoter,
+      attachment_urls: attachments.map((a: any) => a.url).filter(Boolean)
+    });
 
     if (insertError) throw insertError;
 

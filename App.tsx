@@ -87,6 +87,7 @@ export default function App() {
   const [registryModal, setRegistryModal] = useState<{optionText: string, voters: any[]} | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
+  const [stagedSuggestionFiles, setStagedSuggestionFiles] = useState<{url: string, name: string}[]>([]);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
@@ -330,12 +331,26 @@ const handleBoardFileUpload = async (files: FileList) => {
     }
     return uploadedUrls;
   };
+const handleSuggestionFileUpload = async (files: FileList) => {
+    if (!files || !user || !supabase) return;
+    setIsUploading(true);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
+      const filePath = `suggestions/${Date.now()}_${cleanFileName}`;
+      const { error: uploadError } = await supabase.storage.from('suggestion_attachments').upload(filePath, file);
+      if (uploadError) {
+        showToast(uploadError.message, 'error');
+        continue;
+      }
+      const { data: { publicUrl } } = supabase.storage.from('suggestion_attachments').getPublicUrl(filePath);
+      setStagedSuggestionFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+    }
+    setIsUploading(false);
+  };
 
   const handlePollFileUpload = async (files: FileList) => {
     if (!files || !user || !supabase) return;
-    setIsUploading(true);
-    
-    for (let i = 0; i < files.length; i++) {
       const file = files[i];
       // Clean the filename and add a timestamp to prevent duplicates
       const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
@@ -444,21 +459,25 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   };
 
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
-    if (!supabase) return;
+    if (!supabase || !profile?.is_admin) return;
     try {
+      // 1. Optimistically update local state immediately for instant UI response
+      setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
+
       const { error } = await supabase
         .from('suggestions')
         .update({ status: status })
         .eq('id', suggestionId);
 
-      if (error) throw error;
+      if (error) {
+        // 2. If the DB update fails, revert the local state to prevent "liar UI"
+        fetchSuggestions(); 
+        throw error;
+      }
 
-      // Update local state ONLY to prevent the "read-after-write" database lag from reverting the UI
-      setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
       showToast(`Status updated to ${status}`);
-      
-      // Delay the fetch by 2 seconds to allow the DB index to catch up
-      setTimeout(() => { fetchSuggestions(); }, 2000);
+      // NOTE: We do NOT call fetchSuggestions() here. 
+      // The local state update above is sufficient and prevents the "revert" flicker.
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -1299,7 +1318,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             <div className="flex justify-between items-end mb-8">
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter">Suggestion Box</h2>
-                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em]">Community Improvement Proposals</p>
+                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em]">IDEAS YOU PROPOSE TO BE CONSIDERED BY THE CONCERNED CITIZENS OF MOORE COUNTY</p>
               </div>
               <button className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-all border-b-2 border-transparent hover:border-indigo-600 pb-1">
                 Archived Suggestions <i className="fa-solid fa-box-archive ml-1"></i>
@@ -1331,23 +1350,53 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         e.preventDefault();
                         const fd = new FormData(e.currentTarget);
                         const suggestionText = fd.get('description');
+                        const attachmentUrls = stagedSuggestionFiles.map(f => f.url);
                         const { error } = await supabase!.from('suggestions').insert({
                           user_id: user.id,
                           title: fd.get('title'),
                           description: suggestionText,
                           content: suggestionText,
-                          category: 'General'
+                          category: 'General',
+                          attachment_urls: attachmentUrls
                         });
                         if (error) showToast(error.message, 'error');
                         else { 
                           showToast("Proposal Submitted!"); 
                           fetchSuggestions(); 
                           setIsSuggestionModalOpen(false);
+                          setStagedSuggestionFiles([]);
                           (e.target as HTMLFormElement).reset(); 
                         }
                       }} className="space-y-4">
                         <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-6 bg-white rounded-2xl text-sm font-black uppercase outline-none shadow-inner resize-none h-24" />
-                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-6 bg-white rounded-2xl text-base font-medium min-h-[200px] outline-none shadow-inner" />
+                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-6 bg-white rounded-2xl text-base font-medium min-h-[160px] outline-none shadow-inner" />
+                        
+                        <div className="space-y-3">
+                          <label className="flex items-center gap-4 cursor-pointer bg-indigo-700/50 p-4 rounded-2xl border border-indigo-400 hover:bg-indigo-700 transition-colors">
+                            <div className="bg-white text-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
+                              <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-paperclip'}`}></i>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black uppercase text-white leading-none">Attach Proof or Context</span>
+                              <span className="text-[8px] font-bold text-indigo-200 uppercase mt-1">Photos, PDFs, or Documents</span>
+                            </div>
+                            <input type="file" multiple className="hidden" onChange={(e) => e.target.files && handleSuggestionFileUpload(e.target.files)} />
+                          </label>
+
+                          {stagedSuggestionFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 p-3 bg-white/10 rounded-2xl">
+                              {stagedSuggestionFiles.map((file, idx) => (
+                                <div key={idx} className="bg-white px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                  <span className="text-[9px] font-black uppercase text-indigo-600 truncate max-w-[100px]">{file.name}</span>
+                                  <button type="button" onClick={() => setStagedSuggestionFiles(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700">
+                                    <i className="fa-solid fa-circle-xmark"></i>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
                         <button className="w-full py-6 bg-white text-indigo-600 rounded-3xl font-black uppercase text-sm shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
                       </form>
                     ) : (
@@ -1373,8 +1422,19 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         </div>
                       </div>
                       <h4 className="text-2xl font-black uppercase mb-4 leading-tight text-indigo-600 break-words whitespace-normal tracking-tight">{sug.title}</h4>
-                      <p className="text-gray-700 text-base md:text-lg font-medium leading-relaxed mb-8 break-words whitespace-pre-wrap">{sug.description}</p>
+                      <p className="text-gray-700 text-base md:text-lg font-medium leading-relaxed mb-6 break-words whitespace-pre-wrap">{sug.description}</p>
                       
+                      {sug.attachment_urls?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-8">
+                          {sug.attachment_urls.map((url: string, i: number) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all group">
+                              <i className="fa-solid fa-file-invoice text-[10px]"></i>
+                              <span className="text-[9px] font-black uppercase">Reference {i + 1}</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="mt-auto flex items-center gap-3">
                          <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${
                            sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
@@ -1699,12 +1759,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               {isAdminSections.manageSuggestions && (
                 <div className="p-8 border-t border-gray-50 bg-gray-50/30">
                   <div className="grid grid-cols-1 gap-6">
-                    {suggestions.filter(s => !clearedItems.includes(s.id)).map(sug => (
-                  <div key={sug.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                    {suggestions.filter(s => !clearedItems.includes(s.id)).map((sug) => (
+                  <div key={`admin-sug-${sug.id}`} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-4 mb-2">
                         <h4 className="font-black uppercase text-lg truncate">{sug.title}</h4>
-                        <span className={`px-3 py-1 rounded text-base font-black uppercase ${
+                        <span className={`px-3 py-1 rounded text-base font-black uppercase transition-colors duration-300 ${
                           sug.status === 'Completed' ? 'bg-green-600 text-white shadow-md' : 
                           sug.status === 'Scheduled' ? 'bg-blue-600 text-white shadow-md' : 
                           sug.status === 'Closed' ? 'bg-red-600 text-white shadow-md' :

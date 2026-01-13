@@ -30,9 +30,10 @@ serve(async (req) => {
         'Authorization': `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: 'Concerned Citizens of MC <verification@concernedcitizensofmc.com>', 
+        from: 'Moore County Portal <verification@concernedcitizensofmc.com>', 
         to: [email],
         subject: subject,
+        reply_to: 'admin@concernedcitizensofmc.com',
         html: `
           <div style="font-family: sans-serif; padding: 20px;">
             <h2 style="color: #4f46e5;">Hello ${fullName},</h2>
@@ -45,6 +46,16 @@ serve(async (req) => {
     })
 
     const data = await res.json()
+    
+    // If Resend returned an error (like a 403 or 422), pass that error to Supabase logs
+    if (!res.ok) {
+      console.error("Resend API Error:", JSON.stringify(data));
+      return new Response(JSON.stringify(data), { 
+        status: res.status, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      })
+    }
+
     return new Response(JSON.stringify(data), { 
       status: 200, 
       headers: { ...corsHeaders, 'Content-Type': 'application/json' } 

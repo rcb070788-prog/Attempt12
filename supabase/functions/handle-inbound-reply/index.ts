@@ -50,14 +50,18 @@ serve(async (req) => {
     };
 
     const finalContent = cleanEmailBody(text || html);
-    const match = subject.match(/\[MSG-([\w-]+)\]/i);
+    // Robust match for both UUIDs and numeric IDs
+    const match = subject.match(/\[MSG-([a-f0-9-]+|[0-9]+)\]/i);
     const parentId = match ? match[1] : null;
 
-    if (!parentId || !finalContent) throw new Error("Missing ID or Content");
+    if (!parentId || !finalContent) {
+      console.error(`Missing Data - ID: ${parentId}, Content Length: ${finalContent?.length}`);
+      return new Response(JSON.stringify({ error: "Missing ID or Content" }), { status: 400, headers: corsHeaders });
+    }
 
-    // Logic: Identify if this is the Official or the Voter
-    const { data: parentMsg } = await supabase.from('board_messages').select('user_id, profiles(email)').eq('id', parentId).single();
-    const isVoter = fromEmail.toLowerCase() === parentMsg?.profiles?.email?.toLowerCase();
+    // Identify sender: Official or Original Voter
+    const { data: parentMsg } = await supabase.from('board_messages').select('user_id, profiles(email)').eq('id', parentId).maybeSingle();
+    const isVoter = parentMsg?.profiles?.email && fromEmail.toLowerCase().includes(parentMsg.profiles.email.toLowerCase());
 
     const { error: insertError } = await supabase.from('board_messages').insert({
       content: finalContent,
@@ -65,10 +69,13 @@ serve(async (req) => {
       user_id: isVoter ? parentMsg.user_id : null, // If voter follow-up, link to their ID
       recipient_names: isVoter ? 'Officials' : 'Constituent',
       is_official: !isVoter,
-      attachment_urls: attachments.map((a: any) => a.url).filter(Boolean)
+      attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
     });
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      console.error("DB Insert Error:", insertError);
+      throw insertError;
+    }
 
     return new Response(JSON.stringify({ success: true }), { 
       status: 200, 

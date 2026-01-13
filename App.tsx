@@ -1350,14 +1350,14 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                                 </div>
                               </label>
                             ))}
-                            <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="py-4 bg-gray-900 text-white rounded-xl text-xs font-black uppercase">Done</button>
+                            <button type="button" onClick={() => setIsOfficialDropdownOpen(false)} className="py-4 bg-gray-900 text-white rounded-xl text-[18.66px] font-black uppercase">Done</button>
                           </div>
                         )}
                       </div>
 
-                      <input name="subject" required placeholder="SUBJECT / TOPIC" className="w-full p-5 bg-white rounded-2xl text-xs font-black uppercase outline-none placeholder:text-gray-300 focus:ring-4 ring-white/20" />
+                      <input name="subject" required placeholder="MESSAGE SUBJECT (REQUIRED)" className="w-full p-5 bg-white rounded-2xl text-[18.66px] font-black uppercase outline-none placeholder:text-gray-300 focus:ring-4 ring-white/20" />
 
-                      <textarea name="content" required placeholder="What is your message for the public record?" className="w-full p-6 bg-white rounded-[2rem] text-sm min-h-[180px] outline-none placeholder:text-gray-300 focus:ring-4 ring-white/20" />
+                      <textarea name="content" required placeholder="What is your message for the public record?" className="w-full p-6 bg-white rounded-[2rem] text-[18.66px] min-h-[180px] outline-none placeholder:text-gray-300 focus:ring-4 ring-white/20" />
                       
                       <div className="bg-indigo-700 p-5 rounded-2xl border border-indigo-500">
                         <label className="flex items-center gap-4 cursor-pointer text-white">
@@ -1370,7 +1370,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         </label>
                       </div>
 
-                      <button className="w-full py-6 bg-white text-indigo-600 rounded-3xl font-black uppercase text-xs shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Submit to Public Record</button>
+                      <button className="w-full py-6 bg-white text-indigo-600 rounded-3xl font-black uppercase text-[18.66px] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Submit to Public Record</button>
                     </form>
                   </div>
                 ) : (

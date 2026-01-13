@@ -74,6 +74,7 @@ export default function App() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [manualRequests, setManualRequests] = useState<any[]>([]);
   const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
+  const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);
@@ -266,12 +267,19 @@ export default function App() {
     setManualRequests(data || []);
   };
 
+  const fetchDeletionVotes = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('admin_deletion_votes').select('*');
+    setDeletionVotes(data || []);
+  };
+
   const fetchAllData = () => { 
     fetchPolls(); 
     fetchSuggestions(); 
     fetchBoardMessages(); 
     fetchUsers(); 
     fetchManualRequests(); 
+    fetchDeletionVotes();
   };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -454,9 +462,40 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   };
 
   const handleDeletePoll = async (pollId: string) => {
-    if (!supabase || !window.confirm("Permanently delete this poll and all its data?")) return;
-    const { error } = await supabase.from('polls').delete().eq('id', pollId);
-    if (error) showToast(error.message, "error"); else { showToast("Poll Deleted"); fetchPolls(); }
+    if (!supabase || !user || !profile?.is_admin) return;
+    
+    try {
+      // 1. Record/Update the admin's vote for deletion
+      const { error: voteErr } = await supabase
+        .from('admin_deletion_votes')
+        .upsert({ target_id: pollId, target_type: 'poll', admin_id: user.id }, { onConflict: 'target_id,admin_id' });
+
+      if (voteErr) throw voteErr;
+
+      // 2. Fetch fresh votes to check consensus
+      const { data: currentVotesData } = await supabase.from('admin_deletion_votes').select('*').eq('target_id', pollId);
+      const totalAdmins = allUsers.filter(u => u.is_admin).length;
+      const currentVoteCount = currentVotesData?.length || 0;
+
+      if (currentVoteCount >= totalAdmins) {
+        if (window.confirm(`Consensus reached (${currentVoteCount}/${totalAdmins} admins). Finalize permanent deletion?`)) {
+          const { error: delErr } = await supabase.from('polls').delete().eq('id', pollId);
+          if (delErr) throw delErr;
+          
+          showToast("Consensus met: Poll deleted");
+          fetchPolls();
+          fetchDeletionVotes();
+          if (selectedPoll?.id === pollId) setSelectedPoll(null);
+        } else {
+          fetchDeletionVotes();
+        }
+      } else {
+        showToast(`Delete vote recorded (${currentVoteCount}/${totalAdmins} admins)`);
+        fetchDeletionVotes();
+      }
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
   };
 
   const filteredMessages = useMemo(() => {
@@ -1598,12 +1637,34 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           <button onClick={() => handleClosePoll(poll.id)} className="px-6 py-3 bg-gray-900 text-white rounded-2xl text-base font-black uppercase hover:bg-gray-800">Close Early</button>
                         )}
                         <button onClick={() => toggleClearItem(poll.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
-                        <button 
-                          onClick={() => handleDeletePoll(poll.id)}
-                          className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
-                        >
-                          <i className="fa-solid fa-trash-can text-lg"></i>
-                        </button>
+                        {(() => {
+                          const adminList = allUsers.filter(u => u.is_admin);
+                          const totalAdmins = adminList.length || 1;
+                          const currentVotes = deletionVotes.filter(v => v.target_id === poll.id).length;
+                          const progress = (currentVotes / totalAdmins) * 100;
+                          const hasVoted = deletionVotes.some(v => v.target_id === poll.id && v.admin_id === user?.id);
+
+                          return (
+                            <button 
+                              onClick={() => handleDeletePoll(poll.id)}
+                              className="relative w-24 h-14 bg-gray-100 rounded-2xl overflow-hidden group transition-all border border-gray-200"
+                              title={`${currentVotes} of ${totalAdmins} admins voted to delete`}
+                            >
+                              {/* Progress Background */}
+                              <div 
+                                className={`absolute inset-y-0 left-0 transition-all duration-700 ${hasVoted ? 'bg-red-500' : 'bg-red-400'}`}
+                                style={{ width: `${progress}%`, opacity: hasVoted ? 0.4 : 0.2 }}
+                              ></div>
+                              
+                              <div className="relative z-10 flex flex-col items-center justify-center h-full">
+                                <i className={`fa-solid ${hasVoted ? 'fa-check-to-slot' : 'fa-trash-can'} ${hasVoted ? 'text-red-600' : 'text-gray-400'} text-sm group-hover:scale-110 transition-transform`}></i>
+                                <span className="text-[9px] font-black uppercase mt-1 text-gray-600 tracking-tighter">
+                                  {currentVotes} / {totalAdmins} ADM
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   );

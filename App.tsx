@@ -351,10 +351,12 @@ const handleSuggestionFileUpload = async (files: FileList) => {
 
   const handlePollFileUpload = async (files: FileList) => {
     if (!files || !user || !supabase) return;
+    setIsUploading(true);
+    for (let i = 0; i < files.length; i++) {
       const file = files[i];
       // Clean the filename and add a timestamp to prevent duplicates
       const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
-      const filePath = `${Date.now()}_${cleanFileName}`;
+      const filePath = `polls/${Date.now()}_${cleanFileName}`;
       
       const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, file);
       

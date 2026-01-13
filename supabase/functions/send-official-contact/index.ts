@@ -18,10 +18,14 @@ serve(async (req) => {
     const body = await req.json()
     const { senderName, fromEmail, recipients, subject, content, attachments } = body
 
-    // Validate inputs
-    if (!recipients || recipients.length === 0) {
-      throw new Error("No recipients provided")
+    // Filter out any blank strings or invalid addresses from the recipients array
+    const validRecipients = (recipients || []).filter((email: string) => email && email.includes('@'));
+
+    if (validRecipients.length === 0) {
+      throw new Error("No valid recipient email addresses found.")
     }
+
+    // Use validRecipients for the to: field below
 
     // 1. Prepare the email for Resend
     // 'fromEmail' comes from App.tsx (e.g. john.doe@concernedcitizensofmc.com)
@@ -34,8 +38,8 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: `"${senderName}" <verification@concernedcitizensofmc.com>`,
-        // Reply-to removed: forces replies to go back to the portal domain handler
-        to: recipients,
+        // Use the validated/filtered recipient list
+        to: validRecipients,
         subject: subject, // This contains the [MSG-ID]
         text: content,
         // If your database has attachment URLs, we can include them as text links

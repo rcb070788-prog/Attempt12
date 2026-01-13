@@ -399,53 +399,21 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         return;
       }
 
-      // --- NEW: UNIQUE VIRTUAL EMAIL GENERATION ---
-      const [firstName, ...lastNameParts] = verifyData.fullName.split(' ');
-      const lastName = lastNameParts.join(' ');
-      const baseSlug = `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, '')}`;
-      let finalVirtualEmail = `${baseSlug}@concernedcitizensofmc.com`;
-
-      // 1. Check if Level 1 (first.last) exists
-      const { data: level1 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
-      
-      if (level1) {
-        // 2. Try Level 2 (first.last.district)
-        finalVirtualEmail = `${baseSlug}.${verifyData.district}@concernedcitizensofmc.com`;
-        const { data: level2 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
-        
-        if (level2) {
-          // 3. Level 3 (first.last.district.counter)
-          let counter = 1;
-          let isUnique = false;
-          while (!isUnique) {
-            const testEmail = `${baseSlug}.${verifyData.district}.${counter}@concernedcitizensofmc.com`;
-            const { data: existing } = await supabase!.from('profiles').select('id').eq('virtual_email', testEmail).maybeSingle();
-            if (!existing) {
-              finalVirtualEmail = testEmail;
-              isUnique = true;
-            }
-            counter++;
-            if (counter > 100) break; // Safety break
-          }
-        }
-      }
-      // --- END EMAIL GENERATION ---
-      
-      // --- VIRTUAL EMAIL GENERATION ---
+      // --- UNIQUE VIRTUAL EMAIL GENERATION ---
       const [fName, ...lNameParts] = verifyData.fullName.split(' ');
       const lName = lNameParts.join('').replace(/[^a-z0-9]/gi, '');
-      const baseSlug = `${fName.toLowerCase()}.${lName.toLowerCase()}`;
-      let finalVirtualEmail = `${baseSlug}@concernedcitizensofmc.com`;
+      const bSlug = `${fName.toLowerCase()}.${lName.toLowerCase()}`;
+      let finalVirtualEmail = `${bSlug}@concernedcitizensofmc.com`;
 
       const { data: level1 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
       if (level1) {
-        finalVirtualEmail = `${baseSlug}.${verifyData.district}@concernedcitizensofmc.com`;
+        finalVirtualEmail = `${bSlug}.${verifyData.district}@concernedcitizensofmc.com`;
         const { data: level2 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
         if (level2) {
           let counter = 1;
           let isUnique = false;
           while (!isUnique && counter < 50) {
-            const testEmail = `${baseSlug}.${verifyData.district}.${counter}@concernedcitizensofmc.com`;
+            const testEmail = `${bSlug}.${verifyData.district}.${counter}@concernedcitizensofmc.com`;
             const { data: ex } = await supabase!.from('profiles').select('id').eq('virtual_email', testEmail).maybeSingle();
             if (!ex) { finalVirtualEmail = testEmail; isUnique = true; }
             counter++;
@@ -462,16 +430,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             district: verifyData.district, 
             voter_id: voterId,
             virtual_email: finalVirtualEmail
-          } 
-        } 
-      }); 
-        email: fd.get('email') as string, 
-        password: fd.get('password') as string, 
-        options: { 
-          data: { 
-            full_name: verifyData.fullName, 
-            district: verifyData.district, 
-            voter_id: voterId 
           } 
         } 
       });
@@ -1370,31 +1328,35 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                        if (error) {
                         showToast(error.message, 'error');
                       } else { 
-                        // 1. Resolve official emails from constants
+                        // 1. Resolve official emails, filtering out those with no email address on file
                         const recipientEmails = OFFICIALS
-                          .filter(off => selectedOfficials.includes(off.name))
+                          .filter(off => selectedOfficials.includes(off.name) && off.email && off.email.trim() !== "")
                           .map(off => off.email);
 
-                        // 2. Generate slugified sender email
-                        const emailSlug = profile.full_name.toLowerCase().replace(/[^a-z0-9]/g, '.');
-                        const generatedSender = `${emailSlug}@concernedcitizensofmc.com`;
+                        if (recipientEmails.length === 0) {
+                          showToast("The selected official(s) do not have a registered email in our system. Record saved to portal only.", "error");
+                        } else {
+                          // 2. Generate fallback slugified sender email
+                          const emailSlug = profile.full_name.toLowerCase().replace(/[^a-z0-9]/g, '.');
+                          const generatedSender = `${emailSlug}@concernedcitizensofmc.com`;
 
-                        // 3. Trigger Email via Edge Function with Tracking Tag
-                        try {
-                          await supabase!.functions.invoke('send-official-contact', {
-                            body: {
-                              senderName: profile.full_name,
-                              fromEmail: profile.virtual_email || generatedSender,
-                              recipients: recipientEmails,
-                              // Use the mandatory Subject field + the MSG tracking tag
-                              subject: `${fd.get('subject')} [MSG-${newMessage.id}]`,
-                              content: fd.get('content'),
-                              attachments: fileUrls,
-                              messageId: newMessage.id
-                            }
-                          });
-                        } catch (emailErr) {
-                          console.error("Notification failed:", emailErr);
+                          // 3. Trigger Email via Edge Function with Tracking Tag
+                          try {
+                            const { error: invokeErr } = await supabase!.functions.invoke('send-official-contact', {
+                              body: {
+                                senderName: profile.full_name,
+                                fromEmail: profile.virtual_email || generatedSender,
+                                recipients: recipientEmails,
+                                subject: `${fd.get('subject')} [MSG-${newMessage.id}]`,
+                                content: fd.get('content'),
+                                attachments: fileUrls,
+                                messageId: newMessage.id
+                              }
+                            });
+                            if (invokeErr) throw invokeErr;
+                          } catch (emailErr) {
+                            console.error("Notification failed:", emailErr);
+                          }
                         }
 
                         showToast("Message Recorded & Emails Sent"); 

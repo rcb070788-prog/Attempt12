@@ -446,7 +446,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
     if (!supabase) return;
     try {
-      // 1. Perform the update
       const { error } = await supabase
         .from('suggestions')
         .update({ status: status })
@@ -454,17 +453,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
       if (error) throw error;
 
-      // 2. Update local state ONLY. We do not call fetchSuggestions() immediately 
-      // to prevent the database "read-after-write" lag from reverting the UI.
+      // Update local state ONLY to prevent the "read-after-write" database lag from reverting the UI
       setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
-      
       showToast(`Status updated to ${status}`);
       
-      // 3. Optional: Trigger a background refresh after a delay to ensure sync without the flash
-      setTimeout(() => {
-        fetchSuggestions();
-      }, 2000);
-      
+      // Delay the fetch by 2 seconds to allow the DB index to catch up
+      setTimeout(() => { fetchSuggestions(); }, 2000);
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -1735,12 +1729,10 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                                 : 'bg-gray-50 border border-gray-200 text-gray-400 hover:bg-white hover:text-indigo-600'
                             }`}
                           >
-                        {statusOption}
-                        </button>
-                      )})}
-                          {statusOption}
-                        </button>
-                      ))}
+                            {statusOption}
+                          </button>
+                        );
+                      })}
                       <div className="h-10 w-px bg-gray-100 mx-2"></div>
                       <button onClick={() => toggleClearItem(sug.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
                     </div>

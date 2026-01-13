@@ -437,8 +437,20 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
     if (!supabase) return;
-    const { error } = await supabase.from('suggestions').update({ status }).eq('id', suggestionId);
-    if (error) showToast(error.message, "error"); else { showToast(`Suggestion marked as ${status}`); fetchSuggestions(); }
+    try {
+      const { error } = await supabase
+        .from('suggestions')
+        .update({ status: status })
+        .eq('id', suggestionId);
+
+      if (error) throw error;
+
+      showToast(`Status updated to ${status}`);
+      // Refresh the local state immediately
+      await fetchSuggestions();
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
   };
 
   const handleDeletePoll = async (pollId: string) => {
@@ -1133,10 +1145,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
                       {/* Official Replies (Display Only) */}
                       {boardMessages.filter(reply => reply.parent_id === msg.id).map(reply => (
-                        <div key={reply.id} className="mt-6 p-6 bg-indigo-50 rounded-[2rem] border-l-8 border-indigo-600 relative">
-                          <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Official Response</div>
-                          <p className="text-[10px] font-bold text-indigo-400 uppercase mb-2">{formatDate(reply.created_at)}</p>
-                          <p className="text-sm text-gray-800 font-medium leading-relaxed">{reply.content}</p>
+                        <div key={reply.id} className="mt-8 p-8 bg-indigo-50/50 rounded-[2.5rem] border-l-8 border-indigo-600 relative ring-1 ring-indigo-100">
+                          <div className="absolute -top-4 left-6 bg-indigo-600 text-white px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200">
+                            <i className="fa-solid fa-circle-check mr-2"></i> Official Response
+                          </div>
+                          <p className="text-[10px] font-black text-indigo-600 uppercase mb-3 tracking-widest">{formatDate(reply.created_at)}</p>
+                          <div className="text-lg text-gray-900 font-semibold leading-relaxed">{renderTextWithLinks(reply.content)}</div>
                         </div>
                       ))}
                     </div>
@@ -1323,8 +1337,10 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                          <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
                            sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
                            sug.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 
-                           'bg-gray-100 text-gray-400'
+                           sug.status === 'Closed' ? 'bg-red-100 text-red-600' :
+                           'bg-amber-100 text-amber-600'
                          }`}>
+                           <i className="fa-solid fa-circle-info mr-1"></i>
                            Status: {sug.status || 'Under Review'}
                          </span>
                       </div>
@@ -1643,7 +1659,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
                           className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all ${
                             (sug.status === statusOption || (!sug.status && statusOption === 'Under Review')) 
-                              ? 'ring-4 ring-indigo-600 bg-indigo-50 text-indigo-600' 
+                              ? 'ring-4 ring-indigo-600 bg-indigo-600 text-white shadow-lg' 
                               : 'bg-white border border-gray-200 text-gray-400 hover:border-indigo-600 hover:text-indigo-600'
                           }`}
                         >
@@ -1705,7 +1721,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="border-t border-gray-50">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[8px]">
+                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-sm tracking-widest">
                         <tr>
                           <th className="p-6">Applicant</th>
                           <th className="p-6">DOB</th>
@@ -1769,12 +1785,16 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       
                       <div className="space-y-4">
                         <h3 className="text-3xl font-black uppercase text-gray-900 tracking-tighter">Identity Verification</h3>
-                        <p className="text-lg text-gray-500 font-medium leading-relaxed">
+                        <div className="text-lg text-gray-500 font-medium leading-relaxed">
                           You are about to <span className={pendingAction.type === 'Confirm' ? 'text-green-600 font-black' : 'text-red-600 font-black'}>{pendingAction.type.toUpperCase()}</span> that 
                           <br/><span className="text-2xl font-black text-gray-900 block my-2">"{pendingAction.req.first_name} {pendingAction.req.last_name}"</span> 
                           is a registered Moore County voter.
+                        </div>
+                        <p className="text-lg text-gray-400 font-black uppercase tracking-widest bg-gray-50 py-3 rounded-2xl border border-gray-100 mt-4">
+                          <i className="fa-solid fa-envelope-circle-check mr-2 text-indigo-600"></i>
+                          Email will be sent to: <br/>
+                          <span className="text-indigo-600 lowercase">{pendingAction.req.email}</span>
                         </p>
-                        <p className="text-base text-gray-400 font-bold uppercase tracking-widest">An automated email will be sent to: <br/>{pendingAction.req.email}</p>
                       </div>
 
                       <div className="flex flex-col gap-3 pt-4">

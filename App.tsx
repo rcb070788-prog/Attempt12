@@ -465,13 +465,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
     if (!supabase || !profile?.is_admin) return;
     try {
-<<<<<<< HEAD
       // 1. Optimistically update local state immediately
       setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status: status } : s));
-=======
-      // 1. Optimistically update local state immediately for instant UI response
-      setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
->>>>>>> b4dd15e0058f34c8585bcca70e5ebbd7eb8f0853
 
       const { error } = await supabase
         .from('suggestions')
@@ -479,7 +474,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         .eq('id', suggestionId);
 
       if (error) {
-<<<<<<< HEAD
         // 2. Revert on error
         await fetchSuggestions(); 
         throw error;
@@ -487,16 +481,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
       showToast(`Proposal marked as ${status.toUpperCase()}`);
       // Real-time subscription will handle syncing other clients
-=======
-        // 2. If the DB update fails, revert the local state to prevent "liar UI"
-        fetchSuggestions(); 
-        throw error;
-      }
-
-      showToast(`Status updated to ${status}`);
-      // NOTE: We do NOT call fetchSuggestions() here. 
-      // The local state update above is sufficient and prevents the "revert" flicker.
->>>>>>> b4dd15e0058f34c8585bcca70e5ebbd7eb8f0853
     } catch (err: any) {
       showToast(err.message, "error");
     }
@@ -1230,7 +1214,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                             <i className="fa-solid fa-circle-check mr-2"></i> Official Response
                           </div>
                           <p className="text-[10px] font-black text-indigo-600 uppercase mb-3 tracking-widest">{formatDate(reply.created_at)}</p>
-<<<<<<< HEAD
                           
                           {/* Official Content Body */}
                           <div className="text-lg text-gray-900 font-semibold leading-relaxed mb-4">
@@ -1247,9 +1230,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                               ))}
                             </div>
                           )}
-=======
-                          <div className="text-lg text-gray-900 font-semibold leading-relaxed">{renderTextWithLinks(reply.content)}</div>
->>>>>>> b4dd15e0058f34c8585bcca70e5ebbd7eb8f0853
                         </div>
                       ))}
                     </div>

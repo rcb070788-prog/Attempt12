@@ -74,6 +74,7 @@ export default function App() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [manualRequests, setManualRequests] = useState<any[]>([]);
   const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
+  const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);
@@ -86,6 +87,7 @@ export default function App() {
   const [registryModal, setRegistryModal] = useState<{optionText: string, voters: any[]} | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
+  const [stagedSuggestionFiles, setStagedSuggestionFiles] = useState<{url: string, name: string}[]>([]);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
@@ -266,12 +268,19 @@ export default function App() {
     setManualRequests(data || []);
   };
 
+  const fetchDeletionVotes = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('admin_deletion_votes').select('*');
+    setDeletionVotes(data || []);
+  };
+
   const fetchAllData = () => { 
     fetchPolls(); 
     fetchSuggestions(); 
     fetchBoardMessages(); 
     fetchUsers(); 
     fetchManualRequests(); 
+    fetchDeletionVotes();
   };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -322,16 +331,32 @@ const handleBoardFileUpload = async (files: FileList) => {
     }
     return uploadedUrls;
   };
+const handleSuggestionFileUpload = async (files: FileList) => {
+    if (!files || !user || !supabase) return;
+    setIsUploading(true);
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
+      const filePath = `suggestions/${Date.now()}_${cleanFileName}`;
+      const { error: uploadError } = await supabase.storage.from('suggestion_attachments').upload(filePath, file);
+      if (uploadError) {
+        showToast(uploadError.message, 'error');
+        continue;
+      }
+      const { data: { publicUrl } } = supabase.storage.from('suggestion_attachments').getPublicUrl(filePath);
+      setStagedSuggestionFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+    }
+    setIsUploading(false);
+  };
 
   const handlePollFileUpload = async (files: FileList) => {
     if (!files || !user || !supabase) return;
     setIsUploading(true);
-    
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
       // Clean the filename and add a timestamp to prevent duplicates
       const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
-      const filePath = `${Date.now()}_${cleanFileName}`;
+      const filePath = `polls/${Date.now()}_${cleanFileName}`;
       
       const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, file);
       
@@ -436,15 +461,65 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   };
 
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
-    if (!supabase) return;
-    const { error } = await supabase.from('suggestions').update({ status }).eq('id', suggestionId);
-    if (error) showToast(error.message, "error"); else { showToast(`Suggestion marked as ${status}`); fetchSuggestions(); }
+    if (!supabase || !profile?.is_admin) return;
+    try {
+      // 1. Optimistically update local state immediately for instant UI response
+      setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
+
+      const { error } = await supabase
+        .from('suggestions')
+        .update({ status: status })
+        .eq('id', suggestionId);
+
+      if (error) {
+        // 2. If the DB update fails, revert the local state to prevent "liar UI"
+        fetchSuggestions(); 
+        throw error;
+      }
+
+      showToast(`Status updated to ${status}`);
+      // NOTE: We do NOT call fetchSuggestions() here. 
+      // The local state update above is sufficient and prevents the "revert" flicker.
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
   };
 
   const handleDeletePoll = async (pollId: string) => {
-    if (!supabase || !window.confirm("Permanently delete this poll and all its data?")) return;
-    const { error } = await supabase.from('polls').delete().eq('id', pollId);
-    if (error) showToast(error.message, "error"); else { showToast("Poll Deleted"); fetchPolls(); }
+    if (!supabase || !user || !profile?.is_admin) return;
+    
+    try {
+      // 1. Record/Update the admin's vote for deletion
+      const { error: voteErr } = await supabase
+        .from('admin_deletion_votes')
+        .upsert({ target_id: pollId, target_type: 'poll', admin_id: user.id }, { onConflict: 'target_id,admin_id' });
+
+      if (voteErr) throw voteErr;
+
+      // 2. Fetch fresh votes to check consensus
+      const { data: currentVotesData } = await supabase.from('admin_deletion_votes').select('*').eq('target_id', pollId);
+      const totalAdmins = allUsers.filter(u => u.is_admin).length;
+      const currentVoteCount = currentVotesData?.length || 0;
+
+      if (currentVoteCount >= totalAdmins) {
+        if (window.confirm(`Consensus reached (${currentVoteCount}/${totalAdmins} admins). Finalize permanent deletion?`)) {
+          const { error: delErr } = await supabase.from('polls').delete().eq('id', pollId);
+          if (delErr) throw delErr;
+          
+          showToast("Consensus met: Poll deleted");
+          fetchPolls();
+          fetchDeletionVotes();
+          if (selectedPoll?.id === pollId) setSelectedPoll(null);
+        } else {
+          fetchDeletionVotes();
+        }
+      } else {
+        showToast(`Delete vote recorded (${currentVoteCount}/${totalAdmins} admins)`);
+        fetchDeletionVotes();
+      }
+    } catch (err: any) {
+      showToast(err.message, "error");
+    }
   };
 
   const filteredMessages = useMemo(() => {
@@ -473,19 +548,19 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-1">
                <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
-               <span className="text-[8px] font-black uppercase text-indigo-600">
+               <span className="text-[10px] font-black uppercase text-indigo-600">
                 {comment.profiles?.full_name} • {formatDate(comment.created_at)}
                </span>
             </div>
-            <div className="text-gray-700 text-[10px] leading-tight break-words whitespace-pre-wrap">{comment.content}</div>
-            <div className="flex gap-3 mt-2 text-[8px] font-black uppercase">
+            <div className="text-gray-700 text-sm md:text-base leading-snug break-words whitespace-pre-wrap font-medium">{comment.content}</div>
+            <div className="flex gap-4 mt-2 text-[10px] font-black uppercase">
               <button onClick={() => handleReaction(comment.id, 'like', 'suggestion_reactions')} className={userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}>
                 <i className="fa-solid fa-thumbs-up"></i> {likes}
               </button>
               <button onClick={() => handleReaction(comment.id, 'dislike', 'suggestion_reactions')} className={userReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'}>
                 <i className="fa-solid fa-thumbs-down"></i> {dislikes}
               </button>
-              <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400">Reply</button>
+              <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400 hover:text-indigo-600 transition-colors">Reply</button>
             </div>
             {replyTo === comment.id && (
               <form onSubmit={async (e) => { 
@@ -494,9 +569,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestionId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }); 
                 setReplyTo(null); 
                 fetchSuggestions(); 
-              }} className="mt-2 flex gap-1">
-                <input name="content" autoFocus placeholder="Reply..." className="flex-grow p-2 bg-gray-50 rounded-lg text-[10px] outline-none border" />
-                <button type="submit" className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[8px] font-black uppercase">Send</button>
+              }} className="mt-2 flex gap-2">
+                <input name="content" autoFocus placeholder="Reply..." className="flex-grow p-3 bg-gray-50 rounded-lg text-sm outline-none border border-gray-200" />
+                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-lg text-[10px] font-black uppercase">Send</button>
               </form>
             )}
           </div>
@@ -1133,10 +1208,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
                       {/* Official Replies (Display Only) */}
                       {boardMessages.filter(reply => reply.parent_id === msg.id).map(reply => (
-                        <div key={reply.id} className="mt-6 p-6 bg-indigo-50 rounded-[2rem] border-l-8 border-indigo-600 relative">
-                          <div className="absolute -top-3 left-6 bg-indigo-600 text-white px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-widest">Official Response</div>
-                          <p className="text-[10px] font-bold text-indigo-400 uppercase mb-2">{formatDate(reply.created_at)}</p>
-                          <p className="text-sm text-gray-800 font-medium leading-relaxed">{reply.content}</p>
+                        <div key={reply.id} className="mt-8 p-8 bg-indigo-50/50 rounded-[2.5rem] border-l-8 border-indigo-600 relative ring-1 ring-indigo-100">
+                          <div className="absolute -top-4 left-6 bg-indigo-600 text-white px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-lg shadow-indigo-200">
+                            <i className="fa-solid fa-circle-check mr-2"></i> Official Response
+                          </div>
+                          <p className="text-[10px] font-black text-indigo-600 uppercase mb-3 tracking-widest">{formatDate(reply.created_at)}</p>
+                          <div className="text-lg text-gray-900 font-semibold leading-relaxed">{renderTextWithLinks(reply.content)}</div>
                         </div>
                       ))}
                     </div>
@@ -1243,7 +1320,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
             <div className="flex justify-between items-end mb-8">
               <div>
                 <h2 className="text-5xl font-black uppercase tracking-tighter">Suggestion Box</h2>
-                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em]">Community Improvement Proposals</p>
+                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em]">IDEAS YOU PROPOSE TO BE CONSIDERED BY THE CONCERNED CITIZENS OF MOORE COUNTY</p>
               </div>
               <button className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-all border-b-2 border-transparent hover:border-indigo-600 pb-1">
                 Archived Suggestions <i className="fa-solid fa-box-archive ml-1"></i>
@@ -1275,24 +1352,54 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         e.preventDefault();
                         const fd = new FormData(e.currentTarget);
                         const suggestionText = fd.get('description');
+                        const attachmentUrls = stagedSuggestionFiles.map(f => f.url);
                         const { error } = await supabase!.from('suggestions').insert({
                           user_id: user.id,
                           title: fd.get('title'),
                           description: suggestionText,
                           content: suggestionText,
-                          category: 'General'
+                          category: 'General',
+                          attachment_urls: attachmentUrls
                         });
                         if (error) showToast(error.message, 'error');
                         else { 
                           showToast("Proposal Submitted!"); 
                           fetchSuggestions(); 
                           setIsSuggestionModalOpen(false);
+                          setStagedSuggestionFiles([]);
                           (e.target as HTMLFormElement).reset(); 
                         }
                       }} className="space-y-4">
-                        <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase outline-none shadow-inner resize-none h-20" />
-                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-5 bg-white rounded-2xl text-xs min-h-[150px] outline-none shadow-inner" />
-                        <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
+                        <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-6 bg-white rounded-2xl text-sm font-black uppercase outline-none shadow-inner resize-none h-24" />
+                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-6 bg-white rounded-2xl text-base font-medium min-h-[160px] outline-none shadow-inner" />
+                        
+                        <div className="space-y-3">
+                          <label className="flex items-center gap-4 cursor-pointer bg-indigo-700/50 p-4 rounded-2xl border border-indigo-400 hover:bg-indigo-700 transition-colors">
+                            <div className="bg-white text-indigo-600 w-10 h-10 rounded-xl flex items-center justify-center shadow-lg">
+                              <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-paperclip'}`}></i>
+                            </div>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-black uppercase text-white leading-none">Attach Proof or Context</span>
+                              <span className="text-[8px] font-bold text-indigo-200 uppercase mt-1">Photos, PDFs, or Documents</span>
+                            </div>
+                            <input type="file" multiple className="hidden" onChange={(e) => e.target.files && handleSuggestionFileUpload(e.target.files)} />
+                          </label>
+
+                          {stagedSuggestionFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 p-3 bg-white/10 rounded-2xl">
+                              {stagedSuggestionFiles.map((file, idx) => (
+                                <div key={idx} className="bg-white px-3 py-1.5 rounded-lg flex items-center gap-2">
+                                  <span className="text-[9px] font-black uppercase text-indigo-600 truncate max-w-[100px]">{file.name}</span>
+                                  <button type="button" onClick={() => setStagedSuggestionFiles(prev => prev.filter((_, i) => i !== idx))} className="text-red-500 hover:text-red-700">
+                                    <i className="fa-solid fa-circle-xmark"></i>
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        <button className="w-full py-6 bg-white text-indigo-600 rounded-3xl font-black uppercase text-sm shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
                       </form>
                     ) : (
                       <div className="bg-white p-10 rounded-[2rem] text-center">
@@ -1308,30 +1415,43 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               <div className="max-w-4xl mx-auto space-y-6">
                 {suggestions.filter(s => (s.suggestion_comments?.length || 0) >= 0).map(sug => (
                   <div key={sug.id} className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
-                    <div className="p-8 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
-                      <div className="flex items-center gap-3 mb-4">
+                    <div className="p-10 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
+                      <div className="flex items-center gap-4 mb-6">
                         <UserAvatar url={sug.profiles?.avatar_url} size="md" />
                         <div>
-                          <p className="text-[10px] font-black uppercase text-gray-900 leading-none">{sug.profiles?.full_name}</p>
-                          <p className="text-[8px] font-bold text-indigo-400 uppercase mt-1">Dist {sug.profiles?.district} • {formatDate(sug.created_at)}</p>
+                          <p className="text-xs font-black uppercase text-gray-900 leading-none">{sug.profiles?.full_name}</p>
+                          <p className="text-[10px] font-bold text-indigo-400 uppercase mt-1">District {sug.profiles?.district} • {formatDate(sug.created_at)}</p>
                         </div>
                       </div>
-                      <h4 className="text-xl font-black uppercase mb-3 leading-tight text-indigo-600 break-words whitespace-normal">{sug.title}</h4>
-                      <p className="text-gray-600 text-xs font-medium leading-relaxed mb-6 break-words whitespace-pre-wrap">{sug.description}</p>
+                      <h4 className="text-2xl font-black uppercase mb-4 leading-tight text-indigo-600 break-words whitespace-normal tracking-tight">{sug.title}</h4>
+                      <p className="text-gray-700 text-base md:text-lg font-medium leading-relaxed mb-6 break-words whitespace-pre-wrap">{sug.description}</p>
                       
-                      <div className="mt-auto flex items-center gap-2">
-                         <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
+                      {sug.attachment_urls?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-8">
+                          {sug.attachment_urls.map((url: string, i: number) => (
+                            <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-2 px-4 py-2 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all group">
+                              <i className="fa-solid fa-file-invoice text-[10px]"></i>
+                              <span className="text-[9px] font-black uppercase">Reference {i + 1}</span>
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="mt-auto flex items-center gap-3">
+                         <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${
                            sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
                            sug.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 
-                           'bg-gray-100 text-gray-400'
+                           sug.status === 'Closed' ? 'bg-red-100 text-red-600' :
+                           'bg-amber-100 text-amber-600'
                          }`}>
+                           <i className="fa-solid fa-circle-info mr-1"></i>
                            Status: {sug.status || 'Under Review'}
                          </span>
                       </div>
                     </div>
 
-                    <div className="p-6 md:w-1/2 bg-gray-50/50 flex flex-col h-[400px]">
-                      <h5 className="text-[9px] font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
+                    <div className="p-8 md:w-1/2 bg-gray-50/50 flex flex-col h-[500px]">
+                      <h5 className="text-xs font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
                       <div className="flex-grow overflow-y-auto custom-scrollbar px-2">
                         {user ? (
                            <form onSubmit={async (e) => { 
@@ -1340,9 +1460,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                              await supabase?.from('suggestion_comments').insert({ suggestion_id: sug.id, user_id: user.id, content: fd.get('content') }); 
                              (e.target as HTMLFormElement).reset(); 
                              fetchSuggestions(); 
-                           }} className="mb-4 flex gap-2">
-                             <input name="content" required placeholder="Add a comment..." className="flex-grow p-3 bg-white rounded-xl text-[10px] outline-none border border-gray-100" />
-                             <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[8px] font-black uppercase">Post</button>
+                           }} className="mb-6 flex gap-3">
+                             <input name="content" required placeholder="Add a comment..." className="flex-grow p-4 bg-white rounded-2xl text-sm outline-none border border-gray-200 shadow-sm focus:ring-2 ring-indigo-500/10 transition-all" />
+                             <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-indigo-100">Post</button>
                            </form>
                         ) : null}
                         {renderSuggestionComments(sug.suggestion_comments || [], sug.id)}
@@ -1582,12 +1702,34 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           <button onClick={() => handleClosePoll(poll.id)} className="px-6 py-3 bg-gray-900 text-white rounded-2xl text-base font-black uppercase hover:bg-gray-800">Close Early</button>
                         )}
                         <button onClick={() => toggleClearItem(poll.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
-                        <button 
-                          onClick={() => handleDeletePoll(poll.id)}
-                          className="w-14 h-14 bg-red-50 text-red-500 rounded-2xl flex items-center justify-center hover:bg-red-500 hover:text-white transition-all"
-                        >
-                          <i className="fa-solid fa-trash-can text-lg"></i>
-                        </button>
+                        {(() => {
+                          const adminList = allUsers.filter(u => u.is_admin);
+                          const totalAdmins = adminList.length || 1;
+                          const currentVotes = deletionVotes.filter(v => v.target_id === poll.id).length;
+                          const progress = (currentVotes / totalAdmins) * 100;
+                          const hasVoted = deletionVotes.some(v => v.target_id === poll.id && v.admin_id === user?.id);
+
+                          return (
+                            <button 
+                              onClick={() => handleDeletePoll(poll.id)}
+                              className="relative w-24 h-14 bg-gray-100 rounded-2xl overflow-hidden group transition-all border border-gray-200"
+                              title={`${currentVotes} of ${totalAdmins} admins voted to delete`}
+                            >
+                              {/* Progress Background */}
+                              <div 
+                                className={`absolute inset-y-0 left-0 transition-all duration-700 ${hasVoted ? 'bg-red-500' : 'bg-red-400'}`}
+                                style={{ width: `${progress}%`, opacity: hasVoted ? 0.4 : 0.2 }}
+                              ></div>
+                              
+                              <div className="relative z-10 flex flex-col items-center justify-center h-full">
+                                <i className={`fa-solid ${hasVoted ? 'fa-check-to-slot' : 'fa-trash-can'} ${hasVoted ? 'text-red-600' : 'text-gray-400'} text-sm group-hover:scale-110 transition-transform`}></i>
+                                <span className="text-[9px] font-black uppercase mt-1 text-gray-600 tracking-tighter">
+                                  {currentVotes} / {totalAdmins} ADM
+                                </span>
+                              </div>
+                            </button>
+                          );
+                        })()}
                       </div>
                     </div>
                   );
@@ -1619,12 +1761,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               {isAdminSections.manageSuggestions && (
                 <div className="p-8 border-t border-gray-50 bg-gray-50/30">
                   <div className="grid grid-cols-1 gap-6">
-                    {suggestions.filter(s => !clearedItems.includes(s.id)).map(sug => (
-                  <div key={sug.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
+                    {suggestions.filter(s => !clearedItems.includes(s.id)).map((sug) => (
+                  <div key={`admin-sug-${sug.id}`} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-4 mb-2">
                         <h4 className="font-black uppercase text-lg truncate">{sug.title}</h4>
-                        <span className={`px-3 py-1 rounded text-base font-black uppercase ${
+                        <span className={`px-3 py-1 rounded text-base font-black uppercase transition-colors duration-300 ${
                           sug.status === 'Completed' ? 'bg-green-600 text-white shadow-md' : 
                           sug.status === 'Scheduled' ? 'bg-blue-600 text-white shadow-md' : 
                           sug.status === 'Closed' ? 'bg-red-600 text-white shadow-md' :
@@ -1637,19 +1779,22 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     </div>
                     
                     <div className="flex flex-wrap gap-3 justify-center items-center">
-                      {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => (
-                        <button
-                          key={statusOption}
-                          onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
-                          className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all ${
-                            (sug.status === statusOption || (!sug.status && statusOption === 'Under Review')) 
-                              ? 'ring-4 ring-indigo-600 bg-indigo-50 text-indigo-600' 
-                              : 'bg-white border border-gray-200 text-gray-400 hover:border-indigo-600 hover:text-indigo-600'
-                          }`}
-                        >
-                          {statusOption}
-                        </button>
-                      ))}
+                      {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => {
+                        const isActive = sug.status === statusOption || (!sug.status && statusOption === 'Under Review');
+                        return (
+                          <button
+                            key={statusOption}
+                            onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
+                            className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all duration-200 ${
+                              isActive 
+                                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2' 
+                                : 'bg-gray-50 border border-gray-200 text-gray-400 hover:bg-white hover:text-indigo-600'
+                            }`}
+                          >
+                            {statusOption}
+                          </button>
+                        );
+                      })}
                       <div className="h-10 w-px bg-gray-100 mx-2"></div>
                       <button onClick={() => toggleClearItem(sug.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
                     </div>
@@ -1705,7 +1850,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="border-t border-gray-50">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[8px]">
+                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-sm tracking-widest">
                         <tr>
                           <th className="p-6">Applicant</th>
                           <th className="p-6">DOB</th>
@@ -1769,12 +1914,16 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       
                       <div className="space-y-4">
                         <h3 className="text-3xl font-black uppercase text-gray-900 tracking-tighter">Identity Verification</h3>
-                        <p className="text-lg text-gray-500 font-medium leading-relaxed">
+                        <div className="text-lg text-gray-500 font-medium leading-relaxed">
                           You are about to <span className={pendingAction.type === 'Confirm' ? 'text-green-600 font-black' : 'text-red-600 font-black'}>{pendingAction.type.toUpperCase()}</span> that 
                           <br/><span className="text-2xl font-black text-gray-900 block my-2">"{pendingAction.req.first_name} {pendingAction.req.last_name}"</span> 
                           is a registered Moore County voter.
+                        </div>
+                        <p className="text-lg text-gray-400 font-black uppercase tracking-widest bg-gray-50 py-3 rounded-2xl border border-gray-100 mt-4">
+                          <i className="fa-solid fa-envelope-circle-check mr-2 text-indigo-600"></i>
+                          Email will be sent to: <br/>
+                          <span className="text-indigo-600 lowercase">{pendingAction.req.email}</span>
                         </p>
-                        <p className="text-base text-gray-400 font-bold uppercase tracking-widest">An automated email will be sent to: <br/>{pendingAction.req.email}</p>
                       </div>
 
                       <div className="flex flex-col gap-3 pt-4">
@@ -1785,20 +1934,29 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                             if (error) {
                               showToast(error.message, 'error');
                             } else {
-                              showToast(`Account ${newStatus} Successfully`);
-                              
                               // Trigger the Supabase Edge Function to send email via Resend
-                              try {
-                                const fullName = `${pendingAction.req.first_name} ${pendingAction.req.last_name}`;
-                                await supabase!.functions.invoke('send-confirmation', {
-                                  body: { 
-                                    email: pendingAction.req.email, 
-                                    fullName: fullName,
-                                    status: newStatus 
-                                  }
-                                });
-                              } catch (emailErr) {
-                                console.error("Email notification failed to queue:", emailErr);
+                              let emailResult = { error: null };
+                              if (pendingAction.req.email) {
+                                try {
+                                  const fullName = `${pendingAction.req.first_name} ${pendingAction.req.last_name}`;
+                                  const { error: invokeError } = await supabase!.functions.invoke('send-confirmation', {
+                                    body: { 
+                                      email: pendingAction.req.email, 
+                                      fullName: fullName,
+                                      status: newStatus 
+                                    }
+                                  });
+                                  if (invokeError) emailResult.error = invokeError as any;
+                                } catch (emailErr: any) {
+                                  emailResult.error = emailErr;
+                                }
+                              }
+
+                              if (emailResult.error) {
+                                console.error("Email Service Error:", emailResult.error);
+                                showToast(`Saved as ${newStatus}, but email failed.`, "error");
+                              } else {
+                                showToast(`Account ${newStatus} & User Notified`);
                               }
 
                               fetchManualRequests();

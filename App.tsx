@@ -1300,13 +1300,15 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         const emailSlug = profile.full_name.toLowerCase().replace(/[^a-z0-9]/g, '.');
                         const generatedSender = `${emailSlug}@concernedcitizensofmc.com`;
 
-                        // 3. Trigger Email via Edge Function
+                        // 3. Trigger Email via Edge Function with Tracking Tag
                         try {
                           await supabase!.functions.invoke('send-official-contact', {
                             body: {
                               senderName: profile.full_name,
                               fromEmail: generatedSender,
                               recipients: recipientEmails,
+                              // The Subject line is critical for the inbound reply to link back correctly
+                              subject: `New Message from Constituent [MSG-${newMessage.id}]`,
                               content: fd.get('content'),
                               attachments: fileUrls,
                               messageId: newMessage.id

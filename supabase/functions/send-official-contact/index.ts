@@ -34,7 +34,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: `"${senderName}" <verification@concernedcitizensofmc.com>`,
-        reply_to: fromEmail, // This ensures when the official hits reply, it goes to the portal
+        // Reply-to removed: forces replies to go back to the portal domain handler
         to: recipients,
         subject: subject, // This contains the [MSG-ID]
         text: content,

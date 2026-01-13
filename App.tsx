@@ -453,8 +453,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
       if (error) throw error;
 
+      // Patch local state immediately for instant UI feedback in both Admin and Suggestions views
+      setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status } : s));
+      
       showToast(`Status updated to ${status}`);
-      // Refresh the local state immediately
+      
+      // Re-fetch to ensure all joined data (comments, profiles) is fully synced
       await fetchSuggestions();
     } catch (err: any) {
       showToast(err.message, "error");
@@ -524,19 +528,19 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-1">
                <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
-               <span className="text-[8px] font-black uppercase text-indigo-600">
+               <span className="text-[10px] font-black uppercase text-indigo-600">
                 {comment.profiles?.full_name} • {formatDate(comment.created_at)}
                </span>
             </div>
-            <div className="text-gray-700 text-[10px] leading-tight break-words whitespace-pre-wrap">{comment.content}</div>
-            <div className="flex gap-3 mt-2 text-[8px] font-black uppercase">
+            <div className="text-gray-700 text-sm md:text-base leading-snug break-words whitespace-pre-wrap font-medium">{comment.content}</div>
+            <div className="flex gap-4 mt-2 text-[10px] font-black uppercase">
               <button onClick={() => handleReaction(comment.id, 'like', 'suggestion_reactions')} className={userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}>
                 <i className="fa-solid fa-thumbs-up"></i> {likes}
               </button>
               <button onClick={() => handleReaction(comment.id, 'dislike', 'suggestion_reactions')} className={userReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'}>
                 <i className="fa-solid fa-thumbs-down"></i> {dislikes}
               </button>
-              <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400">Reply</button>
+              <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400 hover:text-indigo-600 transition-colors">Reply</button>
             </div>
             {replyTo === comment.id && (
               <form onSubmit={async (e) => { 
@@ -545,9 +549,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestionId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }); 
                 setReplyTo(null); 
                 fetchSuggestions(); 
-              }} className="mt-2 flex gap-1">
-                <input name="content" autoFocus placeholder="Reply..." className="flex-grow p-2 bg-gray-50 rounded-lg text-[10px] outline-none border" />
-                <button type="submit" className="bg-indigo-600 text-white px-3 py-1 rounded-lg text-[8px] font-black uppercase">Send</button>
+              }} className="mt-2 flex gap-2">
+                <input name="content" autoFocus placeholder="Reply..." className="flex-grow p-3 bg-gray-50 rounded-lg text-sm outline-none border border-gray-200" />
+                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-lg text-[10px] font-black uppercase">Send</button>
               </form>
             )}
           </div>
@@ -1343,9 +1347,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           (e.target as HTMLFormElement).reset(); 
                         }
                       }} className="space-y-4">
-                        <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-5 bg-white rounded-2xl text-[10px] font-black uppercase outline-none shadow-inner resize-none h-20" />
-                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-5 bg-white rounded-2xl text-xs min-h-[150px] outline-none shadow-inner" />
-                        <button className="w-full py-5 bg-white text-indigo-600 rounded-2xl font-black uppercase text-xs shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
+                        <textarea name="title" required placeholder="SUMMARY / TITLE" className="w-full p-6 bg-white rounded-2xl text-sm font-black uppercase outline-none shadow-inner resize-none h-24" />
+                        <textarea name="description" required placeholder="DETAIL YOUR SUGGESTION..." className="w-full p-6 bg-white rounded-2xl text-base font-medium min-h-[200px] outline-none shadow-inner" />
+                        <button className="w-full py-6 bg-white text-indigo-600 rounded-3xl font-black uppercase text-sm shadow-xl hover:scale-[1.02] transition-all">Submit Suggestion</button>
                       </form>
                     ) : (
                       <div className="bg-white p-10 rounded-[2rem] text-center">
@@ -1361,19 +1365,19 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               <div className="max-w-4xl mx-auto space-y-6">
                 {suggestions.filter(s => (s.suggestion_comments?.length || 0) >= 0).map(sug => (
                   <div key={sug.id} className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
-                    <div className="p-8 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
-                      <div className="flex items-center gap-3 mb-4">
+                    <div className="p-10 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
+                      <div className="flex items-center gap-4 mb-6">
                         <UserAvatar url={sug.profiles?.avatar_url} size="md" />
                         <div>
-                          <p className="text-[10px] font-black uppercase text-gray-900 leading-none">{sug.profiles?.full_name}</p>
-                          <p className="text-[8px] font-bold text-indigo-400 uppercase mt-1">Dist {sug.profiles?.district} • {formatDate(sug.created_at)}</p>
+                          <p className="text-xs font-black uppercase text-gray-900 leading-none">{sug.profiles?.full_name}</p>
+                          <p className="text-[10px] font-bold text-indigo-400 uppercase mt-1">District {sug.profiles?.district} • {formatDate(sug.created_at)}</p>
                         </div>
                       </div>
-                      <h4 className="text-xl font-black uppercase mb-3 leading-tight text-indigo-600 break-words whitespace-normal">{sug.title}</h4>
-                      <p className="text-gray-600 text-xs font-medium leading-relaxed mb-6 break-words whitespace-pre-wrap">{sug.description}</p>
+                      <h4 className="text-2xl font-black uppercase mb-4 leading-tight text-indigo-600 break-words whitespace-normal tracking-tight">{sug.title}</h4>
+                      <p className="text-gray-700 text-base md:text-lg font-medium leading-relaxed mb-8 break-words whitespace-pre-wrap">{sug.description}</p>
                       
-                      <div className="mt-auto flex items-center gap-2">
-                         <span className={`px-3 py-1 rounded-full text-[8px] font-black uppercase ${
+                      <div className="mt-auto flex items-center gap-3">
+                         <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${
                            sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
                            sug.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 
                            sug.status === 'Closed' ? 'bg-red-100 text-red-600' :
@@ -1385,8 +1389,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       </div>
                     </div>
 
-                    <div className="p-6 md:w-1/2 bg-gray-50/50 flex flex-col h-[400px]">
-                      <h5 className="text-[9px] font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
+                    <div className="p-8 md:w-1/2 bg-gray-50/50 flex flex-col h-[500px]">
+                      <h5 className="text-xs font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
                       <div className="flex-grow overflow-y-auto custom-scrollbar px-2">
                         {user ? (
                            <form onSubmit={async (e) => { 
@@ -1395,9 +1399,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                              await supabase?.from('suggestion_comments').insert({ suggestion_id: sug.id, user_id: user.id, content: fd.get('content') }); 
                              (e.target as HTMLFormElement).reset(); 
                              fetchSuggestions(); 
-                           }} className="mb-4 flex gap-2">
-                             <input name="content" required placeholder="Add a comment..." className="flex-grow p-3 bg-white rounded-xl text-[10px] outline-none border border-gray-100" />
-                             <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[8px] font-black uppercase">Post</button>
+                           }} className="mb-6 flex gap-3">
+                             <input name="content" required placeholder="Add a comment..." className="flex-grow p-4 bg-white rounded-2xl text-sm outline-none border border-gray-200 shadow-sm focus:ring-2 ring-indigo-500/10 transition-all" />
+                             <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-indigo-100">Post</button>
                            </form>
                         ) : null}
                         {renderSuggestionComments(sug.suggestion_comments || [], sug.id)}

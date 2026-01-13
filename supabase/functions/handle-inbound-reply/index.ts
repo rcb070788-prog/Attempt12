@@ -24,9 +24,30 @@ serve(async (req) => {
     // Resend provides 'from', 'subject', 'text' (body), and 'attachments'
     // Depending on the version, data might be at the root or under 'data'
     const payload = body.data || body;
-    const { from, subject, text, attachments } = payload;
+    const { from, subject, text, html, attachments } = payload;
 
-    console.log(`Received email from ${from} with subject: ${subject}`);
+    // Helper to strip email thread boilerplate/replies
+    const cleanEmailBody = (val: string) => {
+      if (!val) return "";
+      const delimiters = [
+        /\n\s*On\s.*wrote:/i,
+        /\n\s*---+\s*Original Message\s*---+/i,
+        /\n\s*From:\s*/i,
+        /\n\s*Sent from my/i,
+        /\n\s*_+/i // Outlook separator
+      ];
+      let cleaned = val.replace(/<[^>]*>?/gm, ''); // Strip HTML tags if html was used
+      for (const pattern of delimiters) {
+        const match = cleaned.match(pattern);
+        if (match && match.index) {
+          cleaned = cleaned.substring(0, match.index);
+        }
+      }
+      return cleaned.trim();
+    };
+
+    const finalContent = cleanEmailBody(text || html || "");
+    console.log(`Received email from ${from}. Parsed length: ${finalContent.length}`);
 
     // 2. Identify the Parent Message ID from the subject line
     // We expect the subject to contain: [MSG-uuid-here]
@@ -45,10 +66,10 @@ serve(async (req) => {
     const { error: insertError } = await supabase
       .from('board_messages')
       .insert({
-        content: text || "Official Response received (No text content)",
+        content: finalContent || "Official Response received (Text could not be parsed)",
         parent_id: parentId,
-        recipient_names: 'Constituent', 
-        attachment_urls: attachments?.map((a: any) => a.url) || [],
+        recipient_names: 'Constituent (Official Response)', 
+        attachment_urls: attachments?.map((a: any) => a.url).filter(Boolean) || [],
       });
 
     if (insertError) throw insertError;

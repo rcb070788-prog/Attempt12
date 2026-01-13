@@ -1544,8 +1544,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               {isAdminSections.poll && (
                 <div className="p-10 pt-0 border-t border-indigo-50">
                   <div className="mb-8 mt-8">
-                    <h2 className="text-3xl font-black uppercase tracking-tighter">Create New Poll</h2>
-                    <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Publish a new community decision point</p>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter text-gray-900">Create New Poll</h2>
+                    <p className="text-indigo-600 font-black text-[14px] uppercase tracking-[0.2em]">Publish a new community decision point</p>
                   </div>
 
               <form onSubmit={async (e) => {
@@ -1587,18 +1587,18 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="grid grid-cols-1 gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Poll Question / Title</label>
-                      <input name="title" required placeholder="Ex: Proposed Rezoning of District 2" className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold text-xs transition-all" />
+                      <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Poll Question / Title</label>
+                      <input name="title" required placeholder="Ex: Proposed Rezoning of District 2" className="w-full p-6 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-black text-[18.66px] transition-all" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Expiration Date</label>
-                      <input name="expires" type="datetime-local" required className="w-full p-5 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-bold text-xs transition-all" />
+                      <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Expiration Date</label>
+                      <input name="expires" type="datetime-local" required className="w-full p-6 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-black text-[18.66px] transition-all" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Context / Description</label>
-                    <textarea name="description" placeholder="Provide background information, links, or context for this poll..." className="w-full p-6 bg-gray-50 rounded-[2rem] border-2 border-transparent focus:border-indigo-600 outline-none font-medium text-xs min-h-[150px] transition-all" />
+                    <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Context / Description</label>
+                    <textarea name="description" placeholder="Provide background information, links, or context for this poll..." className="w-full p-8 bg-gray-50 rounded-[2.5rem] border-2 border-transparent focus:border-indigo-600 outline-none font-medium text-[18.66px] min-h-[200px] transition-all leading-relaxed" />
                   </div>
 
                   <div className="space-y-4">
@@ -1683,7 +1683,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="border-t border-gray-50 p-4">
                   <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-base">
+                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[18.66px]">
                     <tr><th className="p-8">Voter Name</th><th className="p-8">District</th><th className="p-8">Voter ID</th><th className="p-8 text-right">Actions</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -1691,12 +1691,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       <tr key={u.id} className="hover:bg-indigo-50/30 transition-colors group">
                         <td className="p-8 flex items-center gap-4">
                           <UserAvatar url={u.avatar_url} size="md" />
-                          <span className="font-black uppercase text-lg text-gray-900">{u.full_name}</span>
+                          <span className="font-black uppercase text-[18.66px] text-gray-900">{u.full_name}</span>
                         </td>
-                        <td className="p-8 text-base font-bold text-gray-500 uppercase tracking-widest">District {u.district}</td>
-                        <td className="p-8 text-base font-mono text-gray-400 font-bold">{u.voter_id}</td>
+                        <td className="p-8 text-[18.66px] font-bold text-gray-500 uppercase tracking-widest">District {u.district}</td>
+                        <td className="p-8 text-[18.66px] font-mono text-gray-400 font-bold">{u.voter_id}</td>
                         <td className="p-8 text-right">
-                          <button onClick={() => toggleClearItem(u.id)} className="px-4 py-2 bg-gray-100 text-gray-500 rounded-xl text-base font-black uppercase hover:bg-gray-200">Clear</button>
+                          <button onClick={() => toggleClearItem(u.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl text-[18.66px] font-black uppercase hover:bg-gray-200">Clear</button>
                         </td>
                       </tr>
                     ))}
@@ -1740,11 +1740,11 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         <p className="text-base font-bold text-gray-400 uppercase">Created {formatDate(poll.created_at)} • {poll.poll_votes?.length || 0} Total Votes</p>
                       </div>
                       
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-4">
                         {!isExpired && (
-                          <button onClick={() => handleClosePoll(poll.id)} className="px-6 py-3 bg-gray-900 text-white rounded-2xl text-base font-black uppercase hover:bg-gray-800">Close Early</button>
+                          <button onClick={() => handleClosePoll(poll.id)} className="px-8 py-4 bg-gray-900 text-white rounded-2xl text-[18.66px] font-black uppercase hover:bg-black transition-colors">Close Early</button>
                         )}
-                        <button onClick={() => toggleClearItem(poll.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-2xl text-base font-black uppercase">Clear</button>
+                        <button onClick={() => toggleClearItem(poll.id)} className="px-8 py-4 bg-gray-100 text-gray-500 rounded-2xl text-[18.66px] font-black uppercase hover:bg-gray-200 transition-colors">Clear</button>
                         {(() => {
                           const adminList = allUsers.filter(u => u.is_admin);
                           const totalAdmins = adminList.length || 1;
@@ -1755,7 +1755,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           return (
                             <button 
                               onClick={() => handleDeletePoll(poll.id)}
-                              className="relative w-24 h-14 bg-gray-100 rounded-2xl overflow-hidden group transition-all border border-gray-200"
+                              className="relative w-32 h-16 bg-gray-100 rounded-2xl overflow-hidden group transition-all border-2 border-gray-200"
                               title={`${currentVotes} of ${totalAdmins} admins voted to delete`}
                             >
                               {/* Progress Background */}
@@ -1821,17 +1821,17 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       <p className="text-base font-bold text-gray-400 uppercase">By {sug.profiles?.full_name || 'Verified Voter'} • {formatDate(sug.created_at)}</p>
                     </div>
                     
-                    <div className="flex flex-wrap gap-3 justify-center items-center">
+                    <div className="flex flex-wrap gap-4 justify-center items-center">
                       {['Under Review', 'Scheduled', 'Completed', 'Closed'].map((statusOption) => {
                         const isActive = sug.status === statusOption || (!sug.status && statusOption === 'Under Review');
                         return (
                           <button
                             key={statusOption}
                             onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
-                            className={`px-4 py-3 rounded-2xl text-base font-black uppercase transition-all duration-200 ${
+                            className={`px-6 py-4 rounded-2xl text-[18.66px] font-black uppercase transition-all duration-200 ${
                               isActive 
                                 ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2' 
-                                : 'bg-gray-50 border border-gray-200 text-gray-400 hover:bg-white hover:text-indigo-600'
+                                : 'bg-white border-2 border-gray-200 text-gray-400 hover:border-indigo-600 hover:text-indigo-600'
                             }`}
                           >
                             {statusOption}
@@ -1893,7 +1893,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="border-t border-gray-50">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-sm tracking-widest">
+                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[18.66px] tracking-widest">
                         <tr>
                           <th className="p-6">Applicant</th>
                           <th className="p-6">DOB</th>
@@ -1905,24 +1905,24 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         {manualRequests.filter(r => !clearedItems.includes(r.id)).map(req => (
                           <tr key={req.id} className="hover:bg-gray-50 transition-colors">
                             <td className="p-8">
-                              <p className="font-black uppercase text-lg text-gray-900 leading-none">{req.first_name} {req.last_name}</p>
-                              <p className="text-base font-bold text-gray-400 uppercase mt-1">{formatDate(req.created_at)}</p>
+                              <p className="font-black uppercase text-[18.66px] text-gray-900 leading-none">{req.first_name} {req.last_name}</p>
+                              <p className="text-[14px] font-bold text-gray-400 uppercase mt-1">{formatDate(req.created_at)}</p>
                             </td>
-                            <td className="p-8 text-base font-bold text-gray-500">{req.dob}</td>
-                            <td className="p-8 text-base font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>
+                            <td className="p-8 text-[18.66px] font-bold text-gray-500">{req.dob}</td>
+                            <td className="p-8 text-[18.66px] font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>
                             <td className="p-8 text-right">
                               <div className="flex justify-end items-center gap-4">
                                 {req.status === 'Pending' ? (
                                   <>
                                     <button 
                                       onClick={() => setPendingAction({ req, type: 'Confirm' })}
-                                      className="px-6 py-3 bg-green-600 text-white rounded-2xl text-base font-black uppercase hover:scale-105 transition-all shadow-md"
+                                      className="px-8 py-4 bg-green-600 text-white rounded-2xl text-[18.66px] font-black uppercase hover:scale-105 transition-all shadow-md"
                                     >
                                       Confirm
                                     </button>
                                     <button 
                                       onClick={() => setPendingAction({ req, type: 'Deny' })}
-                                      className="px-6 py-3 bg-red-600 text-white rounded-2xl text-base font-black uppercase hover:scale-105 transition-all shadow-md"
+                                      className="px-8 py-4 bg-red-600 text-white rounded-2xl text-[18.66px] font-black uppercase hover:scale-105 transition-all shadow-md"
                                     >
                                       Deny
                                     </button>

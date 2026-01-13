@@ -49,14 +49,21 @@ serve(async (req) => {
       return source.trim();
     };
 
-    const finalContent = cleanEmailBody(text || html);
+    // Ensure we extract content even if text field is empty
+    const rawContent = text || html || "";
+    const finalContent = cleanEmailBody(rawContent);
+    
     // Robust match for both UUIDs and numeric IDs
     const match = subject.match(/\[MSG-([a-f0-9-]+|[0-9]+)\]/i);
     const parentId = match ? match[1] : null;
 
-    if (!parentId || !finalContent) {
-      console.error(`Missing Data - ID: ${parentId}, Content Length: ${finalContent?.length}`);
-      return new Response(JSON.stringify({ error: "Missing ID or Content" }), { status: 400, headers: corsHeaders });
+    if (!parentId || finalContent.length < 2) {
+      console.error(`Inbound Error - ID: ${parentId}, Content length: ${finalContent?.length}`);
+      return new Response(JSON.stringify({ 
+        error: "Invalid payload", 
+        id_found: !!parentId, 
+        content_length: finalContent?.length 
+      }), { status: 400, headers: corsHeaders });
     }
 
     // Identify sender: Official or Original Voter

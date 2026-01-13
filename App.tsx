@@ -398,8 +398,73 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
         setIsVerifying(false);
         return;
       }
+
+      // --- NEW: UNIQUE VIRTUAL EMAIL GENERATION ---
+      const [firstName, ...lastNameParts] = verifyData.fullName.split(' ');
+      const lastName = lastNameParts.join(' ');
+      const baseSlug = `${firstName.toLowerCase()}.${lastName.toLowerCase().replace(/\s+/g, '')}`;
+      let finalVirtualEmail = `${baseSlug}@concernedcitizensofmc.com`;
+
+      // 1. Check if Level 1 (first.last) exists
+      const { data: level1 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
+      
+      if (level1) {
+        // 2. Try Level 2 (first.last.district)
+        finalVirtualEmail = `${baseSlug}.${verifyData.district}@concernedcitizensofmc.com`;
+        const { data: level2 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
+        
+        if (level2) {
+          // 3. Level 3 (first.last.district.counter)
+          let counter = 1;
+          let isUnique = false;
+          while (!isUnique) {
+            const testEmail = `${baseSlug}.${verifyData.district}.${counter}@concernedcitizensofmc.com`;
+            const { data: existing } = await supabase!.from('profiles').select('id').eq('virtual_email', testEmail).maybeSingle();
+            if (!existing) {
+              finalVirtualEmail = testEmail;
+              isUnique = true;
+            }
+            counter++;
+            if (counter > 100) break; // Safety break
+          }
+        }
+      }
+      // --- END EMAIL GENERATION ---
+      
+      // --- VIRTUAL EMAIL GENERATION ---
+      const [fName, ...lNameParts] = verifyData.fullName.split(' ');
+      const lName = lNameParts.join('').replace(/[^a-z0-9]/gi, '');
+      const baseSlug = `${fName.toLowerCase()}.${lName.toLowerCase()}`;
+      let finalVirtualEmail = `${baseSlug}@concernedcitizensofmc.com`;
+
+      const { data: level1 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
+      if (level1) {
+        finalVirtualEmail = `${baseSlug}.${verifyData.district}@concernedcitizensofmc.com`;
+        const { data: level2 } = await supabase!.from('profiles').select('id').eq('virtual_email', finalVirtualEmail).maybeSingle();
+        if (level2) {
+          let counter = 1;
+          let isUnique = false;
+          while (!isUnique && counter < 50) {
+            const testEmail = `${baseSlug}.${verifyData.district}.${counter}@concernedcitizensofmc.com`;
+            const { data: ex } = await supabase!.from('profiles').select('id').eq('virtual_email', testEmail).maybeSingle();
+            if (!ex) { finalVirtualEmail = testEmail; isUnique = true; }
+            counter++;
+          }
+        }
+      }
       
       const { error } = await supabase!.auth.signUp({ 
+        email: fd.get('email') as string, 
+        password: fd.get('password') as string, 
+        options: { 
+          data: { 
+            full_name: verifyData.fullName, 
+            district: verifyData.district, 
+            voter_id: voterId,
+            virtual_email: finalVirtualEmail
+          } 
+        } 
+      }); 
         email: fd.get('email') as string, 
         password: fd.get('password') as string, 
         options: { 
@@ -883,7 +948,15 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   </div>
                   <div className="mt-4">
                     <p className="text-sm font-black text-gray-900 uppercase">{profile?.full_name}</p>
-                    <p className="text-[9px] font-black uppercase text-gray-400">District {profile?.district} Voter</p>
+                    <p className="text-[18.66px] font-black uppercase text-gray-400">District {profile?.district} Voter</p>
+                    {profile?.virtual_email && (
+                      <div className="mt-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 flex items-center gap-2">
+                        <i className="fa-solid fa-envelope text-indigo-600 text-xs"></i>
+                        <p className="text-[18.66px] font-black uppercase text-indigo-600 truncate max-w-[200px]">
+                          {profile.virtual_email}
+                        </p>
+                      </div>
+                    )}
                   </div>
                </div>
             )}
@@ -1311,10 +1384,10 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           await supabase!.functions.invoke('send-official-contact', {
                             body: {
                               senderName: profile.full_name,
-                              fromEmail: generatedSender,
+                              fromEmail: profile.virtual_email || generatedSender,
                               recipients: recipientEmails,
-                              // The Subject line is critical for the inbound reply to link back correctly
-                              subject: `New Message from Constituent [MSG-${newMessage.id}]`,
+                              // Use the mandatory Subject field + the MSG tracking tag
+                              subject: `${fd.get('subject')} [MSG-${newMessage.id}]`,
                               content: fd.get('content'),
                               attachments: fileUrls,
                               messageId: newMessage.id

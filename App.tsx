@@ -1753,7 +1753,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="border-t border-gray-50 p-4">
                   <div className="bg-white rounded-[3rem] border border-gray-100 overflow-hidden shadow-sm">
                     <table className="w-full text-left border-collapse">
-                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[18.66px]">
+                  <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[18.66px] tracking-tighter">
                     <tr><th className="p-8">Voter Name</th><th className="p-8">District</th><th className="p-8">Voter ID</th><th className="p-8 text-right">Actions</th></tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -1763,8 +1763,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           <UserAvatar url={u.avatar_url} size="md" />
                           <span className="font-black uppercase text-[18.66px] text-gray-900">{u.full_name}</span>
                         </td>
-                        <td className="p-8 text-[18.66px] font-bold text-gray-500 uppercase tracking-widest">District {u.district}</td>
-                        <td className="p-8 text-[18.66px] font-mono text-gray-400 font-bold">{u.voter_id}</td>
+                        <td className="p-8 text-[18.66px] font-bold text-gray-500 uppercase tracking-tight">District {u.district}</td>
+                        <td className="p-8 text-[18.66px] font-mono text-gray-400 font-bold tracking-tighter">{u.voter_id}</td>
                         <td className="p-8 text-right">
                           <button onClick={() => toggleClearItem(u.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl text-[18.66px] font-black uppercase hover:bg-gray-200">Clear</button>
                         </td>

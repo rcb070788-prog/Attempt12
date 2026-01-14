@@ -25,8 +25,12 @@ serve(async (req) => {
     // Depending on the version, data might be at the root or under 'data'
     const payload = body.data || body;
     const fromRaw = payload.from || payload.headers?.from || "";
-    const fromEmail = fromRaw.match(/<(.+?)>/)?.[1] || fromRaw;
+    // Extract email from "Name <email@ext.com>" and force to lowercase
+    const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
     const subject = payload.subject || "";
+
+    // LOGGING FOR DEBUGGING (Check Supabase Logs)
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject}`);
     const text = payload.text || "";
     const html = payload.html || "";
     const attachments = payload.attachments || [];
@@ -68,7 +72,15 @@ serve(async (req) => {
 
     // Identify sender: Official or Original Voter
     const { data: parentMsg } = await supabase.from('board_messages').select('user_id, profiles(email)').eq('id', parentId).maybeSingle();
-    const isVoter = parentMsg?.profiles?.email && fromEmail.toLowerCase().includes(parentMsg.profiles.email.toLowerCase());
+    
+    // Handle the join correctly whether it's an object or an array
+    const profileData = Array.isArray(parentMsg?.profiles) ? parentMsg.profiles[0] : parentMsg?.profiles;
+    const voterEmail = profileData?.email?.toLowerCase();
+    
+    // If the person replying is the person who sent the original message, it's a follow-up
+    const isVoter = voterEmail && fromEmail === voterEmail;
+
+    console.log(`INBOUND_DEBUG: isVoter: ${isVoter} | Parent Voter Email: ${voterEmail}`);
 
     const { error: insertError } = await supabase.from('board_messages').insert({
       content: finalContent,

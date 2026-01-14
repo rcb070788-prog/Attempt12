@@ -1343,6 +1343,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           // 3. Trigger Email via Edge Function with Tracking Tag
                           try {
                             const { error: invokeErr } = await supabase!.functions.invoke('send-official-contact', {
+                              headers: {
+                                'Authorization': `Bearer ${supabaseAnonKey}`
+                              },
                               body: {
                                 senderName: profile.full_name,
                                 fromEmail: profile.virtual_email || generatedSender,
@@ -1354,12 +1357,13 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                               }
                             });
                             if (invokeErr) throw invokeErr;
+                            showToast("Message Recorded & Emails Sent"); 
                           } catch (emailErr) {
                             console.error("Notification failed:", emailErr);
+                            showToast("Message Recorded, but email notification failed.", "error");
                           }
                         }
 
-                        showToast("Message Recorded & Emails Sent"); 
                         setSelectedOfficials([]); 
                         setSearchQuery(''); // This clears the search filter
                         setIsOfficialDropdownOpen(false);
@@ -2023,12 +2027,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       
                       <div className="space-y-4">
                         <h3 className="text-3xl font-black uppercase text-gray-900 tracking-tighter">Identity Verification</h3>
-                        <div className="text-lg text-gray-500 font-medium leading-relaxed">
+                        <div className="text-[18.66px] text-gray-500 font-medium leading-relaxed">
                           You are about to <span className={pendingAction.type === 'Confirm' ? 'text-green-600 font-black' : 'text-red-600 font-black'}>{pendingAction.type.toUpperCase()}</span> that 
                           <br/><span className="text-2xl font-black text-gray-900 block my-2">"{pendingAction.req.first_name} {pendingAction.req.last_name}"</span> 
                           is a registered Moore County voter.
                         </div>
-                        <p className="text-lg text-gray-400 font-black uppercase tracking-widest bg-gray-50 py-3 rounded-2xl border border-gray-100 mt-4">
+                        <p className="text-[18.66px] text-gray-400 font-black uppercase tracking-widest bg-gray-50 py-3 rounded-2xl border border-gray-100 mt-4">
                           <i className="fa-solid fa-envelope-circle-check mr-2 text-indigo-600"></i>
                           Email will be sent to: <br/>
                           <span className="text-indigo-600 lowercase">{pendingAction.req.email}</span>
@@ -2076,7 +2080,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         >
                           Continue & Notify User
                         </button>
-                        <button onClick={() => setPendingAction(null)} className="w-full py-4 text-gray-400 font-black uppercase text-base hover:text-gray-900 transition-colors">
+                        <button onClick={() => setPendingAction(null)} className="w-full py-4 text-gray-400 font-black uppercase text-[18.66px] hover:text-gray-900 transition-colors">
                           Cancel Action
                         </button>
                       </div>

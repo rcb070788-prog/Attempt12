@@ -702,24 +702,24 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 setIsSubmittingRequest(false);
               }} className="grid grid-cols-2 gap-4 text-left">
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">First Name</label>
-                  <input name="fname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                  <label className="text-[14px] font-black uppercase text-gray-400 ml-2">First Name</label>
+                  <input name="fname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Last Name</label>
-                  <input name="lname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                  <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Last Name</label>
+                  <input name="lname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Date of Birth</label>
-                  <input name="dob" type="date" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                  <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Date of Birth</label>
+                  <input name="dob" type="date" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Last 4 SSN</label>
-                  <input name="ssn" maxLength={4} pattern="\d{4}" placeholder="0000" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                  <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Last 4 SSN</label>
+                  <input name="ssn" maxLength={4} pattern="\d{4}" placeholder="0000" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="col-span-2 space-y-1">
-                  <label className="text-[9px] font-black uppercase text-gray-400 ml-2">Email Address</label>
-                  <input name="email" type="email" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-xs font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                  <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Email Address</label>
+                  <input name="email" type="email" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="col-span-2 pt-4 flex gap-3">
                   <button type="submit" disabled={isSubmittingRequest} className="flex-grow py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-indigo-100">
@@ -1798,12 +1798,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     <div key={poll.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-4 mb-2">
-                          <h4 className="font-black uppercase text-lg truncate">{poll.title}</h4>
-                          <span className={`px-3 py-1 rounded text-base font-black uppercase ${isExpired ? 'bg-gray-100 text-gray-400' : 'bg-green-100 text-green-600'}`}>
+                          <h4 className="font-black uppercase text-[18.66px] truncate">{poll.title}</h4>
+                          <span className={`px-3 py-1 rounded text-[18.66px] font-black uppercase ${isExpired ? 'bg-gray-100 text-gray-400' : 'bg-green-100 text-green-600'}`}>
                             {isExpired ? 'Closed' : 'Active'}
                           </span>
                         </div>
-                        <p className="text-base font-bold text-gray-400 uppercase">Created {formatDate(poll.created_at)} • {poll.poll_votes?.length || 0} Total Votes</p>
+                        <p className="text-[18.66px] font-bold text-gray-400 uppercase">Created {formatDate(poll.created_at)} • {poll.poll_votes?.length || 0} Total Votes</p>
                       </div>
                       
                       <div className="flex items-center gap-4">
@@ -1874,8 +1874,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                   <div key={`admin-sug-${sug.id}`} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-4 mb-2">
-                        <h4 className="font-black uppercase text-lg truncate">{sug.title}</h4>
-                        <span className={`px-3 py-1 rounded text-base font-black uppercase transition-colors duration-300 ${
+                        <h4 className="font-black uppercase text-[18.66px] truncate">{sug.title}</h4>
+                        <span className={`px-3 py-1 rounded text-[18.66px] font-black uppercase transition-colors duration-300 ${
                           sug.status === 'Completed' ? 'bg-green-600 text-white shadow-md' : 
                           sug.status === 'Scheduled' ? 'bg-blue-600 text-white shadow-md' : 
                           sug.status === 'Closed' ? 'bg-red-600 text-white shadow-md' :
@@ -1884,7 +1884,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           {sug.status || 'Under Review'}
                         </span>
                       </div>
-                      <p className="text-base font-bold text-gray-400 uppercase">By {sug.profiles?.full_name || 'Verified Voter'} • {formatDate(sug.created_at)}</p>
+                      <p className="text-[18.66px] font-bold text-gray-400 uppercase">By {sug.profiles?.full_name || 'Verified Voter'} • {formatDate(sug.created_at)}</p>
                     </div>
                     
                     <div className="flex flex-wrap gap-4 justify-center items-center">

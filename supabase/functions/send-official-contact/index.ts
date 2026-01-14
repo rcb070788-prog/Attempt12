@@ -38,6 +38,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         from: `"${senderName}" <verification@concernedcitizensofmc.com>`,
+        reply_to: fromEmail,
         // Use the validated/filtered recipient list
         to: validRecipients,
         subject: subject, // This contains the [MSG-ID]

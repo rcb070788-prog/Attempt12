@@ -1713,12 +1713,12 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 </div>
 
               <div className="space-y-4">
-                  <label className="text-[10px] font-black uppercase text-gray-400 ml-2">Poll Options (Min 2)</label>
+                  <label className="text-[18.66px] font-black uppercase text-gray-400 ml-2">Poll Options (Min 2)</label>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input name="opt1" required placeholder="OPTION 1" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
-                    <input name="opt2" required placeholder="OPTION 2" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
-                    <input name="opt3" placeholder="OPTION 3 (OPTIONAL)" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
-                    <input name="opt4" placeholder="OPTION 4 (OPTIONAL)" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[10px]" />
+                    <input name="opt1" required placeholder="OPTION 1" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[18.66px]" />
+                    <input name="opt2" required placeholder="OPTION 2" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[18.66px]" />
+                    <input name="opt3" placeholder="OPTION 3 (OPTIONAL)" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[18.66px]" />
+                    <input name="opt4" placeholder="OPTION 4 (OPTIONAL)" className="p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold uppercase text-[18.66px]" />
                   </div>
                 </div>
 
@@ -1766,7 +1766,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         <td className="p-8 text-[18.66px] font-bold text-gray-500 uppercase tracking-tight">District {u.district}</td>
                         <td className="p-8 text-[18.66px] font-mono text-gray-400 font-bold tracking-tighter">{u.voter_id}</td>
                         <td className="p-8 text-right">
-                          <button onClick={() => toggleClearItem(u.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl text-[18.66px] font-black uppercase hover:bg-gray-200">Clear</button>
+                          <button onClick={() => toggleClearItem(u.id)} className="px-6 py-3 bg-gray-100 text-gray-500 rounded-xl text-[18.66px] font-black uppercase tracking-tighter hover:bg-gray-200">Clear</button>
                         </td>
                       </tr>
                     ))}
@@ -1986,13 +1986,13 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                                   <>
                                     <button 
                                       onClick={() => setPendingAction({ req, type: 'Confirm' })}
-                                      className="px-8 py-4 bg-green-600 text-white rounded-2xl text-[18.66px] font-black uppercase hover:scale-105 transition-all shadow-md"
+                                      className="px-8 py-4 bg-green-600 text-white rounded-2xl text-[18.66px] font-black uppercase tracking-tighter hover:scale-105 transition-all shadow-md"
                                     >
                                       Confirm
                                     </button>
                                     <button 
                                       onClick={() => setPendingAction({ req, type: 'Deny' })}
-                                      className="px-8 py-4 bg-red-600 text-white rounded-2xl text-[18.66px] font-black uppercase hover:scale-105 transition-all shadow-md"
+                                      className="px-8 py-4 bg-red-600 text-white rounded-2xl text-[18.66px] font-black uppercase tracking-tighter hover:scale-105 transition-all shadow-md"
                                     >
                                       Deny
                                     </button>

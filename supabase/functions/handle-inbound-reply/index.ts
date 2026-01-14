@@ -19,22 +19,20 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    
-    // 1. Extract details from Resend's inbound payload
-    // Resend provides 'from', 'subject', 'text' (body), and 'attachments'
-    // Depending on the version, data might be at the root or under 'data'
-    const payload = body.data || body;
-    const fromRaw = payload.from || payload.headers?.from || "";
-    // Extract email from "Name <email@ext.com>" and force to lowercase
-    const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
-    const subject = payload.subject || "";
+    // LOG THE FULL PAYLOAD TO DEBUG EMPTY FIELDS
+    console.log("RAW_PAYLOAD_RECEIVED:", JSON.stringify(body));
 
-    const text = payload.text || "";
+    const payload = body.data || body;
+    const fromRaw = payload.from || payload.headers?.from || payload.headers?.["from"] || "";
+    const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
+    const subject = payload.subject || payload.headers?.subject || "";
+    
+    // Check multiple potential content fields from Resend/Mailgun/SES via Resend
+    const text = payload.text || payload.body || payload.content || "";
     const html = payload.html || "";
     const attachments = payload.attachments || [];
 
-    // LOGGING FOR DEBUGGING (Check Supabase Logs)
-    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject} | RawTextLen: ${text.length} | RawHtmlLen: ${html.length}`);
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject} | TextLen: ${text.length} | HtmlLen: ${html.length}`);
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";

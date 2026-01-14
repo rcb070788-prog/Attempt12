@@ -76,8 +76,34 @@ serve(async (req) => {
       return source.trim();
     };
 
-    // Ensure we extract content using the new variable names
-    const finalContent = cleanEmailBody(rawContent);
+    // NEW: Greedy Recursive Search to find content anywhere in the Resend payload
+    const findGreedyContent = (obj: any): string => {
+      if (!obj) return "";
+      const skipKeys = ['from', 'to', 'subject', 'message_id', 'email_id', 'id', 'created_at', 'type', 'object'];
+      for (const key in obj) {
+        const val = obj[key];
+        if (typeof val === 'string' && val.length > 3 && !skipKeys.includes(key.toLowerCase())) {
+          // If the string contains spaces or newlines, it is likely our message body
+          if (val.includes(" ") || val.includes("\n")) return val;
+        } else if (typeof val === 'object' && val !== null) {
+          const deep = findGreedyContent(val);
+          if (deep) return deep;
+        }
+      }
+      return "";
+    };
+
+    let finalContent = cleanEmailBody(rawContent);
+
+    // If standard extraction failed, trigger Greedy Search
+    if (finalContent.length < 2) {
+      console.log("CONTENT_EMPTY: Starting Greedy Recursive Search...");
+      const greedyMatch = findGreedyContent(body);
+      if (greedyMatch) {
+        console.log(`GREEDY_SUCCESS: Found content. Length: ${greedyMatch.length}`);
+        finalContent = cleanEmailBody(greedyMatch);
+      }
+    }
     
     // Robust match for both UUIDs and numeric IDs
     const match = subject.match(/\[MSG-([a-f0-9-]+|[0-9]+)\]/i);

@@ -22,6 +22,8 @@ serve(async (req) => {
   try {
     const body = await req.json()
     console.log("RAW_PAYLOAD_RECEIVED:", JSON.stringify(body));
+    console.log("PAYLOAD_KEYS:", Object.keys(body));
+    if (body.data) console.log("DATA_KEYS:", Object.keys(body.data));
 
     // Resend payloads usually put the email object inside 'data'
     const payload = body.data || body;
@@ -109,17 +111,21 @@ serve(async (req) => {
     const match = subject.match(/\[MSG-([a-f0-9-]+|[0-9]+)\]/i);
     const parentId = match ? match[1] : null;
 
-    if (!parentId || finalContent.length < 2) {
-      console.error(`Inbound Error - ID: ${parentId} | Raw: ${rawContent.length} | Clean: ${finalContent.length}`);
+    if (!parentId) {
+      console.error(`Inbound Error - No ID found in subject. Raw body length: ${rawContent.length}`);
       return new Response(JSON.stringify({ 
-        error: "Invalid payload", 
-        id_found: !!parentId, 
-        raw_len: rawContent.length,
-        clean_len: finalContent.length 
-      }), { status: 400, headers: corsHeaders });
+        error: "Missing ID", 
+        id_found: false
+      }), { status: 200, headers: corsHeaders }); 
+    }
+    
+    // We allow length 0 so it reaches the portal for debugging
+    if (finalContent.length === 0) {
+      console.log("DEBUG: Proceeding with empty content to restore portal visibility.");
     }
 
     // 1. Identify context from parent message
+    // parentId is confirmed to be a UUID from your logs
     const { data: parentMsg, error: fetchError } = await supabase
       .from('board_messages')
       .select('user_id, district, subject, profiles(email)')

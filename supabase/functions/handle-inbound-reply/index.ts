@@ -34,10 +34,7 @@ serve(async (req) => {
     const attachments = payload.attachments || [];
 
     const rawContent = text || html || "";
-    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | RawLen: ${rawContent.length}`);
-    const attachments = payload.attachments || [];
-
-    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject} | TextLen: ${text.length} | HtmlLen: ${html.length}`);
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | TextLen: ${text.length} | HtmlLen: ${html.length} | TotalRawLen: ${rawContent.length}`);
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
@@ -57,8 +54,7 @@ serve(async (req) => {
       return source.trim();
     };
 
-    // Ensure we extract content even if text field is empty
-    const rawContent = text || html || "";
+    // Ensure we extract content using the new variable names
     const finalContent = cleanEmailBody(rawContent);
     
     // Robust match for both UUIDs and numeric IDs

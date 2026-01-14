@@ -992,10 +992,10 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-3">
-                      <h3 className="text-xl font-black uppercase text-gray-900 group-hover:text-indigo-600">{dash.title}</h3>
-                      {dash.status && <span className="px-2 py-0.5 bg-gray-100 text-[8px] font-black uppercase rounded text-gray-500">{dash.status}</span>}
+                      <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-indigo-600 tracking-tighter">{dash.title}</h3>
+                      {dash.status && <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-black uppercase rounded text-gray-500">{dash.status}</span>}
                     </div>
-                    <p className="text-gray-400 text-xs font-medium">{dash.description}</p>
+                    <p className="text-gray-400 text-[18.66px] font-medium leading-tight">{dash.description}</p>
                   </div>
                   <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
                     <i className="fa-solid fa-chevron-right"></i>
@@ -2118,11 +2118,11 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               
               {/* Optional Verification Block */}
               <div className="bg-gray-50 p-8 rounded-[2.5rem] space-y-5 border border-gray-100">
-                <p className="text-xs font-black uppercase text-gray-400 text-center tracking-tighter">Provide Name <span className="text-indigo-600 mx-1">OR</span> Date of Birth</p>
+                <p className="text-[18.66px] font-black uppercase text-gray-400 text-center tracking-tighter">Provide Name <span className="text-indigo-600 mx-1">OR</span> Date of Birth</p>
                 <input 
                   name="lastName" 
                   placeholder="LAST NAME" 
-                  className="w-full p-5 bg-white rounded-xl uppercase text-xs font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
+                  className="w-full p-5 bg-white rounded-xl uppercase text-[18.66px] font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
                 />
                 <div className="relative">
                   <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-black text-indigo-400 uppercase">Date of Birth</span>
@@ -2170,9 +2170,9 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
           <div className="max-w-lg mx-auto py-10 bg-white p-8 rounded-[3rem] shadow-2xl text-center">
             <h2 className="text-2xl font-black uppercase text-indigo-600 mb-8">Secure Access</h2>
             <form className="space-y-4" onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); const { error } = await supabase!.auth.signInWithPassword({ email: fd.get('email') as string, password: fd.get('password') as string }); if (error) showToast(error.message, 'error'); else setCurrentPage('home'); }}>
-              <input name="email" type="email" placeholder="EMAIL" required className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold" />
-              <input name="password" type="password" placeholder="PASSWORD" required className="w-full p-4 bg-gray-50 rounded-xl text-xs font-bold" />
-              <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl">Enter Portal</button>
+              <input name="email" type="email" placeholder="EMAIL" required className="w-full p-4 bg-gray-50 rounded-xl text-[18.66px] font-bold" />
+              <input name="password" type="password" placeholder="PASSWORD" required className="w-full p-4 bg-gray-50 rounded-xl text-[18.66px] font-bold" />
+              <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[18.66px] uppercase shadow-xl tracking-tighter">Enter Portal</button>
             </form>
             <button onClick={() => setCurrentPage('signup')} className="mt-6 text-[10px] font-black uppercase text-gray-400">Need to register as a voter?</button>
           </div>

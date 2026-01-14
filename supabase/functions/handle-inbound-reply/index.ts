@@ -19,17 +19,22 @@ serve(async (req) => {
 
   try {
     const body = await req.json()
-    // LOG THE FULL PAYLOAD TO DEBUG EMPTY FIELDS
     console.log("RAW_PAYLOAD_RECEIVED:", JSON.stringify(body));
 
+    // Resend payloads usually put the email object inside 'data'
     const payload = body.data || body;
-    const fromRaw = payload.from || payload.headers?.from || payload.headers?.["from"] || "";
+    
+    const fromRaw = payload.from || payload.headers?.from || "";
     const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
     const subject = payload.subject || payload.headers?.subject || "";
     
-    // Check multiple potential content fields from Resend/Mailgun/SES via Resend
-    const text = payload.text || payload.body || payload.content || "";
-    const html = payload.html || "";
+    // Aggressive content extraction: Check all possible field names used by inbound providers
+    const text = payload.text || payload.body || payload.content || payload["stripped-text"] || payload["body-plain"] || "";
+    const html = payload.html || payload["body-html"] || "";
+    const attachments = payload.attachments || [];
+
+    const rawContent = text || html || "";
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | RawLen: ${rawContent.length}`);
     const attachments = payload.attachments || [];
 
     console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject} | TextLen: ${text.length} | HtmlLen: ${html.length}`);

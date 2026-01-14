@@ -70,24 +70,33 @@ serve(async (req) => {
       }), { status: 400, headers: corsHeaders });
     }
 
-    // Identify sender: Official or Original Voter
-    const { data: parentMsg } = await supabase.from('board_messages').select('user_id, profiles(email)').eq('id', parentId).maybeSingle();
-    
-    // Handle the join correctly whether it's an object or an array
+    // 1. Identify context from parent message
+    const { data: parentMsg, error: fetchError } = await supabase
+      .from('board_messages')
+      .select('user_id, district, subject, profiles(email)')
+      .eq('id', parentId)
+      .maybeSingle();
+
+    if (fetchError || !parentMsg) {
+      console.error("INBOUND_ERROR: Parent message not found for ID:", parentId);
+      throw new Error("Parent message context missing");
+    }
+
     const profileData = Array.isArray(parentMsg?.profiles) ? parentMsg.profiles[0] : parentMsg?.profiles;
     const voterEmail = profileData?.email?.toLowerCase();
-    
-    // If the person replying is the person who sent the original message, it's a follow-up
     const isVoter = voterEmail && fromEmail === voterEmail;
 
-    console.log(`INBOUND_DEBUG: isVoter: ${isVoter} | Parent Voter Email: ${voterEmail}`);
+    console.log(`INBOUND_DEBUG: Processing reply for MSG-${parentId}. isVoter: ${isVoter}`);
 
+    // 2. Insert reply inheriting metadata to ensure it appears in UI
     const { error: insertError } = await supabase.from('board_messages').insert({
       content: finalContent,
       parent_id: parentId,
-      user_id: isVoter ? parentMsg.user_id : null, // If voter follow-up, link to their ID
+      user_id: isVoter ? parentMsg.user_id : null,
       recipient_names: isVoter ? 'Officials' : 'Constituent',
       is_official: !isVoter,
+      district: parentMsg.district, // CRITICAL: Inherit district so feed filters see it
+      subject: parentMsg.subject ? `Re: ${parentMsg.subject}` : null,
       attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
     });
 

@@ -702,7 +702,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 setIsSubmittingRequest(false);
               }} className="grid grid-cols-2 gap-4 text-left">
                 <div className="space-y-1">
-                  <label className="text-[14px] font-black uppercase text-gray-400 ml-2">First Name</label>
+                  <label className="text-[18.66px] font-black uppercase text-gray-400 ml-2">First Name</label>
                   <input name="fname" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="space-y-1">
@@ -1898,7 +1898,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           <button
                             key={statusOption}
                             onClick={() => handleUpdateSuggestionStatus(sug.id, statusOption)}
-                            className={`px-6 py-4 rounded-2xl text-[18.66px] font-black uppercase transition-all duration-200 ${
+                            className={`px-6 py-4 rounded-2xl text-[18.66px] font-black uppercase tracking-tighter transition-all duration-200 ${
                               isActive 
                                 ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-100 ring-2 ring-indigo-600 ring-offset-2' 
                                 : 'bg-white border-2 border-gray-200 text-gray-400 hover:border-indigo-600 hover:text-indigo-600'
@@ -1963,7 +1963,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="border-t border-gray-50">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[18.66px] tracking-widest">
+                      <thead className="bg-gray-50 border-b border-gray-100 font-black uppercase text-gray-400 text-[18.66px] tracking-tighter">
                         <tr>
                           <th className="p-6">Applicant</th>
                           <th className="p-6">DOB</th>

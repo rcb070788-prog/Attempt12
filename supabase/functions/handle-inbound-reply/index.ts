@@ -29,11 +29,12 @@ serve(async (req) => {
     const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
     const subject = payload.subject || "";
 
-    // LOGGING FOR DEBUGGING (Check Supabase Logs)
-    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject}`);
     const text = payload.text || "";
     const html = payload.html || "";
     const attachments = payload.attachments || [];
+
+    // LOGGING FOR DEBUGGING (Check Supabase Logs)
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Subject: ${subject} | RawTextLen: ${text.length} | RawHtmlLen: ${html.length}`);
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
@@ -62,11 +63,12 @@ serve(async (req) => {
     const parentId = match ? match[1] : null;
 
     if (!parentId || finalContent.length < 2) {
-      console.error(`Inbound Error - ID: ${parentId}, Content length: ${finalContent?.length}`);
+      console.error(`Inbound Error - ID: ${parentId} | Raw: ${rawContent.length} | Clean: ${finalContent.length}`);
       return new Response(JSON.stringify({ 
         error: "Invalid payload", 
         id_found: !!parentId, 
-        content_length: finalContent?.length 
+        raw_len: rawContent.length,
+        clean_len: finalContent.length 
       }), { status: 400, headers: corsHeaders });
     }
 

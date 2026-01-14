@@ -1615,7 +1615,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="p-10 pt-0 border-t border-indigo-50">
                   <div className="mb-8 mt-8">
                     <h2 className="text-4xl font-black uppercase tracking-tighter text-gray-900">Create New Poll</h2>
-                    <p className="text-indigo-600 font-black text-[14px] uppercase tracking-[0.2em]">Publish a new community decision point</p>
+                    <p className="text-indigo-600 font-black text-[18.66px] uppercase tracking-[0.2em]">Publish a new community decision point</p>
                   </div>
 
               <form onSubmit={async (e) => {
@@ -1657,17 +1657,17 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="grid grid-cols-1 gap-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Poll Question / Title</label>
+                      <label className="text-[18.66px] font-black uppercase text-gray-400 ml-2">Poll Question / Title</label>
                       <input name="title" required placeholder="Ex: Proposed Rezoning of District 2" className="w-full p-6 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-black text-[18.66px] transition-all" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Expiration Date</label>
+                      <label className="text-[18.66px] font-black uppercase text-gray-400 ml-2">Expiration Date</label>
                       <input name="expires" type="datetime-local" required className="w-full p-6 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 outline-none font-black text-[18.66px] transition-all" />
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Context / Description</label>
+                    <label className="text-[18.66px] font-black uppercase text-gray-400 ml-2">Context / Description</label>
                     <textarea name="description" placeholder="Provide background information, links, or context for this poll..." className="w-full p-8 bg-gray-50 rounded-[2.5rem] border-2 border-transparent focus:border-indigo-600 outline-none font-medium text-[18.66px] min-h-[200px] transition-all leading-relaxed" />
                   </div>
 
@@ -1739,7 +1739,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                 <div className="text-left flex items-center gap-4">
                   <div>
                     <h2 className="text-3xl font-black uppercase tracking-tighter leading-none">Voter Registry</h2>
-                    <p className="text-gray-400 font-bold text-base uppercase mt-1">Verified Moore County Users</p>
+                    <p className="text-gray-400 font-bold text-[18.66px] uppercase mt-1">Verified Moore County Users</p>
                   </div>
                   <span className="px-4 py-2 bg-indigo-100 text-indigo-600 rounded-full font-black text-base uppercase">{allUsers.filter(u => !clearedItems.includes(u.id)).length}</span>
                 </div>
@@ -1940,7 +1940,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                     
                     {/* Only show 'Pending' count if visible (not cleared) */}
                     {manualRequests.filter(r => !clearedItems.includes(r.id) && r.status === 'Pending').length > 0 && (
-                      <span className="px-4 py-2 bg-amber-100 text-amber-600 rounded-full font-black text-base uppercase animate-pulse">
+                      <span className="px-4 py-2 bg-amber-100 text-amber-600 rounded-full font-black text-[18.66px] uppercase animate-pulse">
                         {manualRequests.filter(r => !clearedItems.includes(r.id) && r.status === 'Pending').length} Pending
                       </span>
                     )}
@@ -1976,7 +1976,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           <tr key={req.id} className="hover:bg-gray-50 transition-colors">
                             <td className="p-8">
                               <p className="font-black uppercase text-[18.66px] text-gray-900 leading-none">{req.first_name} {req.last_name}</p>
-                              <p className="text-[14px] font-bold text-gray-400 uppercase mt-1">{formatDate(req.created_at)}</p>
+                              <p className="text-[18.66px] font-bold text-gray-400 uppercase mt-1">{formatDate(req.created_at)}</p>
                             </td>
                             <td className="p-8 text-[18.66px] font-bold text-gray-500">{req.dob}</td>
                             <td className="p-8 text-[18.66px] font-mono font-bold text-gray-400">***-**-{req.ssn_last_four}</td>

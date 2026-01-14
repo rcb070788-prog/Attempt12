@@ -6,6 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -28,13 +30,33 @@ serve(async (req) => {
     const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
     const subject = payload.subject || payload.headers?.subject || "";
     
-    // Aggressive content extraction: Check all possible field names used by inbound providers
-    const text = payload.text || payload.body || payload.content || payload["stripped-text"] || payload["body-plain"] || "";
-    const html = payload.html || payload["body-html"] || "";
+    const emailId = payload.email_id;
+    let text = payload.text || payload.body || payload.content || payload["stripped-text"] || payload["body-plain"] || "";
+    let html = payload.html || payload["body-html"] || "";
     const attachments = payload.attachments || [];
 
+    // If Resend didn't send the body in the webhook, fetch it using the emailId
+    if (!text && !html && emailId && RESEND_API_KEY) {
+      console.log(`FETCHING_CONTENT: Requesting body for Email ID: ${emailId}`);
+      try {
+        const fetchRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
+          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
+        });
+        if (fetchRes.ok) {
+          const fullEmail = await fetchRes.json();
+          text = fullEmail.text || "";
+          html = fullEmail.html || "";
+          console.log(`FETCH_SUCCESS: Retrieved content length: ${text.length || html.length}`);
+        } else {
+          console.error(`FETCH_ERROR: Resend API returned status ${fetchRes.status}`);
+        }
+      } catch (e) {
+        console.error(`FETCH_CRITICAL_ERROR: ${e.message}`);
+      }
+    }
+
     const rawContent = text || html || "";
-    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | TextLen: ${text.length} | HtmlLen: ${html.length} | TotalRawLen: ${rawContent.length}`);
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | RawLen: ${rawContent.length}`);
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";

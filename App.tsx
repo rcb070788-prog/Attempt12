@@ -1278,12 +1278,24 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                           {/* Official Attachments */}
                           {reply.attachment_urls?.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-4 border-t border-indigo-100">
-                              {reply.attachment_urls.map((url: string, i: number) => {
-                                const filenameMatch = url.match(/filename=([^&]+)/);
-                                const displayName = filenameMatch ? decodeURIComponent(filenameMatch[1]) : `Official Attachment ${i + 1}`;
+                              {reply.attachment_urls.map((rawUrl: string, i: number) => {
+                                // Split our internal separator '::'
+                                const parts = rawUrl.split('::');
+                                const downloadUrl = parts[0];
+                                const displayName = parts[1] || `Attachment ${i + 1}`;
+                                
                                 return (
-                                  <a key={i} href={url} target="_blank" rel="noreferrer" className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all">
-                                    <i className="fa-solid fa-paperclip"></i> {displayName}
+                                  <a 
+                                    key={i} 
+                                    href={downloadUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    download={displayName}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                                  >
+                                    <i className="fa-solid fa-paperclip"></i> 
+                                    {displayName}
                                   </a>
                                 );
                               })}

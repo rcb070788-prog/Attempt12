@@ -92,7 +92,8 @@ serve(async (req) => {
 
                   if (!uploadErr) {
                     const { data: urlData } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
-                    attachments.push(`${urlData.publicUrl}#filename=${encodeURIComponent(att.filename)}`);
+                    // Use '::' as a robust internal separator instead of '#' to avoid fragment issues
+                    attachments.push(`${urlData.publicUrl}::${att.filename}`);
                     console.log(`UPLOAD_SUCCESS: ${att.filename} -> ${urlData.publicUrl}`);
                   } else {
                     console.error("UPLOAD_ERROR:", uploadErr);
@@ -115,24 +116,31 @@ serve(async (req) => {
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
+      // Strip HTML and styles first
       let source = val.replace(/<style[^>]*>.*<\/style>/gms, '').replace(/<[^>]*>?/gm, ' ');
+      
       const delimiters = [
-        /\s*On\s.*wrote:/i,
-        /\s*On\s.*at\s.*wrote/i,
-        /\n\s*---+\s*Original Message\s*---+/i,
-        /\n\s*---+\s*Forwarded message\s*---+/i,
+        /\s*On\s+(?:(?!\n).)*wrote:/i,             // Matches: On Thu, Jan 15... wrote:
+        /\s*On\s+(?:(?!\n).)*at\s+(?:(?!\n).)*wrote/i, // Matches: On ... at ... wrote
+        /^-+ original message -+$/im,
+        /^-+ forwarded message -+$/im,
         /\n\s*From:\s*/i,
         /\n\s*Sent from my/i,
         /\n\s*Sent via/i
       ];
+
       for (const pattern of delimiters) {
         const parts = source.split(pattern);
         if (parts.length > 0) source = parts[0];
       }
+
       return source
         .split('\n')
-        .filter(line => !line.trim().startsWith('>') && !line.trim().startsWith('---'))
+        .map(line => line.trim())
+        // Remove quoted lines (starting with >) and horizontal rules
+        .filter(line => !line.startsWith('>') && !line.startsWith('---'))
         .join('\n')
+        .replace(/\n{3,}/g, '\n\n') // Consolidate excessive newlines
         .trim();
     };
 

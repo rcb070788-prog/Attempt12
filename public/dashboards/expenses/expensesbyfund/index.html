@@ -580,6 +580,9 @@ const EXCLUDED_ROLLUPS = new Set(["51000","52000","53000","54000","55000","56000
 function normalizeFySuffix(yy){
   const s = safeText(yy);
   if (!s) return null;
+  // If it's already just two digits (e.g., "25"), return it
+  if (/^\d{2}$/.test(s)) return s;
+  // Otherwise, grab the last two digits (e.g., "FY25" or "2025" -> "25")
   const m2 = s.match(/(\d{2})$/);
   return m2 ? m2[1] : null;
 }
@@ -591,7 +594,8 @@ function csvPathForFund(fundCode){
 }
 
 function pdfPathForFundYear(fundCode, yy){
-  const fc = safeText(fundCode);
+  // Remove any non-digits (e.g., "Fund 101" becomes "101")
+  const fc = safeText(fundCode).replace(/[^\d]/g, "");
   const y = normalizeFySuffix(yy);
   if (!fc || !y) return null;
   return `./Fund ${fc}/fund${fc}FY${y}.pdf`;
@@ -820,7 +824,12 @@ function resolvePdfFileForFundYear(fundCode, yy, pdfFileRaw){
 function toAbsoluteUrl(u){
   const s = safeText(u);
   if (!s) return null;
-  try { return new URL(s, window.location.href).href; }
+  try { 
+    // This creates an absolute path but decodes it so spaces are " " 
+    // instead of "%20" before they get processed by the viewer.
+    const urlObj = new URL(s, window.location.href);
+    return decodeURI(urlObj.href);
+  }
   catch(_){ return null; }
 }
 
@@ -1176,7 +1185,8 @@ async function checkPdfExists(urlRaw){
 }
 
 function buildPdfHref(fund, seriesKey, yy, searchToken){
-  const pdf = fund?.pdfByYear?.[yy] || { url:null, defaultPage:null };
+  const ySuffix = normalizeFySuffix(yy);
+  const pdf = fund?.pdfByYear?.[ySuffix] || { url:null, defaultPage:null };
   const fundId = fund?.fundId ?? state.fundId ?? null;
 
   // NEW convention: compute per-fund/per-year path at runtime (don’t rely on CSV pdf.url)
@@ -1194,8 +1204,9 @@ function buildPdfHref(fund, seriesKey, yy, searchToken){
 
     // PDF.js viewer (NOT native browser PDF)
   // Pass #search as a fallback (popup-blocked / no window handle). When smart-highlight runs, it clears PDF.js yellow highlights and applies a single green cell highlight.
+  // We use the raw URL first, then convert to absolute inside the viewer builder
   const abs = toAbsoluteUrl(urlRaw);
-  const viewerHref = buildPdfJsViewerHref(abs, page, safeText(searchToken) || null);
+  const viewerHref = buildPdfJsViewerHref(abs, page, null); // We handle highlighting via smart-logic
 
 
   // Prefer viewer; fallback to native if PDF.js isn't available
@@ -3541,7 +3552,9 @@ function showTooltip({ seriesKey, seriesLabel, yy, value, fund, realValue=null, 
   // PDF link (clickable)
   if (linkEl){
     if (href){
-      linkEl.textContent = `${display || "PDF"}${page!=null ? " (page " + page + ")" : ""}`;
+      // Shows "fund101FY24.pdf (page 13)" instead of the whole URL
+      const fileName = urlRaw.split('/').pop();
+      linkEl.textContent = `${fileName}${page!=null ? " (page " + page + ")" : ""}`;
       linkEl.href = href;
       linkEl.style.pointerEvents = "auto";
       linkEl.style.opacity = "1";

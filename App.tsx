@@ -89,6 +89,7 @@ export default function App() {
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const [stagedSuggestionFiles, setStagedSuggestionFiles] = useState<{url: string, name: string}[]>([]);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
+  const [stagedBoardFiles, setStagedBoardFiles] = useState<{url: string, name: string}[]>([]);
   const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
   const [isAdminSections, setIsAdminSections] = useState({ poll: true, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false });
@@ -324,11 +325,12 @@ const handleBoardFileUpload = async (files: FileList) => {
     const uploadedUrls = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const filePath = `board/${Date.now()}_${file.name}`;
+      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+      const filePath = `board/${Date.now()}_${safeName}`;
       const { error: uploadError } = await supabase.storage.from('board_attachments').upload(filePath, file);
       if (!uploadError) {
         const { data: { publicUrl } } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
-        uploadedUrls.push(publicUrl);
+        uploadedUrls.push(`${publicUrl}?filename=${encodeURIComponent(file.name)}`);
       }
     }
     return uploadedUrls;
@@ -1253,11 +1255,15 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       {/* Attachments Section */}
                       {msg.attachment_urls?.length > 0 && (
                         <div className="flex flex-wrap gap-2 mb-6 p-4 bg-gray-50 rounded-2xl">
-                          {msg.attachment_urls.map((url: string, i: number) => (
-                            <a key={i} href={url} target="_blank" rel="noreferrer" className="px-4 py-2 bg-white border border-gray-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all">
-                              <i className="fa-solid fa-file-pdf"></i> Attachment {i + 1}
-                            </a>
-                          ))}
+                          {msg.attachment_urls.map((url: string, i: number) => {
+                            let displayName = `Attachment ${i + 1}`;
+                            try { displayName = new URL(url).searchParams.get('filename') || displayName; } catch(e){}
+                            return (
+                              <a key={i} href={url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="px-4 py-2 bg-white border border-gray-200 text-indigo-600 rounded-xl text-[10px] font-black uppercase flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all shadow-sm">
+                                <i className="fa-solid fa-file-invoice"></i> {displayName}
+                              </a>
+                            );
+                          })}
                         </div>
                       )}
 
@@ -1324,14 +1330,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       if (selectedOfficials.length === 0) return showToast("Select at least one official", "error");
                       if (!fd.get('subject')) return showToast("Please enter a subject", "error");
                       
-                      const fileInput = e.currentTarget.querySelector('input[type="file"]') as HTMLInputElement;
-                      const files = fileInput.files;
-                      let fileUrls: string[] = [];
-                      
-                      if (files && files.length > 0) {
-                        showToast("Uploading files...", "success");
-                        fileUrls = await handleBoardFileUpload(files);
-                      }
+                      const fileUrls = stagedBoardFiles.map(f => f.url);
 
                       const { data: newMessage, error } = await supabase!.from('board_messages').insert({ 
                         user_id: user.id, 
@@ -1418,14 +1417,45 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                       
                       <div className="bg-indigo-700 p-5 rounded-2xl border border-indigo-500">
                         <label className="flex items-center gap-4 cursor-pointer text-white">
-                          <div className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center shadow-lg"><i className="fa-solid fa-paperclip"></i></div>
+                          <div className="bg-white text-indigo-600 w-10 h-10 rounded-full flex items-center justify-center shadow-lg">
+                            <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-paperclip'}`}></i>
+                          </div>
                           <div className="flex flex-col">
                             <span className="text-[10px] font-black uppercase leading-none">Add Attachments</span>
                             <span className="text-[8px] font-bold text-indigo-300 uppercase mt-1">Images or Documents</span>
                           </div>
-                          <input type="file" multiple className="hidden" />
+                          <input 
+                            type="file" 
+                            multiple 
+                            className="hidden" 
+                            onChange={async (e) => {
+                              if (e.target.files && e.target.files.length > 0) {
+                                setIsUploading(true);
+                                const urls = await handleBoardFileUpload(e.target.files);
+                                const newStaged = urls.map(url => ({
+                                  url,
+                                  name: new URL(url).searchParams.get('filename') || 'File'
+                                }));
+                                setStagedBoardFiles(prev => [...prev, ...newStaged]);
+                                setIsUploading(false);
+                              }
+                            }}
+                          />
                         </label>
                       </div>
+
+                      {stagedBoardFiles.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-4 bg-white/10 rounded-2xl">
+                          {stagedBoardFiles.map((file, idx) => (
+                            <div key={idx} className="bg-white px-3 py-1.5 rounded-lg flex items-center gap-2">
+                              <span className="text-[9px] font-black text-indigo-600 truncate max-w-[150px]">{file.name}</span>
+                              <button type="button" onClick={() => setStagedBoardFiles(prev => prev.filter((_, i) => i !== idx))} className="text-red-500">
+                                <i className="fa-solid fa-circle-xmark"></i>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
                       <button className="w-full py-6 bg-white text-indigo-600 rounded-3xl font-black uppercase text-[18.66px] shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all">Submit to Public Record</button>
                     </form>

@@ -67,9 +67,12 @@ serve(async (req) => {
           if (emailData.attachments && Array.isArray(emailData.attachments)) {
             for (const att of emailData.attachments) {
               try {
-                // FETCH: Using the specific path you found in the Resend portal
+                // FETCH: Force binary mode using the Accept header to prevent grey boxes
                 const attRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}/attachments/${att.id}`, {
-                  headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
+                  headers: { 
+                    'Authorization': `Bearer ${RESEND_API_KEY}`,
+                    'Accept': 'application/octet-stream'
+                  }
                 });
                 
                 if (attRes.ok) {
@@ -241,11 +244,8 @@ serve(async (req) => {
       is_official: isOfficial,
       district: contextData.district,
       subject: contextData.subject ? `Re: ${contextData.subject}` : null,
-      // Map URLs if they exist, or filenames as a fallback for metadata visibility
-      attachment_urls: attachments.map((a: any) => {
-        if (typeof a === 'string') return a;
-        return a.url || a.link || (a.filename ? `[File: ${a.filename}]` : null);
-      }).filter(Boolean)
+      // Only store valid URLs to prevent broken labels and home-page redirects
+      attachment_urls: attachments.filter(a => typeof a === 'string' && a.startsWith('http'))
     });
 
     if (insertError) {

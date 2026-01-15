@@ -1743,11 +1743,7 @@ function detectWideOrLong(headers){
 }
 
 function ensureYearMap(){
-  const obj = {};
-  // Always use the very latest discovered years list
-  const currentYears = dataStore.years;
-  for (const y of currentYears) obj[y] = null;
-  return obj;
+  return {};
 }
 
 function addAlias(meta, key, label, yearYY){
@@ -1862,16 +1858,13 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
       lineItems: {}
     },
 
-        pdfByYear: Object.fromEntries(dataStore.years.map(y => [y, { url: null, defaultPage: null }])),
+        pdfByYear: {},
     pageByPoint: {},
     searchValueByPoint: {}, // `${seriesKey}|${yy}` -> raw numeric string for PDF.js #search=
 
 
-    cpiJuneIndex: Object.fromEntries(Array.from({length: 20}, (_,i)=>{
-      const year = 2005 + i;
-      return [`${year}-06`, null];
-    })),
-    populationByYear: Object.fromEntries(dataStore.years.map(y => [y, null])),
+    cpiJuneIndex: {},
+    populationByYear: {},
 
     uncertainties
   };
@@ -1964,7 +1957,7 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
     function getWidePdfPageForYear(row, yearHeader, fallback){
   try{
     const y = parseYearToYY(yearHeader);
-    if (!y || !dataStore.years.includes(y)) return fallback;
+    if (!y) return fallback;
 
     // Page-ish headers (keep this broad; wide exports are inconsistent)
     const pageRe = /(pdf\s*page|pdf\b.*page|source\s*pdf.*page|\bpage\b|\bpg\b|page\s*#|page\s*no\.?|\bp\b)/i;
@@ -2017,11 +2010,15 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
     const y = parseYearToYY(yy);
     if (!y) return;
 
-    // Discovery: If this is a new year we haven't seen in any CSV yet, add it
+    // 1. Discovery: Add year to master list
     if (!dataStore.years.includes(y)) {
       dataStore.years.push(y);
-      // Keep the years in numerical order (05, 06, etc.)
       dataStore.years.sort((a, b) => parseInt(a) - parseInt(b));
+    }
+
+    // 2. Lazy Init: Create the PDF folder for this year if missing
+    if (!fundDataset.pdfByYear[y]) {
+      fundDataset.pdfByYear[y] = { url: null, defaultPage: null };
     }
 
     // Keep stateYear for label tracking inside helpers
@@ -2030,11 +2027,10 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
     const amount = parseNumber(amountRaw);
     const deptTotal = parseNumber(deptTotalRaw);
 
-        const pdfFile = safeText(pdfFileRaw) || null;
+    const pdfFile = safeText(pdfFileRaw) || null;
     const pageInt = parsePdfPageInt(pdfPageRaw);
 
-
-    // record pdfByYear from any row (prefer first non-null; fund total will overwrite defaultPage)
+    // 3. Record PDF Info (Safe now because fundDataset.pdfByYear[y] exists)
     if (pdfFile && !fundDataset.pdfByYear[y].url) fundDataset.pdfByYear[y].url = pdfFile;
 
     // program grouping (never numeric series)
@@ -2397,6 +2393,9 @@ async function tryLoadFund(fundId){
 
 
 async function loadAllFunds(){
+  // Clear discovered years so we can re-learn them from the CSVs
+  dataStore.years = [];
+  
   // reset loaded flags + funds
   for (const id of Object.keys(dataStore.fundRegistry)){
     dataStore.fundRegistry[id].loaded = false;
@@ -2649,9 +2648,10 @@ function buildSeriesForCurrentSelection(fund){
   }
   if (state.programCode){
     // Derived series: sum department totals in this program (no double count)
-    const years = dataStore.years;
+    const years = [...dataStore.years].sort((a, b) => a.localeCompare(b));
     const deptList = fund.hierarchy.programs[state.programCode]?.departments || [];
-    const values = Object.fromEntries(years.map(y=>[y,null]));
+    const values = {};
+    for (const y of years) values[y] = null;
     for (const y of years){
       let sum=0, any=false;
       for (const d of deptList){

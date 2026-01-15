@@ -74,20 +74,28 @@ serve(async (req) => {
                 
                 if (attRes.ok) {
                   const attData = await attRes.arrayBuffer();
-                  const filePath = `${parentId}/${Date.now()}_${att.filename}`;
+                  // Support UUIDs by matching any non-bracket character inside the MSG tag
+                  const msgMatch = subject.match(/\[MSG-([^\]\s]+)\]/i);
+                  const attParentId = msgMatch ? msgMatch[1] : 'orphaned';
+
+                  // Sanitize filename and prepare path
+                  const safeName = att.filename.replace(/[^a-zA-Z0-9.]/g, '_');
+                  const filePath = `${attParentId}/${Date.now()}_${safeName}`;
                   
-                  // Upload to Supabase Storage 'board_attachments' bucket
-                  const { data: uploadData, error: uploadErr } = await supabase.storage
+                  const { error: uploadErr } = await supabase.storage
                     .from('board_attachments')
                     .upload(filePath, attData, {
                       contentType: att.content_type || 'application/octet-stream',
+                      cacheControl: '3600',
                       upsert: true
                     });
 
                   if (!uploadErr) {
                     const { data: urlData } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
-                    // Store the URL with the filename appended as a hash for the UI to read
                     attachments.push(`${urlData.publicUrl}#filename=${encodeURIComponent(att.filename)}`);
+                    console.log(`UPLOAD_SUCCESS: ${att.filename} -> ${urlData.publicUrl}`);
+                  } else {
+                    console.error("UPLOAD_ERROR:", uploadErr);
                   }
                 }
               } catch (attErr) {
@@ -105,35 +113,32 @@ serve(async (req) => {
       }
     }
 
-    // Refresh rawContent after Path B fetch attempt
-    const rawContent = text || html || "";
-    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | RawLen: ${rawContent.length}`);
-
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
       let source = val.replace(/<style[^>]*>.*<\/style>/gms, '').replace(/<[^>]*>?/gm, ' ');
-      
       const delimiters = [
-        /[^\n]*On\s.*wrote:/i,
-        /[^\n]*On\s.*at\s.*wrote/i,
+        /\s*On\s.*wrote:/i,
+        /\s*On\s.*at\s.*wrote/i,
         /\n\s*---+\s*Original Message\s*---+/i,
         /\n\s*---+\s*Forwarded message\s*---+/i,
         /\n\s*From:\s*/i,
         /\n\s*Sent from my/i,
-        /\n\s*Sent via/i,
-        /\n\s*_+/i
+        /\n\s*Sent via/i
       ];
-
       for (const pattern of delimiters) {
-        source = source.split(pattern)[0];
+        const parts = source.split(pattern);
+        if (parts.length > 0) source = parts[0];
       }
-
       return source
         .split('\n')
-        .filter(line => !line.trim().startsWith('>'))
+        .filter(line => !line.trim().startsWith('>') && !line.trim().startsWith('---'))
         .join('\n')
         .trim();
     };
+
+    // Refresh rawContent after Path B fetch attempt
+    const rawContent = text || html || "";
+    console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | RawLen: ${rawContent.length}`);
 
     // Content Hunter: Looks for any string that looks like an email body
     const findGreedyContent = (obj: any): string => {

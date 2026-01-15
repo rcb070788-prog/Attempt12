@@ -59,18 +59,43 @@ serve(async (req) => {
         
         if (fetchRes.ok) {
           const fullEmail = await fetchRes.json();
-          // Receiving API often wraps the email object in a 'data' property
           const emailData = fullEmail.data || fullEmail;
           text = emailData.text || "";
           html = emailData.html || "";
           
-          // Capture attachments from the API response
+          // PATH B - STEP 2: Process binary attachments
           if (emailData.attachments && Array.isArray(emailData.attachments)) {
-            attachments.push(...emailData.attachments);
-            console.log(`FETCH_SUCCESS: Retrieved content and ${attachments.length} attachments.`);
-          } else {
-            console.log(`FETCH_SUCCESS: Retrieved content. Text length: ${text?.length || 0}`);
+            for (const att of emailData.attachments) {
+              try {
+                // Fetch the actual file content from Resend
+                const attRes = await fetch(`https://api.resend.com/attachments/receiving/${att.id}?emailId=${emailId}`, {
+                  headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
+                });
+                
+                if (attRes.ok) {
+                  const attData = await attRes.arrayBuffer();
+                  const filePath = `${parentId}/${Date.now()}_${att.filename}`;
+                  
+                  // Upload to Supabase Storage 'board_attachments' bucket
+                  const { data: uploadData, error: uploadErr } = await supabase.storage
+                    .from('board_attachments')
+                    .upload(filePath, attData, {
+                      contentType: att.content_type || 'application/octet-stream',
+                      upsert: true
+                    });
+
+                  if (!uploadErr) {
+                    const { data: urlData } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
+                    // Store the URL with the filename appended as a hash for the UI to read
+                    attachments.push(`${urlData.publicUrl}#filename=${encodeURIComponent(att.filename)}`);
+                  }
+                }
+              } catch (attErr) {
+                console.error(`ATTACHMENT_SYNC_ERROR: ${att.filename}:`, attErr.message);
+              }
+            }
           }
+          console.log(`FETCH_SUCCESS: Retrieved content and processed ${attachments.length} attachments.`);
         } else {
           const errorText = await fetchRes.text();
           console.error(`FETCH_ERROR: status ${fetchRes.status} - ${errorText}`);
@@ -86,27 +111,23 @@ serve(async (req) => {
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
-      // 1. Remove HTML tags and styles
       let source = val.replace(/<style[^>]*>.*<\/style>/gms, '').replace(/<[^>]*>?/gm, ' ');
       
-      // 2. Remove "Reply Tail" using common headers
       const delimiters = [
-        /\s*On\s.*wrote:/i,
-        /\s*On\s.*at\s.*wrote/i,
+        /[^\n]*On\s.*wrote:/i,
+        /[^\n]*On\s.*at\s.*wrote/i,
         /\n\s*---+\s*Original Message\s*---+/i,
         /\n\s*---+\s*Forwarded message\s*---+/i,
         /\n\s*From:\s*/i,
         /\n\s*Sent from my/i,
         /\n\s*Sent via/i,
-        /\n\s*_+/i,
-        /\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}\sGMT/i
+        /\n\s*_+/i
       ];
+
       for (const pattern of delimiters) {
-        const match = source.match(pattern);
-        if (match && match.index) source = source.substring(0, match.index);
+        source = source.split(pattern)[0];
       }
 
-      // 3. Strip lines starting with '>' (quoted text)
       return source
         .split('\n')
         .filter(line => !line.trim().startsWith('>'))

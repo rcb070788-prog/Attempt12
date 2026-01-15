@@ -63,32 +63,29 @@ serve(async (req) => {
           text = emailData.text || "";
           html = emailData.html || "";
           
-          // PATH B - STEP 2: Process binary attachments
+          // PATH B - STEP 2: Process binary attachments using your Resend discovery
           if (emailData.attachments && Array.isArray(emailData.attachments)) {
             for (const att of emailData.attachments) {
               try {
-                // Fetch the actual file content from Resend
-                const attRes = await fetch(`https://api.resend.com/attachments/receiving/${att.id}?emailId=${emailId}`, {
+                // FETCH: Using the specific path you found in the Resend portal
+                const attRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}/attachments/${att.id}`, {
                   headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
                 });
                 
                 if (attRes.ok) {
                   const attData = await attRes.arrayBuffer();
-                  // Support UUIDs by matching any non-bracket character inside the MSG tag
                   const msgMatch = subject.match(/\[MSG-([^\]\s]+)\]/i);
                   const attParentId = msgMatch ? msgMatch[1] : 'orphaned';
 
-                  // Sanitize filename and prepare path
                   const safeName = att.filename.replace(/[^a-zA-Z0-9.]/g, '_');
                   const filePath = `${attParentId}/${Date.now()}_${safeName}`;
                   
-                  // Robust Content-Type detection
+                  // DETECT: Ensure browser viewers open PDFs/Images correctly
                   let detectedType = att.content_type || 'application/octet-stream';
-                  const lowerName = att.filename.toLowerCase();
-                  if (lowerName.endsWith('.pdf')) detectedType = 'application/pdf';
-                  else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) detectedType = 'image/jpeg';
-                  else if (lowerName.endsWith('.png')) detectedType = 'image/png';
-                  else if (lowerName.endsWith('.gif')) detectedType = 'image/gif';
+                  const lower = att.filename.toLowerCase();
+                  if (lower.endsWith('.pdf')) detectedType = 'application/pdf';
+                  else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) detectedType = 'image/jpeg';
+                  else if (lower.endsWith('.png')) detectedType = 'image/png';
 
                   const { error: uploadErr } = await supabase.storage
                     .from('board_attachments')
@@ -100,16 +97,12 @@ serve(async (req) => {
 
                   if (!uploadErr) {
                     const { data: urlData } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
-                    // Use '::' as a robust internal separator instead of '#' to avoid fragment issues
-                    attachments.push(`${urlData.publicUrl}::${att.filename}`);
+                    // Standardize URL with a 'filename' parameter so UI can read the name
+                    attachments.push(`${urlData.publicUrl}?filename=${encodeURIComponent(att.filename)}`);
                     console.log(`UPLOAD_SUCCESS: ${att.filename} -> ${urlData.publicUrl}`);
-                  } else {
-                    console.error("UPLOAD_ERROR:", uploadErr);
                   }
                 }
-              } catch (attErr) {
-                console.error(`ATTACHMENT_SYNC_ERROR: ${att.filename}:`, attErr.message);
-              }
+              } catch (attErr) { console.error(`ATTACH_ERR: ${att.filename}:`, attErr.message); }
             }
           }
           console.log(`FETCH_SUCCESS: Retrieved content and processed ${attachments.length} attachments.`);

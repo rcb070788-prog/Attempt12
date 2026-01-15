@@ -45,10 +45,29 @@ serve(async (req) => {
     let html = payload.html || payload["body-html"] || "";
     const attachments = payload.attachments || [];
 
-    // Retrieval via Resend API /emails/{id} is only for outbound messages.
-    // For inbound, we rely on the webhook/rule providing the body directly.
-    if (!text && !html) {
-      console.log("WAITING_FOR_BODY: No content found in initial payload.");
+    // PATH B: Fetch full content from Resend API using the emailId
+    if (!text && !html && emailId && RESEND_API_KEY) {
+      console.log(`PATH_B_FETCH: Requesting body for Email ID: ${emailId}`);
+      try {
+        const fetchRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
+          headers: { 
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (fetchRes.ok) {
+          const fullEmail = await fetchRes.json();
+          text = fullEmail.text || "";
+          html = fullEmail.html || "";
+          console.log(`FETCH_SUCCESS: Retrieved content. Text length: ${text?.length || 0}`);
+        } else {
+          const errorText = await fetchRes.text();
+          console.error(`FETCH_ERROR: status ${fetchRes.status} - ${errorText}`);
+        }
+      } catch (e) {
+        console.error(`FETCH_CRITICAL_ERROR: ${e.message}`);
+      }
     }
 
     const rawContent = text || html || "";
@@ -61,9 +80,12 @@ serve(async (req) => {
         /\n\s*On\s.*wrote:/i,
         /On\s.*at\s.*wrote/i,
         /\n\s*---+\s*Original Message\s*---+/i,
+        /\n\s*---+\s*Forwarded message\s*---+/i,
         /\n\s*From:\s*/i,
         /\n\s*Sent from my/i,
-        /\n\s*_+/i
+        /\n\s*Sent via/i,
+        /\n\s*_+/i,
+        /\d{4}-\d{2}-\d{2}\s\d{2}:\d{2}\sGMT/i
       ];
       for (const pattern of delimiters) {
         const match = source.match(pattern);
@@ -152,15 +174,18 @@ serve(async (req) => {
     
     console.log(`INBOUND_DEBUG: Inserting Reply for Message: ${parentId}. Official: ${isOfficial}`);
     
+    // Ensure finalContent is populated from Path B fetch before insert
+    const finalDisplayContent = finalContent && finalContent.length > 0 ? finalContent : "(Message content could not be retrieved)";
+
     const { error: insertError } = await supabase.from('board_messages').insert({
-      content: finalContent || "(Empty Reply)",
+      content: finalDisplayContent,
       parent_id: parentId,
       user_id: contextData.user_id,
       recipient_names: isOfficial ? 'Constituent' : 'Officials',
       is_official: isOfficial,
       district: contextData.district,
       subject: contextData.subject ? `Re: ${contextData.subject}` : null,
-      attachment_urls: attachments.map((a: any) => (typeof a === 'string' ? a : a.url)).filter(Boolean)
+      attachment_urls: attachments.map((a: any) => (typeof a === 'string' ? a : a.url || a.link)).filter(Boolean)
     });
 
     if (insertError) {

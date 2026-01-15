@@ -82,10 +82,18 @@ serve(async (req) => {
                   const safeName = att.filename.replace(/[^a-zA-Z0-9.]/g, '_');
                   const filePath = `${attParentId}/${Date.now()}_${safeName}`;
                   
+                  // Robust Content-Type detection
+                  let detectedType = att.content_type || 'application/octet-stream';
+                  const lowerName = att.filename.toLowerCase();
+                  if (lowerName.endsWith('.pdf')) detectedType = 'application/pdf';
+                  else if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) detectedType = 'image/jpeg';
+                  else if (lowerName.endsWith('.png')) detectedType = 'image/png';
+                  else if (lowerName.endsWith('.gif')) detectedType = 'image/gif';
+
                   const { error: uploadErr } = await supabase.storage
                     .from('board_attachments')
                     .upload(filePath, attData, {
-                      contentType: att.content_type || 'application/octet-stream',
+                      contentType: detectedType,
                       cacheControl: '3600',
                       upsert: true
                     });

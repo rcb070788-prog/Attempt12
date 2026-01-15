@@ -1290,7 +1290,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                                     href={downloadUrl} 
                                     target="_blank" 
                                     rel="noopener noreferrer" 
-                                    download={displayName}
                                     onClick={(e) => e.stopPropagation()}
                                     className="px-3 py-1.5 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                                   >

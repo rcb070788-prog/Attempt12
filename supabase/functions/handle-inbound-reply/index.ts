@@ -129,71 +129,46 @@ serve(async (req) => {
       console.log("DEBUG: Proceeding with empty content to restore portal visibility.");
     }
 
-    // 1. Identify context (Check board_messages first, then public_records)
-    let { data: contextData, error: fetchError } = await supabase
+    // 1. Identify context (Lookup the specific board message being replied to)
+    const { data: contextData, error: fetchError } = await supabase
       .from('board_messages')
-      .select('user_id, district, subject, profiles(email)')
+      .select('user_id, district, subject')
       .eq('id', parentId)
       .maybeSingle();
 
-    let isPublicRecordComment = false;
-
-    if (!contextData) {
-      // If not a board message, check if it's a comment on a Public Record
-      const { data: recordData } = await supabase
-        .from('public_records')
-        .select('id, district, title')
-        .eq('id', parentId)
-        .maybeSingle();
-      
-      if (recordData) {
-        isPublicRecordComment = true;
-        contextData = { 
-          user_id: null, 
-          district: recordData.district, 
-          subject: recordData.title 
-        };
-      }
-    }
-
-    if (!contextData) {
-      console.error("INBOUND_ERROR: ID not found in board_messages or public_records:", parentId);
-      return new Response(JSON.stringify({ error: "Context ID not found", id: parentId }), { status: 200, headers: corsHeaders });
-    }
-
-    // 2. Insert as either a threaded reply or a Public Record comment
-    if (isPublicRecordComment) {
-      console.log(`INBOUND_DEBUG: Inserting Official Response for Public Record: ${parentId}`);
-      const { error: commentErr } = await supabase.from('comments').insert({
-        public_record_id: parentId,
-        content: finalContent || "(Empty Reply)",
-        is_official: true,
-        user_id: null 
+    if (fetchError || !contextData) {
+      console.error("INBOUND_ERROR: ID not found in board_messages table:", parentId);
+      return new Response(JSON.stringify({ error: "Context ID not found", id: parentId }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       });
-      if (commentErr) throw commentErr;
-    } else {
-      const profileData = Array.isArray(contextData?.profiles) ? contextData.profiles[0] : contextData?.profiles;
-      const voterEmail = profileData?.email?.toLowerCase();
-      const isVoter = voterEmail && fromEmail === voterEmail;
-
-      console.log(`INBOUND_DEBUG: Inserting Board Message Reply for: ${parentId}`);
-      const { error: msgErr } = await supabase.from('board_messages').insert({
-        content: finalContent || "(Empty Reply)",
-        parent_id: parentId,
-        user_id: isVoter ? contextData.user_id : null,
-        recipient_names: isVoter ? 'Officials' : 'Constituent',
-        is_official: !isVoter,
-        district: contextData.district,
-        subject: contextData.subject ? `Re: ${contextData.subject}` : null,
-        attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
-      });
-      if (msgErr) throw msgErr;
     }
+
+    console.log(`MATCH_FOUND: ID ${parentId} found in board_messages.`);
+
+    // 2. Insert the reply as a new board_message linked to the parent
+    // Official status is determined by the sender's email domain (Testing with Gmail)
+    const isOfficial = fromEmail.includes('gmail.com') || fromEmail.includes('concernedcitizensofmc.com');
+    
+    console.log(`INBOUND_DEBUG: Inserting Reply for Message: ${parentId}. Official: ${isOfficial}`);
+    
+    const { error: insertError } = await supabase.from('board_messages').insert({
+      content: finalContent || "(Empty Reply)",
+      parent_id: parentId,
+      user_id: contextData.user_id, // Keep the thread owner consistent
+      recipient_names: isOfficial ? 'Constituent' : 'Officials',
+      is_official: isOfficial,
+      district: contextData.district,
+      subject: contextData.subject ? `Re: ${contextData.subject}` : null,
+      attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
+    });
 
     if (insertError) {
-      console.error("DB Insert Error:", insertError);
+      console.error("DATABASE_INSERT_ERROR:", insertError);
       throw insertError;
     }
+
+    // Successfully inserted reply
 
     return new Response(JSON.stringify({ success: true }), { 
       status: 200, 

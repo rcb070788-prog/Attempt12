@@ -45,11 +45,12 @@ serve(async (req) => {
     let html = payload.html || payload["body-html"] || "";
     const attachments = payload.attachments || [];
 
-    // PATH B: Fetch full content from Resend API using the emailId
+    // PATH B: Fetch full content from Resend API using the receiving endpoint
     if (!text && !html && emailId && RESEND_API_KEY) {
-      console.log(`PATH_B_FETCH: Requesting body for Email ID: ${emailId}`);
+      console.log(`PATH_B_FETCH: Requesting body for Received Email ID: ${emailId}`);
       try {
-        const fetchRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
+        // Updated URL to the receiving-specific endpoint
+        const fetchRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
           headers: { 
             'Authorization': `Bearer ${RESEND_API_KEY}`,
             'Content-Type': 'application/json'
@@ -58,9 +59,11 @@ serve(async (req) => {
         
         if (fetchRes.ok) {
           const fullEmail = await fetchRes.json();
-          text = fullEmail.text || "";
-          html = fullEmail.html || "";
-          console.log(`FETCH_SUCCESS: Retrieved content. Text length: ${text?.length || 0}`);
+          // Receiving API often wraps the email object in a 'data' property
+          const emailData = fullEmail.data || fullEmail;
+          text = emailData.text || "";
+          html = emailData.html || "";
+          console.log(`FETCH_SUCCESS: Retrieved content via Receiving API. Text length: ${text?.length || 0}`);
         } else {
           const errorText = await fetchRes.text();
           console.error(`FETCH_ERROR: status ${fetchRes.status} - ${errorText}`);
@@ -70,6 +73,7 @@ serve(async (req) => {
       }
     }
 
+    // Refresh rawContent after Path B fetch attempt
     const rawContent = text || html || "";
     console.log(`INBOUND_DEBUG: From: ${fromEmail} | Sub: ${subject} | RawLen: ${rawContent.length}`);
 
@@ -120,9 +124,10 @@ serve(async (req) => {
       return "";
     };
 
+    // Recalculate finalContent using the potentially newly fetched rawContent
     let finalContent = cleanEmailBody(rawContent);
 
-    // If standard extraction failed, trigger Content Hunter
+    // If Path B and standard extraction both yielded nothing, trigger Content Hunter
     if (finalContent.length < 2) {
       console.log("CONTENT_EMPTY: Triggering Content Hunter...");
       const greedyMatch = findGreedyContent(body);

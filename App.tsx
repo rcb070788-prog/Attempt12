@@ -164,16 +164,17 @@ export default function App() {
   // --- BROWSER HISTORY SYNC ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
-      if (event.state) {
-        setCurrentPage(event.state.page || 'home');
-        setSelectedCategory(event.state.category || null);
-        setSelectedPoll(event.state.poll || null);
-        setActiveDashboard(event.state.dashboard || null);
-      }
+      // If user hits back, use the history state to update the app view
+      const state = event.state || { page: 'home', category: null, poll: null, dashboard: null };
+      setCurrentPage(state.page || 'home');
+      setSelectedCategory(state.category || null);
+      setSelectedPoll(state.poll || null);
+      setActiveDashboard(state.dashboard || null);
     };
+
     window.addEventListener('popstate', handlePopState);
     
-    // Replace initial state so the first 'home' load is in the stack
+    // Set initial history point so 'Back' has somewhere to go
     if (!window.history.state) {
       window.history.replaceState({ page: 'home', category: null, poll: null, dashboard: null }, '');
     }
@@ -183,13 +184,16 @@ export default function App() {
 
   useEffect(() => {
     const hState = window.history.state;
-    const isNewState = !hState || 
+    // Check if the current app state is actually different from what the browser thinks it is
+    const isDifferent = !hState || 
       hState.page !== currentPage || 
       hState.category !== selectedCategory || 
-      hState.poll?.id !== selectedPoll?.id ||
-      hState.dashboard?.id !== activeDashboard?.id;
+      (hState.poll && hState.poll.id !== selectedPoll?.id) ||
+      (!hState.poll && selectedPoll) ||
+      (hState.dashboard && hState.dashboard.id !== activeDashboard?.id) ||
+      (!hState.dashboard && activeDashboard);
 
-    if (isNewState) {
+    if (isDifferent) {
       window.history.pushState({ 
         page: currentPage, 
         category: selectedCategory, 

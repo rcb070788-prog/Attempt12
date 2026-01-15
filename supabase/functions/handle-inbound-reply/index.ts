@@ -28,33 +28,27 @@ serve(async (req) => {
     // Resend payloads usually put the email object inside 'data'
     const payload = body.data || body;
     
+    // Robust sender extraction for both Object and String formats
+    let fromEmail = "";
     const fromRaw = payload.from || payload.headers?.from || "";
-    const fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
+    if (typeof fromRaw === 'object' && fromRaw !== null) {
+      fromEmail = (fromRaw.email || fromRaw.address || "").toLowerCase().trim();
+    } else {
+      fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
+    }
+
     const subject = payload.subject || payload.headers?.subject || "";
+    const emailId = payload.email_id || payload.id;
     
-    const emailId = payload.email_id;
+    // Support standard body keys and Resend Inbound Rule keys
     let text = payload.text || payload.body || payload.content || payload["stripped-text"] || payload["body-plain"] || "";
     let html = payload.html || payload["body-html"] || "";
     const attachments = payload.attachments || [];
 
-    // If Resend didn't send the body in the webhook, fetch it using the emailId
-    if (!text && !html && emailId && RESEND_API_KEY) {
-      console.log(`FETCHING_CONTENT: Requesting body for Email ID: ${emailId}`);
-      try {
-        const fetchRes = await fetch(`https://api.resend.com/emails/${emailId}`, {
-          headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
-        });
-        if (fetchRes.ok) {
-          const fullEmail = await fetchRes.json();
-          text = fullEmail.text || "";
-          html = fullEmail.html || "";
-          console.log(`FETCH_SUCCESS: Retrieved content length: ${text.length || html.length}`);
-        } else {
-          console.error(`FETCH_ERROR: Resend API returned status ${fetchRes.status}`);
-        }
-      } catch (e) {
-        console.error(`FETCH_CRITICAL_ERROR: ${e.message}`);
-      }
+    // Retrieval via Resend API /emails/{id} is only for outbound messages.
+    // For inbound, we rely on the webhook/rule providing the body directly.
+    if (!text && !html) {
+      console.log("WAITING_FOR_BODY: No content found in initial payload.");
     }
 
     const rawContent = text || html || "";
@@ -107,8 +101,8 @@ serve(async (req) => {
       }
     }
     
-    // Robust match for both UUIDs and numeric IDs
-    const match = subject.match(/\[MSG-([a-f0-9-]+|[0-9]+)\]/i);
+    // Support UUIDs by matching any non-bracket character inside the MSG tag
+    const match = subject.match(/\[MSG-([^\]\s]+)\]/i);
     const parentId = match ? match[1] : null;
 
     if (!parentId) {

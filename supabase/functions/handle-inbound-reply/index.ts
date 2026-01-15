@@ -72,14 +72,23 @@ serve(async (req) => {
       return source.trim();
     };
 
-    // NEW: Greedy Recursive Search to find content anywhere in the Resend payload
+    // Content Hunter: Looks for any string that looks like an email body
     const findGreedyContent = (obj: any): string => {
       if (!obj) return "";
-      const skipKeys = ['from', 'to', 'subject', 'message_id', 'email_id', 'id', 'created_at', 'type', 'object'];
+      // Keys we know are NOT the body
+      const skipKeys = ['from', 'to', 'subject', 'message_id', 'email_id', 'id', 'created_at', 'type', 'object', 'reply_to', 'address', 'name', 'email'];
+      
+      // 1. Check common body keys first
+      const priorityKeys = ['text', 'html', 'body', 'content', 'body_text', 'stripped-text'];
+      for (const k of priorityKeys) {
+        if (obj[k] && typeof obj[k] === 'string' && obj[k].length > 1) return obj[k];
+      }
+
+      // 2. Search everything else
       for (const key in obj) {
         const val = obj[key];
         if (typeof val === 'string' && val.length > 3 && !skipKeys.includes(key.toLowerCase())) {
-          // If the string contains spaces or newlines, it is likely our message body
+          // If it's a long string with spaces, it's probably the message
           if (val.includes(" ") || val.includes("\n")) return val;
         } else if (typeof val === 'object' && val !== null) {
           const deep = findGreedyContent(val);
@@ -91,13 +100,15 @@ serve(async (req) => {
 
     let finalContent = cleanEmailBody(rawContent);
 
-    // If standard extraction failed, trigger Greedy Search
+    // If standard extraction failed, trigger Content Hunter
     if (finalContent.length < 2) {
-      console.log("CONTENT_EMPTY: Starting Greedy Recursive Search...");
+      console.log("CONTENT_EMPTY: Triggering Content Hunter...");
       const greedyMatch = findGreedyContent(body);
       if (greedyMatch) {
-        console.log(`GREEDY_SUCCESS: Found content. Length: ${greedyMatch.length}`);
+        console.log(`HUNTER_SUCCESS: Content recovered. Length: ${greedyMatch.length}`);
         finalContent = cleanEmailBody(greedyMatch);
+      } else {
+        console.log("HUNTER_FAILED: No body content found anywhere in the payload keys.");
       }
     }
     
@@ -127,8 +138,14 @@ serve(async (req) => {
       .maybeSingle();
 
     if (fetchError || !parentMsg) {
-      console.error("INBOUND_ERROR: Parent message not found for ID:", parentId);
-      throw new Error("Parent message context missing");
+      console.error("INBOUND_ERROR: Parent message not found in DB for ID:", parentId);
+      return new Response(JSON.stringify({ 
+        error: "Message ID not found in database", 
+        id_searched: parentId 
+      }), { 
+        status: 200, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      });
     }
 
     const profileData = Array.isArray(parentMsg?.profiles) ? parentMsg.profiles[0] : parentMsg?.profiles;

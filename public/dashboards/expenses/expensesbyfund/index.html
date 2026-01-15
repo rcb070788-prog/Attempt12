@@ -2153,23 +2153,31 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
 
       }
     } else {
+      const yyRaw = get(row, col.fiscalYear);
+      const yy = parseYearToYY(yyRaw);
+      
+      if (yy) {
+        // Discovery: Add the year to the master list if we haven't seen it yet
+        if (!dataStore.years.includes(yy)) {
+          dataStore.years.push(yy);
+          // Keep years in order: 05, 06, 07...
+          dataStore.years.sort((a, b) => a.localeCompare(b));
+        }
 
-      const yy = parseYearToYY(get(row, col.fiscalYear));
-      if (!yy || !dataStore.years.includes(yy)) continue;
-
-      consumeRowYear({
-        yy,
-        programCode,
-        programLabel,
-        deptCode,
-        deptLabel,
-        lineCode,
-        lineLabel,
-        amountRaw: get(row, col.amount),
-        deptTotalRaw: get(row, col.deptTotal),
-        pdfFileRaw: pdfFileRaw0,
-        pdfPageRaw: pdfPageRaw0
-      });
+        consumeRowYear({
+          yy: yyRaw, // pass the raw 'FY25' to the function
+          programCode,
+          programLabel,
+          deptCode,
+          deptLabel,
+          lineCode,
+          lineLabel,
+          amountRaw: get(row, col.amount),
+          deptTotalRaw: get(row, col.deptTotal),
+          pdfFileRaw: pdfFileRaw0,
+          pdfPageRaw: pdfPageRaw0
+        });
+      }
     }
   }
 
@@ -2795,7 +2803,8 @@ function renderChart(fund){
   const mode = state.lineKey ? "Line item" : state.deptCode ? "Department" : state.programCode ? "Program (derived sum of departments)" : "Fund total";
   $("chartMeta").textContent = `${mode}${derived ? " • derived" : ""}`;
 
-  const years = dataStore.years.slice();
+  // Ensure we use the most up-to-date list of discovered years
+  const years = [...dataStore.years].sort((a, b) => a.localeCompare(b));
   const W = 900, H = 360;
 
   // Slightly wider left padding to avoid y-label clipping

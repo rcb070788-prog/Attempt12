@@ -63,7 +63,14 @@ serve(async (req) => {
           const emailData = fullEmail.data || fullEmail;
           text = emailData.text || "";
           html = emailData.html || "";
-          console.log(`FETCH_SUCCESS: Retrieved content via Receiving API. Text length: ${text?.length || 0}`);
+          
+          // Capture attachments from the API response
+          if (emailData.attachments && Array.isArray(emailData.attachments)) {
+            attachments.push(...emailData.attachments);
+            console.log(`FETCH_SUCCESS: Retrieved content and ${attachments.length} attachments.`);
+          } else {
+            console.log(`FETCH_SUCCESS: Retrieved content. Text length: ${text?.length || 0}`);
+          }
         } else {
           const errorText = await fetchRes.text();
           console.error(`FETCH_ERROR: status ${fetchRes.status} - ${errorText}`);
@@ -79,10 +86,13 @@ serve(async (req) => {
 
     const cleanEmailBody = (val: string) => {
       if (!val) return "";
+      // 1. Remove HTML tags and styles
       let source = val.replace(/<style[^>]*>.*<\/style>/gms, '').replace(/<[^>]*>?/gm, ' ');
+      
+      // 2. Remove "Reply Tail" using common headers
       const delimiters = [
-        /\n\s*On\s.*wrote:/i,
-        /On\s.*at\s.*wrote/i,
+        /\s*On\s.*wrote:/i,
+        /\s*On\s.*at\s.*wrote/i,
         /\n\s*---+\s*Original Message\s*---+/i,
         /\n\s*---+\s*Forwarded message\s*---+/i,
         /\n\s*From:\s*/i,
@@ -95,7 +105,13 @@ serve(async (req) => {
         const match = source.match(pattern);
         if (match && match.index) source = source.substring(0, match.index);
       }
-      return source.trim();
+
+      // 3. Strip lines starting with '>' (quoted text)
+      return source
+        .split('\n')
+        .filter(line => !line.trim().startsWith('>'))
+        .join('\n')
+        .trim();
     };
 
     // Content Hunter: Looks for any string that looks like an email body
@@ -190,7 +206,11 @@ serve(async (req) => {
       is_official: isOfficial,
       district: contextData.district,
       subject: contextData.subject ? `Re: ${contextData.subject}` : null,
-      attachment_urls: attachments.map((a: any) => (typeof a === 'string' ? a : a.url || a.link)).filter(Boolean)
+      // Map URLs if they exist, or filenames as a fallback for metadata visibility
+      attachment_urls: attachments.map((a: any) => {
+        if (typeof a === 'string') return a;
+        return a.url || a.link || (a.filename ? `[File: ${a.filename}]` : null);
+      }).filter(Boolean)
     });
 
     if (insertError) {

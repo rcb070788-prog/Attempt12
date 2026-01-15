@@ -129,42 +129,66 @@ serve(async (req) => {
       console.log("DEBUG: Proceeding with empty content to restore portal visibility.");
     }
 
-    // 1. Identify context from parent message
-    // parentId is confirmed to be a UUID from your logs
-    const { data: parentMsg, error: fetchError } = await supabase
+    // 1. Identify context (Check board_messages first, then public_records)
+    let { data: contextData, error: fetchError } = await supabase
       .from('board_messages')
       .select('user_id, district, subject, profiles(email)')
       .eq('id', parentId)
       .maybeSingle();
 
-    if (fetchError || !parentMsg) {
-      console.error("INBOUND_ERROR: Parent message not found in DB for ID:", parentId);
-      return new Response(JSON.stringify({ 
-        error: "Message ID not found in database", 
-        id_searched: parentId 
-      }), { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      });
+    let isPublicRecordComment = false;
+
+    if (!contextData) {
+      // If not a board message, check if it's a comment on a Public Record
+      const { data: recordData } = await supabase
+        .from('public_records')
+        .select('id, district, title')
+        .eq('id', parentId)
+        .maybeSingle();
+      
+      if (recordData) {
+        isPublicRecordComment = true;
+        contextData = { 
+          user_id: null, 
+          district: recordData.district, 
+          subject: recordData.title 
+        };
+      }
     }
 
-    const profileData = Array.isArray(parentMsg?.profiles) ? parentMsg.profiles[0] : parentMsg?.profiles;
-    const voterEmail = profileData?.email?.toLowerCase();
-    const isVoter = voterEmail && fromEmail === voterEmail;
+    if (!contextData) {
+      console.error("INBOUND_ERROR: ID not found in board_messages or public_records:", parentId);
+      return new Response(JSON.stringify({ error: "Context ID not found", id: parentId }), { status: 200, headers: corsHeaders });
+    }
 
-    console.log(`INBOUND_DEBUG: Processing reply for MSG-${parentId}. isVoter: ${isVoter}`);
+    // 2. Insert as either a threaded reply or a Public Record comment
+    if (isPublicRecordComment) {
+      console.log(`INBOUND_DEBUG: Inserting Official Response for Public Record: ${parentId}`);
+      const { error: commentErr } = await supabase.from('comments').insert({
+        public_record_id: parentId,
+        content: finalContent || "(Empty Reply)",
+        is_official: true,
+        user_id: null 
+      });
+      if (commentErr) throw commentErr;
+    } else {
+      const profileData = Array.isArray(contextData?.profiles) ? contextData.profiles[0] : contextData?.profiles;
+      const voterEmail = profileData?.email?.toLowerCase();
+      const isVoter = voterEmail && fromEmail === voterEmail;
 
-    // 2. Insert reply inheriting metadata to ensure it appears in UI
-    const { error: insertError } = await supabase.from('board_messages').insert({
-      content: finalContent,
-      parent_id: parentId,
-      user_id: isVoter ? parentMsg.user_id : null,
-      recipient_names: isVoter ? 'Officials' : 'Constituent',
-      is_official: !isVoter,
-      district: parentMsg.district, // CRITICAL: Inherit district so feed filters see it
-      subject: parentMsg.subject ? `Re: ${parentMsg.subject}` : null,
-      attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
-    });
+      console.log(`INBOUND_DEBUG: Inserting Board Message Reply for: ${parentId}`);
+      const { error: msgErr } = await supabase.from('board_messages').insert({
+        content: finalContent || "(Empty Reply)",
+        parent_id: parentId,
+        user_id: isVoter ? contextData.user_id : null,
+        recipient_names: isVoter ? 'Officials' : 'Constituent',
+        is_official: !isVoter,
+        district: contextData.district,
+        subject: contextData.subject ? `Re: ${contextData.subject}` : null,
+        attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
+      });
+      if (msgErr) throw msgErr;
+    }
 
     if (insertError) {
       console.error("DB Insert Error:", insertError);

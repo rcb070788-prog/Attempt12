@@ -155,12 +155,12 @@ serve(async (req) => {
     const { error: insertError } = await supabase.from('board_messages').insert({
       content: finalContent || "(Empty Reply)",
       parent_id: parentId,
-      user_id: contextData.user_id, // Keep the thread owner consistent
+      user_id: contextData.user_id,
       recipient_names: isOfficial ? 'Constituent' : 'Officials',
       is_official: isOfficial,
       district: contextData.district,
       subject: contextData.subject ? `Re: ${contextData.subject}` : null,
-      attachment_urls: attachments.map((a: any) => a.url || a.link).filter(Boolean)
+      attachment_urls: attachments.map((a: any) => (typeof a === 'string' ? a : a.url)).filter(Boolean)
     });
 
     if (insertError) {

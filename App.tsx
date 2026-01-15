@@ -1322,7 +1322,8 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
                         subject: fd.get('subject'),
                         recipient_names: selectedOfficials.join(', '), 
                         district: profile.district,
-                        attachment_urls: fileUrls
+                        attachment_urls: fileUrls,
+                        is_official: false
                       }).select().single();
 
                        if (error) {

@@ -2094,9 +2094,11 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   <p className="text-center py-10 text-[10px] font-black uppercase text-gray-300">No suggestions to manage.</p>
                 )}
               </div>
-              </div>
-              )}
-              {/* --- SHARED ADMIN INBOX SECTION --- */}
+            </div>
+          )}
+        </section>
+
+        {/* --- SHARED ADMIN INBOX SECTION --- */}
             <section className="bg-white rounded-[2.5rem] border-4 border-indigo-600 shadow-xl overflow-hidden">
               <button 
                 onClick={() => setIsAdminSections(prev => ({...prev, adminInbox: !prev.adminInbox}))}
@@ -2223,9 +2225,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                                   </button>
                                 </div>
                               ))}
-                            </div>
+                            </div> {/* This closes the staged files wrapper */}
+                          </div> {/* This closes the pt-8 wrapper */}
 
-                            <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-indigo-100">Send Response</button>
+                          <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-indigo-100">Send Response</button>
                           </form>
                         </div>
                       </div>

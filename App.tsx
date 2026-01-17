@@ -198,7 +198,17 @@ export default function App() {
     
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+// Handle exiting fullscreen when the dashboard is closed
+  useEffect(() => {
+    if (!activeDashboard && document.fullscreenElement) {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(err => console.warn(err));
+      }
+    }
+  }, [activeDashboard]);
 
+  useEffect(() => {
+    const hState = window.history.state;
   useEffect(() => {
     const hState = window.history.state;
     // Check if the current app state is actually different from what the browser thinks it is
@@ -670,9 +680,14 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
 
   if (activeDashboard) {
     return (
-      <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden">
+      <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden h-[100dvh]">
         {/* The 'Close Report' button is now rendered inside the Dashboard HTML file itself */}
-        <iframe src={activeDashboard.folderPath} className="w-full h-full border-0" title="Dashboard" />
+        <iframe 
+          src={activeDashboard.folderPath} 
+          className="w-full h-full border-0 flex-grow" 
+          title="Dashboard" 
+          allow="fullscreen"
+        />
       </div>
     );
   }
@@ -1010,7 +1025,18 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
               {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (
                 <div 
                   key={dash.id} 
-                  onClick={() => setActiveDashboard(dash as any)}
+                  onClick={() => {
+                    setActiveDashboard(dash as any);
+                    // Attempt to trigger fullscreen to hide mobile URL bar
+                    const doc = document.documentElement as any;
+                    if (doc.requestFullscreen) {
+                      doc.requestFullscreen().catch(() => {});
+                    } else if (doc.webkitRequestFullscreen) {
+                      doc.webkitRequestFullscreen();
+                    } else if (doc.msRequestFullscreen) {
+                      doc.msRequestFullscreen();
+                    }
+                  }}
                   className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-indigo-600 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
                 >
                   <div className="space-y-1">

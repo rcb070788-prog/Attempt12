@@ -395,16 +395,22 @@
 <body>
 
 <header>
-  <h1>Expense Explorer (FY05–FY24)</h1>
+  <h1>Expense Explorer (FY05–FY25)</h1>
   <div class="sub">
     <span>Top-level: <b>Primary Government</b> vs <b>Schools</b></span>
     <span>Overlay labels reserved: <b>Inflation</b>, <b>Inflation + Population</b></span>
   </div>
 </header>
 
-<div class="wrap">
+<div class="wrap" style="position:relative;">
 
-  <div class="panel">
+  <!-- Sliding Drawer Trigger -->
+  <div id="toolboxTrigger" style="background:var(--panel); border:1px solid var(--line); color:var(--accent); padding:10px 20px; border-radius:0 0 16px 16px; width:fit-content; margin:-1px auto 20px; cursor:pointer; font-weight:bold; z-index:101; position:relative; box-shadow:0 4px 15px rgba(0,0,0,0.4); text-align:center;">
+    <span id="triggerLabel">Settings</span> <span id="triggerArrow">▼</span>
+  </div>
+
+  <!-- Settings Drawer -->
+  <div id="slidingToolbox" class="panel" style="position:absolute; top:50px; left:14px; right:14px; z-index:100; transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; transform:translateY(-150%); opacity:0; pointer-events:none; border-color:var(--accent); box-shadow:0 20px 40px rgba(0,0,0,0.6);">
                <div class="row" style="justify-content:space-between; width:100%">
       <div class="tabs" id="topGroupTabs"></div>
 
@@ -430,7 +436,7 @@
           <input id="inflationToggle" type="checkbox" aria-label="Inflation overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation</b>
         </label>
-        <label class="chip" id="inflationPopToggleWrap" style="cursor:pointer;" title="Inflation + Population uses CPI plus average annual population growth from decennial U.S. Census for Moore County, TN, interpolated between Census years.">
+        <label class="chip" id="inflationPopToggleWrap" style="cursor:pointer;" title="Inflation + Population uses CPI plus average annual population growth from decennial U.S. Census for Moore County, TN. Populations for non-census years are annualized estimates based on the previous 9 years of growth trends.">
           <input id="inflationPopToggle" type="checkbox" aria-label="Inflation + Population overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation + Population</b>
         </label>
@@ -444,10 +450,6 @@
         <select id="fundSelect"></select>
         <div id="fundWarn" class="small" style="display:none;margin-top:6px;max-width:320px;white-space:normal;overflow-wrap:anywhere;color:var(--danger);line-height:1.25;"></div>
       </div>
-
-
- 
-
 
       <div class="detailWrap" id="programWrap">
         <label>Program / Function</label>
@@ -465,7 +467,10 @@
       </div>
     </div>
 
-
+    <!-- Done Button -->
+    <div class="row" style="justify-content:center; margin-top:20px; padding-top:15px; border-top:1px solid var(--line);">
+      <button id="doneBtn" class="primary" style="min-width:150px; font-weight:bold;">DONE</button>
+    </div>
 
     <div class="chips" id="stateChips"></div>
   </div>
@@ -521,15 +526,9 @@
   <button id="closeTipBtn">Close</button>
 </div>
 
-      <div class="footerNote">
-        Notes: Missing years are stored as <code>null</code> (gaps), never 0. Program codes 51000–58000 are treated as grouping labels only (non-data).
-      </div>
+      
     </div>
 
-    <div class="panel">
-      <div style="font-weight:700; margin-bottom:6px;">Phase 1 Audit (runtime)</div>
-      <div class="audit" id="auditBox">Loading…</div>
-    </div>
   </div>
 
 </div>
@@ -539,7 +538,7 @@
    DATASET_START_DO_NOT_MODIFY
    =========================== */
 const dataStore = {
-  years: ["05","06","07","08","09","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24"],
+  years: [],
 
   overlayLabels: {
     inflation: "Inflation",
@@ -580,6 +579,9 @@ const EXCLUDED_ROLLUPS = new Set(["51000","52000","53000","54000","55000","56000
 function normalizeFySuffix(yy){
   const s = safeText(yy);
   if (!s) return null;
+  // If it's already just two digits (e.g., "25"), return it
+  if (/^\d{2}$/.test(s)) return s;
+  // Otherwise, grab the last two digits (e.g., "FY25" or "2025" -> "25")
   const m2 = s.match(/(\d{2})$/);
   return m2 ? m2[1] : null;
 }
@@ -591,7 +593,8 @@ function csvPathForFund(fundCode){
 }
 
 function pdfPathForFundYear(fundCode, yy){
-  const fc = safeText(fundCode);
+  // Remove any non-digits (e.g., "Fund 101" becomes "101")
+  const fc = safeText(fundCode).replace(/[^\d]/g, "");
   const y = normalizeFySuffix(yy);
   if (!fc || !y) return null;
   return `./Fund ${fc}/fund${fc}FY${y}.pdf`;
@@ -621,16 +624,18 @@ const CPI_ANNUAL_AVG = {
   2021: 270.970,
   2022: 292.655,
   2023: 304.702,
-  2024: 313.689
+  2024: 313.689,
+  2025: 321.943
 };
 
 // Moore County, TN population anchors (total population):
-// 2000, 2010, 2020 decennial Census; 2024 estimate from Census-based FRED series TNMOOR7POP (thousands × 1,000). 
+// 2000, 2010, 2020 decennial Census; 2025 estimate from Census-based FRED series TNMOOR7POP (thousands × 1,000). 
+// Disclaimer: populations for non-census years are annualized estimates based on the previous 9 years of growth trends.
 const POP_ANCHORS = [
   { year: 2000, value: 5740 }, // Census 2000 total population
   { year: 2010, value: 6362 }, // Census 2010
   { year: 2020, value: 6461 }, // Census 2020
-  { year: 2024, value: 6773 }  // 2024 resident-population estimate (6.773k)
+  { year: 2025, value: 6800 }  // 2025 resident-population estimate (6.8k)
 ];
 
 // Interpolate population between anchors using a smooth, constant annual % growth within each segment.
@@ -673,9 +678,9 @@ function buildMacroOverlays(years, baseYearFull){
   for (let i = 0; i < years.length; i++){
     const yyStr = years[i];
     const fullYear = 2000 + Number(yyStr);
-    const cpiVal = CPI_ANNUAL_AVG[fullYear];
+    const cpiVal = CPI_ANNUAL_AVG[fullYear] || null;
 
-    if (!cpiVal){
+    if (cpiVal === null){
       cpiIndex.push(null);
       cpiPopIndex.push(null);
       continue;
@@ -820,7 +825,12 @@ function resolvePdfFileForFundYear(fundCode, yy, pdfFileRaw){
 function toAbsoluteUrl(u){
   const s = safeText(u);
   if (!s) return null;
-  try { return new URL(s, window.location.href).href; }
+  try { 
+    // This creates an absolute path but decodes it so spaces are " " 
+    // instead of "%20" before they get processed by the viewer.
+    const urlObj = new URL(s, window.location.href);
+    return decodeURI(urlObj.href);
+  }
   catch(_){ return null; }
 }
 
@@ -963,19 +973,20 @@ function setupDetailLevelRadios(){
 function recalcChartHeight(){
   const vv = window.visualViewport;
   const vh = vv ? vv.height : window.innerHeight;
-
-  const wrap = document.querySelector(".chartWrap");
-  const header = document.querySelector(".chartHeader");
+  const vw = vv ? vv.width : window.innerWidth;
   const chart = $("chart");
-  if (!wrap || !chart) return;
+  if (!chart) return;
 
-  const top = wrap.getBoundingClientRect().top;
-  const headerH = header ? header.getBoundingClientRect().height : 0;
+  // For mobile (width < 768), maximize height to use the "long side" of the portrait screen
+  // For desktop, use a standard proportional height
+  let h;
+  if (vw < 768) {
+    h = vh * 0.75; // Use 75% of vertical screen height on mobile
+  } else {
+    h = vh * 0.65;
+    h = Math.max(360, Math.min(h, 720));
+  }
 
-  let h = vh - top - headerH - 16;
-  h = Math.max(260, Math.min(h, 680));
-
-  // Works whether you used CSS var(--chartH) or not:
   document.documentElement.style.setProperty("--chartH", Math.round(h) + "px");
   chart.style.height = Math.round(h) + "px";
 }
@@ -1176,7 +1187,8 @@ async function checkPdfExists(urlRaw){
 }
 
 function buildPdfHref(fund, seriesKey, yy, searchToken){
-  const pdf = fund?.pdfByYear?.[yy] || { url:null, defaultPage:null };
+  const ySuffix = normalizeFySuffix(yy);
+  const pdf = fund?.pdfByYear?.[ySuffix] || { url:null, defaultPage:null };
   const fundId = fund?.fundId ?? state.fundId ?? null;
 
   // NEW convention: compute per-fund/per-year path at runtime (don’t rely on CSV pdf.url)
@@ -1194,8 +1206,9 @@ function buildPdfHref(fund, seriesKey, yy, searchToken){
 
     // PDF.js viewer (NOT native browser PDF)
   // Pass #search as a fallback (popup-blocked / no window handle). When smart-highlight runs, it clears PDF.js yellow highlights and applies a single green cell highlight.
+  // We use the raw URL first, then convert to absolute inside the viewer builder
   const abs = toAbsoluteUrl(urlRaw);
-  const viewerHref = buildPdfJsViewerHref(abs, page, safeText(searchToken) || null);
+  const viewerHref = buildPdfJsViewerHref(abs, page, null); // We handle highlighting via smart-logic
 
 
   // Prefer viewer; fallback to native if PDF.js isn't available
@@ -1253,10 +1266,15 @@ function buildPdfSmartLocator(fund, seriesKey){
   const s = safeText(seriesKey);
   const fundId = fund?.fundId ?? null;
 
-  // Fund total series
+    // Fund total series
   if (fund && s && s === fund.fundTotalKey){
+    // Fund 141 override: Fund Total can net to 0.00; highlight the Education expenditure total row instead.
+    if (String(fundId) === "141"){
+      return { kind:"fund141Edu", fundId };
+    }
     return { kind:"fund", fundId };
   }
+
 
   // Line item seriesKey is "#####-###"
   const m = s.match(/^(\d{5})-(\d{3})$/);
@@ -1274,10 +1292,12 @@ function buildPdfSmartLocator(fund, seriesKey){
 
 function formatPdfSmartLocator(loc){
   if (!loc) return "—";
-  if (loc.kind === "line") return `Dept ${loc.deptCode} • Line ${loc.lineCode} • YTD cell`;
+    if (loc.kind === "line") return `Dept ${loc.deptCode} • Line ${loc.lineCode} • YTD cell`;
   if (loc.kind === "dept") return `Total ${loc.deptCode} • YTD cell`;
+  if (loc.kind === "fund141Edu") return `Total 70000 Education • YTD cell`;
   if (loc.kind === "fund") return `Total For Fund ${loc.fundId} • YTD cell`;
   return `Anchor ${safeText(loc.seriesKey) || "—"} • YTD cell`;
+
 }
 
 function isMoneyLikeToken(t){
@@ -1361,10 +1381,15 @@ function smartHighlightPdfjs(win, { page, locator, ytdToken=null, onWarn=null })
 
     clearPdfjsHighlights(win.document);
 
-    const ok = smartHighlightOnPdfPage(win, pageEl, locator, ytdToken);
+        const ok = smartHighlightOnPdfPage(win, pageEl, locator, ytdToken);
     if (!ok){
-      warn("Couldn’t locate the correct row/YTD cell on this page (OCR/text layout mismatch or page mapping issue).");
+      if (locator && locator.kind === "fund141Edu"){
+        warn("Fund 141 override: couldn't find 'Total 70000 Education' on this page to highlight the Year-to-Date Expenditures value.");
+      } else {
+        warn("Couldn’t locate the correct row/YTD cell on this page (OCR/text layout mismatch or page mapping issue).");
+      }
     }
+
   };
 
   tick();
@@ -1388,18 +1413,33 @@ function smartHighlightOnPdfPage(win, pageEl, locator, ytdToken){
     };
   }).sort((a,b) => a.y - b.y || a.x - b.x);
 
-  // Find approximate X center of the "Year-to-Date" column header
+    // Find approximate X center of the "Year-to-Date" column header
   let ytdX = null;
-  for (const it of items){
-    if (/Year-to-Date/i.test(it.text)){
-      ytdX = it.x;
-      break;
+
+  // Fund 141 override: prefer the Expenditures column header if present (some templates have multiple "Year-to-Date" headers)
+  if (locator?.kind === "fund141Edu"){
+    for (const it of items){
+      if (/Expenditures/i.test(it.text)){
+        ytdX = it.x;
+        break;
+      }
     }
   }
+
+  if (ytdX == null){
+    for (const it of items){
+      if (/Year-to-Date/i.test(it.text)){
+        ytdX = it.x;
+        break;
+      }
+    }
+  }
+
   if (ytdX == null){
     // Template fallback: YTD is typically mid-right
     ytdX = pageRect.left + pageRect.width * 0.63;
   }
+
 
   // Group spans into lines using y proximity
   const lines = [];
@@ -1428,6 +1468,11 @@ function smartHighlightOnPdfPage(win, pageEl, locator, ytdToken){
   };
 
   let targetIdx = -1;
+  // Fund 141 override: locate "Total 70000 Education" row on this page (spacing/punctuation tolerant)
+  if (locator?.kind === "fund141Edu"){
+    const reEdu = /Total\s+70000\b.*\bEducation/i;
+    targetIdx = findLineIndex(ln => reEdu.test(ln.text));
+  }
 
   if (locator?.kind === "fund" && locator.fundId != null){
     const reFund = new RegExp(`\\b${String(locator.fundId).replace(/[^\d]/g,"")}\\b`);
@@ -1711,9 +1756,7 @@ function detectWideOrLong(headers){
 }
 
 function ensureYearMap(){
-  const obj = {};
-  for (const y of dataStore.years) obj[y] = null;
-  return obj;
+  return {};
 }
 
 function addAlias(meta, key, label, yearYY){
@@ -1828,16 +1871,13 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
       lineItems: {}
     },
 
-        pdfByYear: Object.fromEntries(dataStore.years.map(y => [y, { url: null, defaultPage: null }])),
+        pdfByYear: {},
     pageByPoint: {},
     searchValueByPoint: {}, // `${seriesKey}|${yy}` -> raw numeric string for PDF.js #search=
 
 
-    cpiJuneIndex: Object.fromEntries(Array.from({length: 20}, (_,i)=>{
-      const year = 2005 + i;
-      return [`${year}-06`, null];
-    })),
-    populationByYear: Object.fromEntries(dataStore.years.map(y => [y, null])),
+    cpiJuneIndex: {},
+    populationByYear: {},
 
     uncertainties
   };
@@ -1930,7 +1970,7 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
     function getWidePdfPageForYear(row, yearHeader, fallback){
   try{
     const y = parseYearToYY(yearHeader);
-    if (!y || !dataStore.years.includes(y)) return fallback;
+    if (!y) return fallback;
 
     // Page-ish headers (keep this broad; wide exports are inconsistent)
     const pageRe = /(pdf\s*page|pdf\b.*page|source\s*pdf.*page|\bpage\b|\bpg\b|page\s*#|page\s*no\.?|\bp\b)/i;
@@ -1981,7 +2021,18 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
 
   function consumeRowYear({ yy, programCode, programLabel, deptCode, deptLabel, lineCode, lineLabel, amountRaw, deptTotalRaw, pdfFileRaw, pdfPageRaw }){
     const y = parseYearToYY(yy);
-    if (!y || !dataStore.years.includes(y)) return;
+    if (!y) return;
+
+    // 1. Discovery: Add year to master list
+    if (!dataStore.years.includes(y)) {
+      dataStore.years.push(y);
+      dataStore.years.sort((a, b) => parseInt(a) - parseInt(b));
+    }
+
+    // 2. Lazy Init: Create the PDF folder for this year if missing
+    if (!fundDataset.pdfByYear[y]) {
+      fundDataset.pdfByYear[y] = { url: null, defaultPage: null };
+    }
 
     // Keep stateYear for label tracking inside helpers
     stateYearYY = y;
@@ -1989,11 +2040,10 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
     const amount = parseNumber(amountRaw);
     const deptTotal = parseNumber(deptTotalRaw);
 
-        const pdfFile = safeText(pdfFileRaw) || null;
+    const pdfFile = safeText(pdfFileRaw) || null;
     const pageInt = parsePdfPageInt(pdfPageRaw);
 
-
-    // record pdfByYear from any row (prefer first non-null; fund total will overwrite defaultPage)
+    // 3. Record PDF Info (Safe now because fundDataset.pdfByYear[y] exists)
     if (pdfFile && !fundDataset.pdfByYear[y].url) fundDataset.pdfByYear[y].url = pdfFile;
 
     // program grouping (never numeric series)
@@ -2112,23 +2162,31 @@ function buildFundDatasetFromCSV(fundId, fundTitle, csvText){
 
       }
     } else {
+      const yyRaw = get(row, col.fiscalYear);
+      const yy = parseYearToYY(yyRaw);
+      
+      if (yy) {
+        // Discovery: Add the year to the master list if we haven't seen it yet
+        if (!dataStore.years.includes(yy)) {
+          dataStore.years.push(yy);
+          // Keep years in order: 05, 06, 07...
+          dataStore.years.sort((a, b) => a.localeCompare(b));
+        }
 
-      const yy = parseYearToYY(get(row, col.fiscalYear));
-      if (!yy || !dataStore.years.includes(yy)) continue;
-
-      consumeRowYear({
-        yy,
-        programCode,
-        programLabel,
-        deptCode,
-        deptLabel,
-        lineCode,
-        lineLabel,
-        amountRaw: get(row, col.amount),
-        deptTotalRaw: get(row, col.deptTotal),
-        pdfFileRaw: pdfFileRaw0,
-        pdfPageRaw: pdfPageRaw0
-      });
+        consumeRowYear({
+          yy: yyRaw, // pass the raw 'FY25' to the function
+          programCode,
+          programLabel,
+          deptCode,
+          deptLabel,
+          lineCode,
+          lineLabel,
+          amountRaw: get(row, col.amount),
+          deptTotalRaw: get(row, col.deptTotal),
+          pdfFileRaw: pdfFileRaw0,
+          pdfPageRaw: pdfPageRaw0
+        });
+      }
     }
   }
 
@@ -2348,6 +2406,9 @@ async function tryLoadFund(fundId){
 
 
 async function loadAllFunds(){
+  // Clear discovered years so we can re-learn them from the CSVs
+  dataStore.years = [];
+  
   // reset loaded flags + funds
   for (const id of Object.keys(dataStore.fundRegistry)){
     dataStore.fundRegistry[id].loaded = false;
@@ -2600,9 +2661,10 @@ function buildSeriesForCurrentSelection(fund){
   }
   if (state.programCode){
     // Derived series: sum department totals in this program (no double count)
-    const years = dataStore.years;
+    const years = [...dataStore.years].sort((a, b) => a.localeCompare(b));
     const deptList = fund.hierarchy.programs[state.programCode]?.departments || [];
-    const values = Object.fromEntries(years.map(y=>[y,null]));
+    const values = {};
+    for (const y of years) values[y] = null;
     for (const y of years){
       let sum=0, any=false;
       for (const d of deptList){
@@ -2754,7 +2816,8 @@ function renderChart(fund){
   const mode = state.lineKey ? "Line item" : state.deptCode ? "Department" : state.programCode ? "Program (derived sum of departments)" : "Fund total";
   $("chartMeta").textContent = `${mode}${derived ? " • derived" : ""}`;
 
-  const years = dataStore.years.slice();
+  // Ensure we use the most up-to-date list of discovered years
+  const years = [...dataStore.years].sort((a, b) => a.localeCompare(b));
   const W = 900, H = 360;
 
   // Slightly wider left padding to avoid y-label clipping
@@ -3491,7 +3554,9 @@ function showTooltip({ seriesKey, seriesLabel, yy, value, fund, realValue=null, 
   // PDF link (clickable)
   if (linkEl){
     if (href){
-      linkEl.textContent = `${display || "PDF"}${page!=null ? " (page " + page + ")" : ""}`;
+      // Shows "fund101FY24.pdf (page 13)" instead of the whole URL
+      const fileName = urlRaw.split('/').pop();
+      linkEl.textContent = `${fileName}${page!=null ? " (page " + page + ")" : ""}`;
       linkEl.href = href;
       linkEl.style.pointerEvents = "auto";
       linkEl.style.opacity = "1";
@@ -3689,20 +3754,17 @@ function refreshUI(){
   refreshFundSelect();
   refreshProgramSelect();
   refreshDeptSelect();
-    refreshLineSelect();
+  refreshLineSelect();
   refreshChips();
   renderFundWarning();
 
   const fund = getFund();
   if (!fund){
     clearChart();
-    renderAudit();
     return;
   }
 
-
-    renderChart(fund);
-  renderAudit();
+  renderChart(fund);
   applyDetailLevelVisibility();
 }
 
@@ -3816,6 +3878,33 @@ async function init(){
     .filter(id => dataStore.fundRegistry[id].loaded)
     .filter(id => (dataStore.fundRegistry[id].topGroupsExpected || []).includes(state.topGroup));
   state.fundId = candidates[0] || Object.keys(dataStore.funds)[0] || null;
+
+  // Toolbox Slide Logic
+  const drawer = $("slidingToolbox");
+  const trigger = $("toolboxTrigger");
+  const doneBtn = $("doneBtn");
+  const arrow = $("triggerArrow");
+  const label = $("triggerLabel");
+
+  function toggleSettings() {
+    const isOpen = drawer.style.opacity === "1";
+    if (isOpen) {
+      drawer.style.transform = "translateY(-150%)";
+      drawer.style.opacity = "0";
+      drawer.style.pointerEvents = "none";
+      arrow.textContent = "▼";
+      label.textContent = "Settings";
+    } else {
+      drawer.style.transform = "translateY(0)";
+      drawer.style.opacity = "1";
+      drawer.style.pointerEvents = "auto";
+      arrow.textContent = "▲";
+      label.textContent = "Close";
+    }
+  }
+
+  trigger.onclick = toggleSettings;
+  doneBtn.onclick = toggleSettings;
 
   refreshUI();
 }

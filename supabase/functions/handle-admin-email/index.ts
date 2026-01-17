@@ -26,13 +26,24 @@ serve(async (req) => {
       fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
     }
 
+    // 2. Routing Check: Only proceed if this email was sent to admin@concernedcitizensofmc.com
+    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to || ""];
+    const isAdminEmail = recipients.some((email: string) => 
+      email.toLowerCase().includes('admin@concernedcitizensofmc.com')
+    );
+
+    if (!isAdminEmail) {
+      console.log("Routing: Email not for admin. Skipping.");
+      return new Response(JSON.stringify({ filtered: true }), { status: 200, headers: corsHeaders });
+    }
+
     const fromName = payload.from?.name || (fromRaw.match(/^"?(.*?)"?\s*</)?.[1] || "External Sender");
     const subject = payload.subject || payload.headers?.subject || "No Subject";
     let text = payload.text || payload.body || "";
     let html = payload.html || "";
     const attachments: string[] = [];
 
-    // 2. Security Analysis Check
+    // 3. Security Analysis Check
     let securityFlag = 'clean';
     let securityNote = '';
     const dangerousExtensions = /\.(exe|scr|vbs|bat|js|zip|rar|7z)$/i;
@@ -47,7 +58,7 @@ serve(async (req) => {
       securityNote += ' Detected shortened/tracking links.';
     }
 
-    // 3. Path B: Fetch full content if missing
+    // 4. Path B: Fetch full content if missing
     if (!text && !html && emailId && RESEND_API_KEY) {
       const fetchRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
         headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
@@ -78,7 +89,7 @@ serve(async (req) => {
       }
     }
 
-    // 4. Insert into Database
+    // 5. Insert into Database
     const { error: insertErr } = await supabase.from('admin_messages').insert({
       from_email: fromEmail,
       from_name: fromName,

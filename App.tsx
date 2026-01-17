@@ -2144,8 +2144,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   {/* Message Reader */}
                   <div className="lg:w-2/3 bg-white flex flex-col">
                     {selectedAdminEmail ? (
-                      <div className="p-10 flex flex-col h-full">
-                        <div className="flex justify-between items-start mb-8">
+                      <div className="p-10 flex flex-col h-full overflow-hidden">
+                        <div className="flex justify-between items-start mb-8 shrink-0">
                           <div>
                             <h3 className="text-2xl font-black uppercase text-indigo-600 leading-tight mb-2">{selectedAdminEmail.subject}</h3>
                             <p className="text-xs font-bold text-gray-400 uppercase">From: {selectedAdminEmail.from_name} ({selectedAdminEmail.from_email})</p>
@@ -2159,7 +2159,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         </div>
 
                         {selectedAdminEmail.security_note && (
-                          <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center gap-4 text-amber-700">
+                          <div className="mb-6 p-4 bg-amber-50 border-2 border-amber-200 rounded-2xl flex items-center gap-4 text-amber-700 shrink-0">
                             <i className="fa-solid fa-triangle-exclamation text-xl"></i>
                             <p className="text-[10px] font-black uppercase">{selectedAdminEmail.security_note}</p>
                           </div>
@@ -2170,7 +2170,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         </div>
 
                         {selectedAdminEmail.attachment_urls?.length > 0 && (
-                          <div className="mb-8 p-4 bg-indigo-50 rounded-2xl flex flex-wrap gap-2">
+                          <div className="mb-8 p-4 bg-indigo-50 rounded-2xl flex flex-wrap gap-2 shrink-0">
                              {selectedAdminEmail.attachment_urls.map((url: string, i: number) => (
                                <a key={i} href={url} target="_blank" rel="noreferrer" className="px-4 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-[9px] font-black uppercase flex items-center gap-2 hover:bg-indigo-600 hover:text-white transition-all">
                                  <i className="fa-solid fa-paperclip"></i> View File {i+1}
@@ -2179,7 +2179,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                           </div>
                         )}
 
-                        <div className="pt-8 border-t border-gray-100">
+                        <div className="pt-8 border-t border-gray-100 shrink-0">
                           <p className="text-[9px] font-black uppercase text-gray-400 mb-4">Reply as Site Administrator</p>
                           <form onSubmit={async (e) => {
                             e.preventDefault();
@@ -2208,7 +2208,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                               fetchAdminMessages();
                             }
                           }} className="space-y-4">
-                            <textarea name="reply" required placeholder="Type your response to the constituent..." className="w-full p-6 bg-gray-50 rounded-2xl text-sm outline-none border-2 border-transparent focus:border-indigo-600 min-h-[150px]" />
+                            <textarea name="reply" required placeholder="Type your response to the constituent..." className="w-full p-6 bg-gray-50 rounded-2xl text-sm outline-none border-2 border-transparent focus:border-indigo-600 min-h-[120px]" />
                             
                             <div className="flex flex-wrap gap-2">
                               <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors">
@@ -2227,12 +2227,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                               ))}
                             </div>
 
-                            <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-indigo-100">Send Response</button>
+                            <button type="submit" className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-indigo-100">Send Response</button>
                           </form>
                         </div>
                       </div>
-                    </div>
-                  </div>
                     ) : (
                       <div className="flex-grow flex flex-col items-center justify-center text-gray-200 p-20 text-center">
                         <i className="fa-solid fa-envelope-open-text text-6xl mb-4"></i>
@@ -2243,7 +2241,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                 </div>
               )}
             </section>
-
             {/* --- MANUAL VERIFICATION REQUESTS SECTION --- */}
             <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
               <button 

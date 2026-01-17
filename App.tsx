@@ -209,8 +209,6 @@ export default function App() {
 
   useEffect(() => {
     const hState = window.history.state;
-  useEffect(() => {
-    const hState = window.history.state;
     // Check if the current app state is actually different from what the browser thinks it is
     const isDifferent = !hState || 
       hState.page !== currentPage || 

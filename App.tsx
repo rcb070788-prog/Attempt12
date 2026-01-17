@@ -2192,7 +2192,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                                 recipients: [selectedAdminEmail.from_email],
                                 subject: `Re: ${selectedAdminEmail.subject}`,
                                 content: content,
-                                attachments: fileUrls // Now passing the staged attachments
+                                attachments: fileUrls
                               }
                             });
 
@@ -2201,14 +2201,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                             } else {
                               await supabase!.from('admin_messages').update({ status: 'replied' }).eq('id', selectedAdminEmail.id);
                               showToast("Reply sent successfully");
-                              setStagedAdminReplyFiles([]); // Clear the files
+                              setStagedAdminReplyFiles([]); 
                               (e.target as HTMLFormElement).reset();
                               fetchAdminMessages();
                             }
                           }} className="space-y-4">
                             <textarea name="reply" required placeholder="Type your response to the constituent..." className="w-full p-6 bg-gray-50 rounded-2xl text-sm outline-none border-2 border-transparent focus:border-indigo-600 min-h-[150px]" />
                             
-                            {/* Attachment UI for Reply */}
                             <div className="flex flex-wrap gap-2">
                               <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors">
                                 <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-paperclip'} text-indigo-600`}></i>
@@ -2228,19 +2227,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
                             <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-indigo-100">Send Response</button>
                           </form>
-
-                            if (emailErr) {
-                              showToast("Failed to send email", "error");
-                            } else {
-                              await supabase!.from('admin_messages').update({ status: 'replied' }).eq('id', selectedAdminEmail.id);
-                              showToast("Reply sent successfully");
-                              (e.target as HTMLFormElement).reset();
-                              fetchAdminMessages();
-                            }
-                          }} className="space-y-4">
-                            <textarea name="reply" required placeholder="Type your response to the constituent..." className="w-full p-6 bg-gray-50 rounded-2xl text-sm outline-none border-2 border-transparent focus:border-indigo-600 min-h-[150px]" />
-                            <button className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg shadow-indigo-100">Send Response</button>
-                          </form>
                         </div>
                       </div>
                     ) : (
@@ -2252,7 +2238,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   </div>
                 </div>
               )}
-            </section>
             </section>
 
             {/* --- MANUAL VERIFICATION REQUESTS SECTION --- */}

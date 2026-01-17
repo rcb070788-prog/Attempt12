@@ -395,16 +395,22 @@
 <body>
 
 <header>
-  <h1>Expense Explorer (FY05–FY24)</h1>
+  <h1>Expense Explorer (FY05–FY25)</h1>
   <div class="sub">
     <span>Top-level: <b>Primary Government</b> vs <b>Schools</b></span>
     <span>Overlay labels reserved: <b>Inflation</b>, <b>Inflation + Population</b></span>
   </div>
 </header>
 
-<div class="wrap">
+<div class="wrap" style="position:relative;">
 
-  <div class="panel">
+  <!-- Sliding Drawer Trigger -->
+  <div id="toolboxTrigger" style="background:var(--panel); border:1px solid var(--line); color:var(--accent); padding:10px 20px; border-radius:0 0 16px 16px; width:fit-content; margin:-1px auto 20px; cursor:pointer; font-weight:bold; z-index:101; position:relative; box-shadow:0 4px 15px rgba(0,0,0,0.4); text-align:center;">
+    <span id="triggerLabel">Settings</span> <span id="triggerArrow">▼</span>
+  </div>
+
+  <!-- Settings Drawer -->
+  <div id="slidingToolbox" class="panel" style="position:absolute; top:50px; left:14px; right:14px; z-index:100; transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; transform:translateY(-150%); opacity:0; pointer-events:none; border-color:var(--accent); box-shadow:0 20px 40px rgba(0,0,0,0.6);">
                <div class="row" style="justify-content:space-between; width:100%">
       <div class="tabs" id="topGroupTabs"></div>
 
@@ -430,7 +436,7 @@
           <input id="inflationToggle" type="checkbox" aria-label="Inflation overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation</b>
         </label>
-        <label class="chip" id="inflationPopToggleWrap" style="cursor:pointer;" title="Inflation + Population uses CPI plus average annual population growth from decennial U.S. Census for Moore County, TN. Populations for non-census years are annualized estimates based on the previous 9 years of growth trends."></label>
+        <label class="chip" id="inflationPopToggleWrap" style="cursor:pointer;" title="Inflation + Population uses CPI plus average annual population growth from decennial U.S. Census for Moore County, TN. Populations for non-census years are annualized estimates based on the previous 9 years of growth trends.">
           <input id="inflationPopToggle" type="checkbox" aria-label="Inflation + Population overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation + Population</b>
         </label>
@@ -444,10 +450,6 @@
         <select id="fundSelect"></select>
         <div id="fundWarn" class="small" style="display:none;margin-top:6px;max-width:320px;white-space:normal;overflow-wrap:anywhere;color:var(--danger);line-height:1.25;"></div>
       </div>
-
-
- 
-
 
       <div class="detailWrap" id="programWrap">
         <label>Program / Function</label>
@@ -465,7 +467,10 @@
       </div>
     </div>
 
-
+    <!-- Done Button -->
+    <div class="row" style="justify-content:center; margin-top:20px; padding-top:15px; border-top:1px solid var(--line);">
+      <button id="doneBtn" class="primary" style="min-width:150px; font-weight:bold;">DONE</button>
+    </div>
 
     <div class="chips" id="stateChips"></div>
   </div>
@@ -521,15 +526,9 @@
   <button id="closeTipBtn">Close</button>
 </div>
 
-      <div class="footerNote">
-        Notes: Missing years are stored as <code>null</code> (gaps), never 0. Program codes 51000–58000 are treated as grouping labels only (non-data).
-      </div>
+      
     </div>
 
-    <div class="panel">
-      <div style="font-weight:700; margin-bottom:6px;">Phase 1 Audit (runtime)</div>
-      <div class="audit" id="auditBox">Loading…</div>
-    </div>
   </div>
 
 </div>
@@ -974,19 +973,20 @@ function setupDetailLevelRadios(){
 function recalcChartHeight(){
   const vv = window.visualViewport;
   const vh = vv ? vv.height : window.innerHeight;
-
-  const wrap = document.querySelector(".chartWrap");
-  const header = document.querySelector(".chartHeader");
+  const vw = vv ? vv.width : window.innerWidth;
   const chart = $("chart");
-  if (!wrap || !chart) return;
+  if (!chart) return;
 
-  const top = wrap.getBoundingClientRect().top;
-  const headerH = header ? header.getBoundingClientRect().height : 0;
+  // For mobile (width < 768), maximize height to use the "long side" of the portrait screen
+  // For desktop, use a standard proportional height
+  let h;
+  if (vw < 768) {
+    h = vh * 0.75; // Use 75% of vertical screen height on mobile
+  } else {
+    h = vh * 0.65;
+    h = Math.max(360, Math.min(h, 720));
+  }
 
-  let h = vh - top - headerH - 16;
-  h = Math.max(260, Math.min(h, 680));
-
-  // Works whether you used CSS var(--chartH) or not:
   document.documentElement.style.setProperty("--chartH", Math.round(h) + "px");
   chart.style.height = Math.round(h) + "px";
 }
@@ -3754,20 +3754,17 @@ function refreshUI(){
   refreshFundSelect();
   refreshProgramSelect();
   refreshDeptSelect();
-    refreshLineSelect();
+  refreshLineSelect();
   refreshChips();
   renderFundWarning();
 
   const fund = getFund();
   if (!fund){
     clearChart();
-    renderAudit();
     return;
   }
 
-
-    renderChart(fund);
-  renderAudit();
+  renderChart(fund);
   applyDetailLevelVisibility();
 }
 
@@ -3881,6 +3878,33 @@ async function init(){
     .filter(id => dataStore.fundRegistry[id].loaded)
     .filter(id => (dataStore.fundRegistry[id].topGroupsExpected || []).includes(state.topGroup));
   state.fundId = candidates[0] || Object.keys(dataStore.funds)[0] || null;
+
+  // Toolbox Slide Logic
+  const drawer = $("slidingToolbox");
+  const trigger = $("toolboxTrigger");
+  const doneBtn = $("doneBtn");
+  const arrow = $("triggerArrow");
+  const label = $("triggerLabel");
+
+  function toggleSettings() {
+    const isOpen = drawer.style.opacity === "1";
+    if (isOpen) {
+      drawer.style.transform = "translateY(-150%)";
+      drawer.style.opacity = "0";
+      drawer.style.pointerEvents = "none";
+      arrow.textContent = "▼";
+      label.textContent = "Settings";
+    } else {
+      drawer.style.transform = "translateY(0)";
+      drawer.style.opacity = "1";
+      drawer.style.pointerEvents = "auto";
+      arrow.textContent = "▲";
+      label.textContent = "Close";
+    }
+  }
+
+  trigger.onclick = toggleSettings;
+  doneBtn.onclick = toggleSettings;
 
   refreshUI();
 }

@@ -430,7 +430,7 @@
           <input id="inflationToggle" type="checkbox" aria-label="Inflation overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation</b>
         </label>
-        <label class="chip" id="inflationPopToggleWrap" style="cursor:pointer;" title="Inflation + Population uses CPI plus average annual population growth from decennial U.S. Census for Moore County, TN, interpolated between Census years.">
+        <label class="chip" id="inflationPopToggleWrap" style="cursor:pointer;" title="Inflation + Population uses CPI plus average annual population growth from decennial U.S. Census for Moore County, TN. Populations for non-census years are annualized estimates based on the previous 9 years of growth trends."></label>
           <input id="inflationPopToggle" type="checkbox" aria-label="Inflation + Population overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation + Population</b>
         </label>
@@ -625,16 +625,18 @@ const CPI_ANNUAL_AVG = {
   2021: 270.970,
   2022: 292.655,
   2023: 304.702,
-  2024: 313.689
+  2024: 313.689,
+  2025: 321.943
 };
 
 // Moore County, TN population anchors (total population):
-// 2000, 2010, 2020 decennial Census; 2024 estimate from Census-based FRED series TNMOOR7POP (thousands × 1,000). 
+// 2000, 2010, 2020 decennial Census; 2025 estimate from Census-based FRED series TNMOOR7POP (thousands × 1,000). 
+// Disclaimer: populations for non-census years are annualized estimates based on the previous 9 years of growth trends.
 const POP_ANCHORS = [
   { year: 2000, value: 5740 }, // Census 2000 total population
   { year: 2010, value: 6362 }, // Census 2010
   { year: 2020, value: 6461 }, // Census 2020
-  { year: 2024, value: 6773 }  // 2024 resident-population estimate (6.773k)
+  { year: 2025, value: 6800 }  // 2025 resident-population estimate (6.8k)
 ];
 
 // Interpolate population between anchors using a smooth, constant annual % growth within each segment.

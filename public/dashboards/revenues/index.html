@@ -1,0 +1,128 @@
+
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Property Tax Receivables — Moore County</title>
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
+  <style>
+    .wrap { width: calc(100vw - 2in); margin: 1in auto; }
+    body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; padding: 0; }
+    .bar { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 8px; position: relative; }
+    .left-controls { position: absolute; left: 0; display: flex; align-items: center; gap: 8px; }
+    h1 { margin: 0; font-size: 20px; font-weight: 700; text-align: center; }
+    #chart { width: 100%; height: 680px; }
+    .foot { margin-top: 10px; font-size: 12px; color: #444; }
+    select { padding: 6px 10px; border-radius: 8px; border: 1px solid #bbb; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div class="left-controls">
+        <label for="seriesSel"><span style="display:inline-block;background:#eef;border:1px solid #ccd;padding:2px 6px;border-radius:6px;font-size:12px;">Series</span></label>
+        <select id="seriesSel">
+          <option value="TOTAL" selected>Total (GA+Schools)</option>
+          <option value="GA">Governmental Activities</option>
+          <option value="SCHOOL">Metropolitan School Department</option>
+        </select>
+      </div>
+      <h1>Property Tax Receivables</h1>
+    </div>
+
+    <div id="chart"></div>
+
+    <div class="foot">
+      CPI baseline shown for the selected series. CPI source: U.S. Bureau of Labor Statistics, CPI-U (All items, U.S. city average, Not Seasonally Adjusted — Series CUUR0000SA0),
+      June index each year. Baseline anchored to the 2005 receivable for the selected series.
+    </div>
+  </div>
+
+  <script>
+    const years = ["05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"];
+    const GA   = [1371586, 1671548, 1809130, 2017383, 2215489, 2166238, 2414025, 2563609, 2579444, 2689082, 2765779, 3419019, 3605713, 3599182, 4005402, 4116389, 4130748, 4436952, 4631424, 4967555];
+    const SCH  = [1662914, 1477914, 1733929, 1928120, 1964456, 2057678, 2114469, 2238670, 2494376, 2581810, 2648380, 2795663, 2933823, 3060644, 3106093, 3190082, 3236252, 3321132, 3315181, 3553915];
+    const TOT  = [3034500, 3149462, 3543059, 3945503, 4179945, 4223916, 4528494, 4802279, 5073820, 5270892, 5414159, 6214682, 6539536, 6659826, 7111495, 7306471, 7367000, 7758084, 7946605, 8521470];
+    const GA_CPI  = [1371586, 1430822, 1469268, 1543052, 1521036, 1537058, 1591759, 1618246, 1642779, 1669428, 1682841, 1699765, 1727387, 1776990, 1799429, 1817947, 1915961, 2089543, 2151585, 2215178];
+    const SCH_CPI = [1662914, 1734731, 1781344, 1870800, 1844108, 1863532, 1929852, 1961965, 1991709, 2024019, 2040280, 2060799, 2094288, 2154427, 2181632, 2204083, 2322916, 2533366, 2608586, 2685687];
+    const TOT_CPI = [3034500, 3165553, 3250613, 3413852, 3365143, 3400590, 3521611, 3580211, 3634489, 3693447, 3723121, 3760565, 3821676, 3931417, 3981061, 4022031, 4238877, 4622909, 4760171, 4900866];
+    const URLS = ["https://drive.google.com/file/d/1iYFseTXjfTBOXALpMs_-MbxeZVlPPI6z/view?usp=drive_link", "https://drive.google.com/file/d/1k_8KkQZKyK9-VtEZfMh7KLTqbAnEosof/view?usp=drive_link", "https://drive.google.com/file/d/1E2VjD3G9iKbohfQAmBd46pbwujZtQSEs/view?usp=drive_link", "https://drive.google.com/file/d/1YacNN8_nM2dynCoiGeTpnzPWYdoWw4c9/view?usp=drive_link", "https://drive.google.com/file/d/1jPJAeskk09tghycpunT62DLR-y_c38lJ/view?usp=drive_link", "https://drive.google.com/file/d/1jX_wf84UhEf5DBErLpbyrS6A4CFeyqgZ/view?usp=drive_link", "https://drive.google.com/file/d/1v0H3gtW-fvyND9zAlNKqQ-uS3Ph6DpEl/view?usp=drive_link", "https://drive.google.com/file/d/1O-vQUCvI2e4HHihfM_ZlWu_3hfjVRuZb/view?usp=drive_link", "https://drive.google.com/file/d/14s2bNtaiRLHVhNmNBf7eXggn0omevY1-/view?usp=drive_link", "https://drive.google.com/file/d/1vpoXMcTFlaGt1oRoFWiNMJfqwASKDa82/view?usp=drive_link", "https://drive.google.com/file/d/1RtnvCWh4BGSYCL23L8RT0yccgBNzQj7n/view?usp=drive_link", "https://drive.google.com/file/d/1kmURBTiB-YgjhAb4g1lElwOgwnCS7ZO-/view?usp=drive_link", "https://drive.google.com/file/d/1qhQ0w9kcaX3FQCP4PycDc1zI6l9WKeIi/view?usp=drive_link", "https://drive.google.com/file/d/1k4UFfBcw8Xb50V_O28WTBWfuEV8wO572/view?usp=drive_link", "https://drive.google.com/file/d/1ToWBZC2lNNlrbytu135qWpwzKQUWVCaC/view?usp=drive_link", "https://drive.google.com/file/d/1E13_MsMM2i9JLlZkMgDEFkI6qFXHBlXU/view?usp=drive_link", "https://drive.google.com/file/d/1rQ2-5cUJkh0aebQCCU1lHaQ7BB5a0352/view?usp=drive_link", "https://drive.google.com/file/d/1aID2Oksx-Uhvy7feRqTzLszeNQUAxszf/view?usp=drive_link", "https://drive.google.com/file/d/1fzWWf3L6FRlkefY16jrjiK8QNicHgtax/view?usp=drive_link", "https://drive.google.com/file/d/1c3EA5wkirG6yiI6xTmm9wEe3KDs7wSEt/view?usp=drive_link"];
+
+    // Color palette
+    const BLUE = "#1f77b4";     // Totals
+    const RED  = "#d62728";     // CPI for Totals
+    const ORANGE = "#ff7f0e";   // GA
+    const PURPLE = "#9467bd";   // School
+    const GREY = "#7f7f7f";     // CPI for GA/School
+
+    function mkTrace({name, y, color, urls, dash=null, show=false, citationColor=null, citationBG=null}) {
+      let citation = "Click to open Exhibit A (AFR)";
+      if (citationColor) {
+        const style = "color:" + citationColor + (citationBG ? ";background-color:" + citationBG + ";padding:0 4px;border-radius:3px" : "");
+        citation = "<span style='" + style + "'>" + citation + "</span>";
+      } else {
+        citation = "<span style='color:#555'>" + citation + "</span>";
+      }
+      return {
+        x: years, y,
+        mode: "lines+markers",
+        name,
+        visible: show,
+        line: { dash: dash || "solid", width: 3, color },
+        marker: { size: 8, color },
+        customdata: urls.slice(),
+        hovertemplate:
+          "<b>FY %{x}</b><br>" + name + ": $%{y:,d}<br>" + citation + "<extra></extra>"
+      };
+    }
+
+    // Totals (blue) + its CPI (red), with citation color rules
+    const trTOT  = mkTrace({name:"Total (GA + Schools)", y: TOT, color: BLUE, urls: URLS, dash:null, show:true, citationColor:"#fff", citationBG:BLUE});
+    const trTOTc = mkTrace({name:"CPI baseline (Total, FY '05 base = $" + TOT[0].toLocaleString() + ")", y: TOT_CPI, color: RED, urls: URLS, dash:"dot", show:true, citationColor:"#000", citationBG:null});
+
+    // GA and School keep their previous colors; CPI lines shown in grey
+    const trGA   = mkTrace({name:"Governmental Activities", y: GA, color: ORANGE, urls: URLS, show:false});
+    const trGAc  = mkTrace({name:"CPI baseline (Govt, FY '05 base = $" + GA[0].toLocaleString() + ")", y: GA_CPI, color: GREY, urls: URLS, dash:"dot", show:false});
+    const trSCH  = mkTrace({name:"Metropolitan School Department", y: SCH, color: PURPLE, urls: URLS, show:false});
+    const trSCHc = mkTrace({name:"CPI baseline (School, FY '05 base = $" + SCH[0].toLocaleString() + ")", y: SCH_CPI, color: GREY, urls: URLS, dash:"dot", show:false});
+
+    const data = [trTOT, trTOTc, trGA, trGAc, trSCH, trSCHc];
+
+    const layout = {
+      height: 680,
+      margin: { l: 90, r: 40, t: 30, b: 70 },
+      xaxis: { type: "category", tickmode: "array", tickvals: years, ticktext: years, title: "Fiscal Year (YY)" },
+      yaxis: { tickformat: ",d", title: "Property Taxes Receivable (US$)" },
+      legend: { orientation: "h", x: 0, y: 1.03 }
+    };
+    const config = { responsive: true, displaylogo: false };
+
+    const chart = document.getElementById("chart");
+    Plotly.newPlot(chart, data, layout, config);
+
+    // Click behavior: each point carries its own URL
+    chart.on("plotly_click", function(ev) {
+      const pt = ev.points && ev.points[0];
+      if (!pt) return;
+      const url = pt.customdata;
+      if (typeof url === "string" && url.startsWith("http")) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    });
+
+    // Dropdown
+    const sel = document.getElementById("seriesSel");
+    function applySelection(val) {
+      // indices: 0=TOT(blue),1=TOT_CPI(red),2=GA,3=GA_CPI(grey),4=SCH,5=SCH_CPI(grey)
+      let vis = [false,false,false,false,false,false];
+      if (val === "TOTAL") vis = [true,true,false,false,false,false];
+      if (val === "GA")    vis = [false,false,true,true,false,false];
+      if (val === "SCHOOL")vis = [false,false,false,false,true,true];
+      Plotly.update(chart, { visible: vis });
+    }
+    sel.addEventListener("change", (e)=>applySelection(e.target.value));
+    applySelection(sel.value);
+  </script>
+</body>
+</html>

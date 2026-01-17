@@ -2097,7 +2097,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             </div>
           )}
         </section>
-        </section>
 
         {/* --- SHARED ADMIN INBOX SECTION --- */}
             <section className="bg-white rounded-[2.5rem] border-4 border-indigo-600 shadow-xl overflow-hidden">
@@ -2233,6 +2232,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         </div>
                       </div>
                     </div>
+                  </div>
                     ) : (
                       <div className="flex-grow flex flex-col items-center justify-center text-gray-200 p-20 text-center">
                         <i className="fa-solid fa-envelope-open-text text-6xl mb-4"></i>

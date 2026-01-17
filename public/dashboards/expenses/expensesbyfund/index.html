@@ -427,8 +427,33 @@
 
 <div class="wrap" style="position:relative;">
 
-  <!-- Settings Drawer (Full Screen Overlay) -->
-  <div id="slidingToolbox" class="panel" style="display:none; position:absolute; inset: 0; z-index: 2000; margin: 0; border-radius: 16px; background: var(--bg); border: 2px solid var(--accent); overflow-y: auto; padding: 20px;">
+  <style>
+    /* Responsive Toolbox behavior */
+    #slidingToolbox {
+      display: block; /* Default to open */
+      position: relative;
+      z-index: 100;
+      margin-bottom: 20px;
+      border-color: var(--accent);
+      background: var(--panel);
+      overflow-y: auto;
+    }
+
+    @media (max-width: 768px) {
+      #slidingToolbox {
+        position: absolute;
+        inset: 0;
+        z-index: 2000;
+        margin: 0;
+        background: var(--bg);
+        padding: 20px;
+        border-width: 2px;
+      }
+    }
+  </style>
+
+  <!-- Settings Drawer -->
+  <div id="slidingToolbox" class="panel">
                <div class="row" style="justify-content:space-between; width:100%">
       <div class="tabs" id="topGroupTabs"></div>
 
@@ -573,11 +598,9 @@ const dataStore = {
   },
 
   fundRegistry: {
-    "101": { title: "General Fund #101", topGroupsExpected: ["primaryGovernment","schools"], loaded: false },
-    "116": { title: "Solid Waste/Sanitation Fund #116", topGroupsExpected: 
-["primaryGovernment"], loaded: false },
-    "121": { title: "Urban Services Fund #121", topGroupsExpected:
-["primaryGovernment"], loaded: false },
+    "101": { title: "General Fund #101", topGroupsExpected: ["primaryGovernment"], loaded: false },
+    "116": { title: "Solid Waste/Sanitation Fund #116", topGroupsExpected: ["primaryGovernment"], loaded: false },
+    "121": { title: "Urban Services Fund #121", topGroupsExpected: ["primaryGovernment"], loaded: false },
     "122": { title: "Drug Control Fund #122", topGroupsExpected: ["primaryGovernment"], loaded: false },
     "131": { title: "Highway/Public Works Fund #131", topGroupsExpected: ["primaryGovernment"], loaded: false },
     "141": { title: "General Purpose School Fund #141", topGroupsExpected: ["schools"], loaded: false },
@@ -2457,7 +2480,21 @@ function buildTopGroupTabs(){
     const b = document.createElement("div");
     b.className = "tab" + (state.topGroup === k ? " active" : "");
     b.textContent = TOP_GROUPS[k].label;
-    b.onclick = () => { state.topGroup = k; state.fundId=null; state.programCode=null; state.deptCode=null; state.lineKey=null; hideTooltip(); refreshUI(); };
+    b.onclick = () => { 
+      state.topGroup = k; 
+      state.fundId = null; 
+      state.programCode = null; 
+      state.deptCode = null; 
+      state.lineKey = null; 
+      
+      // Auto-select first available fund for the group
+      const candidates = Object.keys(dataStore.fundRegistry)
+        .filter(id => (dataStore.fundRegistry[id].topGroupsExpected || []).includes(k));
+      if (candidates.length > 0) state.fundId = candidates[0];
+
+      hideTooltip(); 
+      refreshUI(); 
+    };
     box.appendChild(b);
   }
 }
@@ -3917,21 +3954,33 @@ async function init(){
   const arrow = $("triggerArrow");
   const label = $("triggerLabel");
 
+  // Initial UI state for "Default Open"
+  arrow.textContent = "▲";
+  label.textContent = "CLOSE";
+
   function toggleSettings() {
-    const isOpen = drawer.style.display === "block";
+    const isMobile = window.innerWidth <= 768;
+    const isOpen = window.getComputedStyle(drawer).display === "block";
+
     if (isOpen) {
       drawer.style.display = "none";
       arrow.textContent = "▼";
       label.textContent = "SETTINGS";
-      document.body.style.overflow = ""; // restore scroll
+      if (isMobile) document.body.style.overflow = ""; 
     } else {
       drawer.style.display = "block";
       arrow.textContent = "▲";
       label.textContent = "CLOSE";
-      document.body.style.overflow = "hidden"; // lock scroll for full screen
-      window.scrollTo(0,0);
+      if (isMobile) {
+        document.body.style.overflow = "hidden";
+        window.scrollTo(0,0);
+      }
     }
-    if (typeof recalcChartHeight === "function") recalcChartHeight();
+    
+    // Trigger height recalculation so chart expands/shrinks
+    requestAnimationFrame(() => {
+      if (typeof recalcChartHeight === "function") recalcChartHeight();
+    });
   }
 
   trigger.onclick = toggleSettings;

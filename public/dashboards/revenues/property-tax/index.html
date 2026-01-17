@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <title>Property Tax Receivables — Moore County</title>
+  <!-- Professional Plotly Engine -->
+  <script src="https://cdn.plot.ly/plotly-2.30.0.min.js"></script>
   <style>
     :root {
       --bg: #0b0d12;
@@ -21,286 +23,244 @@
       margin: 0;
       background: var(--bg);
       color: var(--text);
-      font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      font: 14px/1.35 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      overflow-x: hidden;
     }
-    .wrap {
-      padding: 12px 14px 24px;
-      width: 100%;
-      margin: 0 auto;
-    }
-    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-    .panel {
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 12px;
-      box-shadow: 0 12px 30px rgba(0,0,0,.25);
-    }
-    label { font-size: 12px; color: var(--muted); display: block; margin: 0 0 4px; }
-    select, button { font: inherit; }
-    select {
-      background: #0f1422;
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px;
-      min-width: 240px;
-      outline: none;
-    }
-    button {
-      background: #0f1422;
-      color: var(--text);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 10px 12px;
-      cursor: pointer;
-    }
-    button.primary {
-      background: rgba(74,163,255,.12);
-      border-color: rgba(74,163,255,.45);
-    }
-    .chip {
-      display: inline-flex;
-      gap: 8px;
-      align-items: center;
-      background: var(--chip);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      color: var(--muted);
-    }
-    .chip b { color: var(--text); font-weight: 600; }
-    .chartWrap {
-      position: relative;
-      width: 100%;
-      border-radius: 16px;
-      border: 1px solid var(--line);
-      background: #0d1220;
-    }
-    .chartHeader {
-      padding: 10px 12px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .chartTitle { font-weight: 700; letter-spacing: .2px; }
-    svg { display: block; width: 100%; height: var(--chartH, 480px); }
     
-    /* Forced Landscape Logic */
+    /* Forced Landscape Logic from Reference */
     @media screen and (orientation: portrait) and (max-width: 768px) {
       body { overflow: hidden; background: #000; }
       .wrap {
         position: fixed; top: 0; left: 0; width: 100vh; height: 100vw;
         transform: rotate(90deg); transform-origin: top left;
-        margin-left: 100vw; overflow-y: auto; padding: 0;
+        margin-left: 100vw; overflow-y: auto; padding: 12px;
       }
     }
 
-    .tooltip {
-      position: absolute;
-      background: rgba(15,20,34,.95);
+    .wrap { padding: 14px; width: 100%; min-height: 100vh; display: flex; flex-direction: column; gap: 12px; }
+    .panel {
+      background: var(--panel);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 12px;
-      box-shadow: 0 10px 30px rgba(0,0,0,.5);
-      display: none;
-      z-index: 100;
-      min-width: 220px;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,.25);
     }
-    .trow { display: flex; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
-    .val { font-weight: 700; }
-    #slidingToolbox { display: block; margin-bottom: 12px; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    
+    /* Sliding Toolbox Styling */
+    #slidingToolbox { display: block; border-left: 4px solid var(--accent); }
+    label { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; display: block; }
+    
+    select, button { font: inherit; cursor: pointer; }
+    select {
+      background: #0f1422; color: var(--text); border: 1px solid var(--line);
+      border-radius: 12px; padding: 10px; min-width: 220px; outline: none;
+    }
+    button {
+      background: #0f1422; color: var(--text); border: 1px solid var(--line);
+      border-radius: 10px; padding: 8px 14px; font-weight: bold; transition: all 0.2s;
+    }
+    button.primary { background: rgba(74,163,255,.12); border-color: rgba(74,163,255,.45); color: var(--accent); }
+    button:hover { background: var(--line); }
+    
+    .chip {
+      display: inline-flex; gap: 8px; align-items: center; background: var(--chip);
+      border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+      font-size: 12px; color: var(--muted); cursor: pointer; transition: all 0.2s;
+    }
+    .chip:hover { border-color: var(--accent); }
+    .chip input { cursor: pointer; }
+    .chip b { color: var(--text); font-weight: 600; }
+
+    .chartWrap {
+      flex-grow: 1; min-height: 450px; border-radius: 16px;
+      border: 1px solid var(--line); background: #0d1220; display: flex; flex-direction: column;
+    }
+    .chartHeader {
+      padding: 12px 16px; border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .chartTitle { font-size: 16px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+    
+    #chart { flex-grow: 1; width: 100%; border-radius: 0 0 16px 16px; }
+    
+    .footer { margin-top: auto; padding: 10px 4px; font-size: 11px; color: var(--muted); line-height: 1.4; }
   </style>
 </head>
 <body>
 
 <div class="wrap">
-  <!-- Settings Drawer -->
+  <!-- Settings Drawer (Fully Functional) -->
   <div id="slidingToolbox" class="panel">
     <div class="row" style="justify-content: space-between;">
-      <div>
-        <label>Data Series</label>
-        <select id="seriesSelect">
-          <option value="TOT">Total (GA + Schools)</option>
-          <option value="GA">Governmental Activities</option>
-          <option value="SCH">Metropolitan School Department</option>
-        </select>
-      </div>
-      <div class="row" style="margin-top: 15px;">
-        <label class="chip" style="cursor:pointer;">
-          <input id="trendToggle" type="checkbox" style="width:16px;height:16px;" />
-          <b>Trend</b>
-        </label>
-        <label class="chip" style="cursor:pointer;">
-          <input id="inflationToggle" type="checkbox" style="width:16px;height:16px;" />
-          <b>Inflation</b>
-        </label>
-        <label class="chip" style="cursor:pointer;">
-          <input id="inflationPopToggle" type="checkbox" style="width:16px;height:16px;" />
-          <b>Inflation + Pop</b>
-        </label>
-        <button id="doneBtn" class="primary">DONE</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="chartWrap">
-    <div class="chartHeader">
-      <div>
-        <div class="chartTitle" id="chartTitle">Property Tax Receivables</div>
-        <div class="small" style="color:var(--muted); font-size:10px;">Moore County, TN — Official Audit Records</div>
+      <div class="row">
+        <div>
+          <label>Data Series</label>
+          <select id="seriesSelect">
+            <option value="TOT">Total Property Tax Receivables</option>
+            <option value="GA">Governmental Activities</option>
+            <option value="SCH">Metropolitan School Department</option>
+          </select>
+        </div>
       </div>
       <div class="row">
-        <div id="toolboxTrigger" style="background:var(--chip); border:1px solid var(--accent); color:var(--accent); padding:6px 12px; border-radius:8px; cursor:pointer; font-size:11px; font-weight:bold;">
-          SETTINGS ▼
-        </div>
-        <button id="closeReportBtn" style="background:var(--danger); color:white; border:none; padding:6px 12px; border-radius:8px; font-weight:bold; font-size:11px;">CLOSE</button>
-      </div>
-    </div>
-
-    <svg id="chart" viewBox="0 0 900 400" preserveAspectRatio="none"></svg>
-
-    <div class="tooltip" id="tooltip">
-      <div class="trow"><div class="muted">FY</div><div class="val" id="ttYear">—</div></div>
-      <div class="trow"><div class="muted" id="ttKey">Value</div><div class="val" id="ttVal">—</div></div>
-      <div class="trow" id="ttRealRow" style="display:none;"><div class="muted">Adj. Value</div><div class="val" id="ttReal">—</div></div>
-      <div style="margin-top:10px; border-top:1px solid var(--line); padding-top:10px;">
-        <button id="openPdfBtn" class="primary" style="width:100%; font-size:11px; font-weight:bold;">OPEN EXHIBIT (AFR)</button>
+        <label class="chip">
+          <input id="trendToggle" type="checkbox" />
+          <b>Trend Line</b>
+        </label>
+        <label class="chip" title="Adjustment based on annual CPI-U (US City Avg)">
+          <input id="inflationToggle" type="checkbox" />
+          <b>Inflation</b>
+        </label>
+        <label class="chip" title="Adjustment based on CPI + Moore County Census Growth">
+          <input id="inflationPopToggle" type="checkbox" />
+          <b>Inflation + Pop</b>
+        </label>
+        <button id="closeReportBtn" style="background:var(--danger); border-color:transparent; color:white;">CLOSE REPORT</button>
       </div>
     </div>
   </div>
-  
-  <div class="row" style="margin-top: 12px; color: var(--muted); font-size: 11px; opacity: 0.8;">
-    CPI: U.S. Bureau of Labor Statistics (Annual Avg). Pop: Moore County Decennial Census + Estimates.
+
+  <!-- Chart Main Area -->
+  <div class="chartWrap">
+    <div class="chartHeader">
+      <div class="chartTitle">Property Tax Receivables (FY05–FY24)</div>
+      <div style="font-size: 10px; font-weight: bold; color: var(--accent); text-transform: uppercase;">
+        Tap points for Exhibit A (AFR)
+      </div>
+    </div>
+    <div id="chart"></div>
+  </div>
+
+  <div class="footer">
+    Data source: Moore County Annual Financial Reports (Exhibits). Inflation adjusted to 2005 baseline using BLS CPI-U data. Population estimates interpolated from Decennial US Census anchors for Moore County, TN.
   </div>
 </div>
 
 <script>
-  // --- CORE DATA (Must not be altered) ---
+  // --- CORE DATA (Immutable) ---
   const YEARS = ["05", "06", "07", "08", "09", "10", "11", "12", "13", "14", "15", "16", "17", "18", "19", "20", "21", "22", "23", "24"];
-  const DATA = {
+  const SERIES_DATA = {
     GA:  [1371586, 1671548, 1809130, 2017383, 2215489, 2166238, 2414025, 2563609, 2579444, 2689082, 2765779, 3419019, 3605713, 3599182, 4005402, 4116389, 4130748, 4436952, 4631424, 4967555],
     SCH: [1662914, 1477914, 1733929, 1928120, 1964456, 2057678, 2114469, 2238670, 2494376, 2581810, 2648380, 2795663, 2933823, 3060644, 3106093, 3190082, 3236252, 3321132, 3315181, 3553915],
     TOT: [3034500, 3149462, 3543059, 3945503, 4179945, 4223916, 4528494, 4802279, 5073820, 5270892, 5414159, 6214682, 6539536, 6659826, 7111495, 7306471, 7367000, 7758084, 7946605, 8521470]
   };
   const URLS = ["https://drive.google.com/file/d/1iYFseTXjfTBOXALpMs_-MbxeZVlPPI6z/view", "https://drive.google.com/file/d/1k_8KkQZKyK9-VtEZfMh7KLTqbAnEosof/view", "https://drive.google.com/file/d/1E2VjD3G9iKbohfQAmBd46pbwujZtQSEs/view", "https://drive.google.com/file/d/1YacNN8_nM2dynCoiGeTpnzPWYdoWw4c9/view", "https://drive.google.com/file/d/1jPJAeskk09tghycpunT62DLR-y_c38lJ/view", "https://drive.google.com/file/d/1jX_wf84UhEf5DBErLpbyrS6A4CFeyqgZ/view", "https://drive.google.com/file/d/1v0H3gtW-fvyND9zAlNKqQ-uS3Ph6DpEl/view", "https://drive.google.com/file/d/1O-vQUCvI2e4HHihfM_ZlWu_3hfjVRuZb/view", "https://drive.google.com/file/d/14s2bNtaiRLHVhNmNBf7eXggn0omevY1-/view", "https://drive.google.com/file/d/1vpoXMcTFlaGt1oRoFWiNMJfqwASKDa82/view", "https://drive.google.com/file/d/1RtnvCWh4BGSYCL23L8RT0yccgBNzQj7n/view", "https://drive.google.com/file/d/1kmURBTiB-YgjhAb4g1lElwOgwnCS7ZO-/view", "https://drive.google.com/file/d/1qhQ0w9kcaX3FQCP4PycDc1zI6l9WKeIi/view", "https://drive.google.com/file/d/1k4UFfBcw8Xb50V_O28WTBWfuEV8wO572/view", "https://drive.google.com/file/d/1ToWBZC2lNNlrbytu135qWpwzKQUWVCaC/view", "https://drive.google.com/file/d/1E13_MsMM2i9JLlZkMgDEFkI6qFXHBlXU/view", "https://drive.google.com/file/d/1rQ2-5cUJkh0aebQCCU1lHaQ7BB5a0352/view", "https://drive.google.com/file/d/1aID2Oksx-Uhvy7feRqTzLszeNQUAxszf/view", "https://drive.google.com/file/d/1fzWWf3L6FRlkefY16jrjiK8QNicHgtax/view", "https://drive.google.com/file/d/1c3EA5wkirG6yiI6xTmm9wEe3KDs7wSEt/view"];
 
-  // --- MACRO DATA ---
-  const CPI = { 2005: 195.3, 2006: 201.6, 2007: 207.3, 2008: 215.3, 2009: 214.5, 2010: 218.0, 2011: 224.9, 2012: 229.6, 2013: 232.9, 2014: 236.7, 2015: 237.0, 2016: 240.0, 2017: 245.1, 2018: 251.1, 2019: 255.6, 2020: 258.8, 2021: 270.9, 2022: 292.6, 2023: 304.7, 2024: 313.7 };
-  const POP = [ {y: 2000, v: 5740}, {y: 2010, v: 6362}, {y: 2020, v: 6461}, {y: 2025, v: 6800} ];
+  // --- MACRO REFERENCE DATA ---
+  const CPI_DATA = { 2005: 195.3, 2006: 201.6, 2007: 207.3, 2008: 215.3, 2009: 214.5, 2010: 218.0, 2011: 224.9, 2012: 229.6, 2013: 232.9, 2014: 236.7, 2015: 237.0, 2016: 240.0, 2017: 245.1, 2018: 251.1, 2019: 255.6, 2020: 258.8, 2021: 270.9, 2022: 292.6, 2023: 304.7, 2024: 313.7 };
+  const POP_ANCHORS = [ {y: 2000, v: 5740}, {y: 2010, v: 6362}, {y: 2020, v: 6461}, {y: 2025, v: 6800} ];
 
-  function getPop(year) {
-    let a = POP[0], b = POP[1];
-    for (let i=0; i<POP.length-1; i++) {
-      if (year >= POP[i].y && year <= POP[i+1].y) { a=POP[i]; b=POP[i+1]; break; }
+  function getInterpolatedPop(year) {
+    let a, b;
+    for (let i=0; i < POP_ANCHORS.length - 1; i++) {
+      if (year >= POP_ANCHORS[i].y && year <= POP_ANCHORS[i+1].y) {
+        a = POP_ANCHORS[i]; b = POP_ANCHORS[i+1]; break;
+      }
     }
-    const ratio = Math.pow(b.v / a.v, 1 / (b.y - a.y));
-    return a.v * Math.pow(ratio, year - a.y);
+    const factor = Math.pow(b.v / a.v, 1 / (b.y - a.y));
+    return a.v * Math.pow(factor, year - a.y);
   }
 
+  // --- CHART LOGIC ---
   const state = { series: "TOT", trend: false, inflation: false, pop: false };
 
-  function render() {
-    const svg = document.getElementById("chart");
-    svg.innerHTML = "";
-    const yData = DATA[state.series];
+  function updateChart() {
+    const rawData = SERIES_DATA[state.series];
+    const xLabels = YEARS.map(y => "FY" + y);
     
-    // Scale Logic
-    const yMax = Math.max(...yData) * 1.15;
-    const yMin = 0;
-    const W = 900, H = 400, padL = 80, padR = 20, padT = 20, padB = 40;
-    const innerW = W - padL - padR, innerH = H - padT - padB;
+    const traces = [];
 
-    function x(i) { return padL + (i / (YEARS.length - 1)) * innerW; }
-    function y(v) { return padT + (1 - (v - yMin) / (yMax - yMin)) * innerH; }
-
-    // Axes
-    const axis = `M ${padL} ${padT} V ${padT+innerH} H ${W-padR}`;
-    svg.innerHTML += `<path d="${axis}" fill="none" stroke="var(--line)" />`;
-
-    // Data Path
-    let d = `M ${x(0)} ${y(yData[0])}`;
-    for (let i=1; i<yData.length; i++) d += ` L ${x(i)} ${y(yData[i])}`;
-    svg.innerHTML += `<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5" />`;
-
-    // Macro Overlays
-    if (state.inflation || state.pop) {
-      let dInf = `M ${x(0)} ${y(yData[0])}`;
-      let dPop = `M ${x(0)} ${y(yData[0])}`;
-      const baseCPI = CPI[2005], basePop = getPop(2005);
-      
-      for (let i=1; i<YEARS.length; i++) {
-        const yr = 2000 + parseInt(YEARS[i]);
-        const infVal = yData[0] * (CPI[yr] / baseCPI);
-        const popVal = infVal * (getPop(yr) / basePop);
-        dInf += ` L ${x(i)} ${y(infVal)}`;
-        dPop += ` L ${x(i)} ${y(popVal)}`;
-      }
-      if (state.inflation) svg.innerHTML += `<path d="${dInf}" fill="none" stroke="#ffcc66" stroke-dasharray="4" />`;
-      if (state.pop) svg.innerHTML += `<path d="${dPop}" fill="none" stroke="var(--ok)" stroke-dasharray="2 6" />`;
-    }
-
-    // Trend Line (Least Squares)
-    if (state.trend) {
-      let sumX=0, sumY=0, sumXY=0, sumXX=0, n=yData.length;
-      for (let i=0; i<n; i++) { sumX+=i; sumY+=yData[i]; sumXY+=i*yData[i]; sumXX+=i*i; }
-      const slope = (n*sumXY - sumX*sumY) / (n*sumXX - sumX*sumX);
-      const intercept = (sumY - slope*sumX) / n;
-      svg.innerHTML += `<line x1="${x(0)}" y1="${y(intercept)}" x2="${x(n-1)}" y2="${y(intercept + slope*(n-1))}" stroke="var(--muted)" stroke-dasharray="10 5" opacity="0.6" />`;
-    }
-
-    // Interactive Points
-    yData.forEach((v, i) => {
-      const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-      g.innerHTML = `<circle cx="${x(i)}" cy="${y(v)}" r="12" fill="transparent" style="cursor:pointer" />
-                     <circle cx="${x(i)}" cy="${y(v)}" r="4" fill="var(--text)" stroke="var(--accent)" />`;
-      g.onclick = (ev) => showTooltip(i, v, ev);
-      svg.appendChild(g);
+    // 1. Primary Data Trace
+    traces.push({
+      x: xLabels, y: rawData, name: "Actual Receivables",
+      mode: 'lines+markers', type: 'scatter',
+      line: { color: '#4aa3ff', width: 3 },
+      marker: { size: 8, color: '#4aa3ff', symbol: 'circle' },
+      customdata: URLS,
+      hovertemplate: '<b>%{x}</b><br>Amount: $%{y:,.0f}<br>Click for Audit PDF<extra></extra>'
     });
-  }
 
-  function showTooltip(i, v, ev) {
-    const tip = document.getElementById("tooltip");
-    const yr = 2000 + parseInt(YEARS[i]);
-    document.getElementById("ttYear").textContent = "20" + YEARS[i];
-    document.getElementById("ttVal").textContent = "$" + v.toLocaleString();
-    
-    const ttReal = document.getElementById("ttReal");
-    const ttRealRow = document.getElementById("ttRealRow");
-    
-    if (state.inflation || state.pop) {
-      const baseCPI = CPI[2005], basePop = getPop(2005);
-      const inflFactor = CPI[yr] / baseCPI;
-      const factor = state.pop ? (inflFactor * (getPop(yr) / basePop)) : inflFactor;
-      ttRealRow.style.display = "flex";
-      ttReal.textContent = "$" + Math.round(DATA[state.series][0] * factor).toLocaleString();
-    } else {
-      ttRealRow.style.display = "none";
+    // 2. Trend Line (Linear Regression)
+    if (state.trend) {
+      const n = rawData.length;
+      let sumX=0, sumY=0, sumXY=0, sumXX=0;
+      for(let i=0; i<n; i++) {
+        sumX += i; sumY += rawData[i];
+        sumXY += i * rawData[i]; sumXX += i * i;
+      }
+      const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
+      const trendY = xLabels.map((_, i) => slope * i + intercept);
+      
+      traces.push({
+        x: xLabels, y: trendY, name: "Trend Line",
+        mode: 'lines', line: { color: '#8ea0b5', dash: 'dash', width: 2 },
+        hoverinfo: 'skip'
+      });
     }
 
-    tip.style.display = "block";
-    tip.style.left = (ev.pageX - 110) + "px";
-    tip.style.top = (ev.pageY - 160) + "px";
-    document.getElementById("openPdfBtn").onclick = () => window.open(URLS[i], "_blank");
+    // 3. Inflation Overlay
+    if (state.inflation) {
+      const baseVal = rawData[0];
+      const baseCPI = CPI_DATA[2005];
+      const infY = YEARS.map(y => baseVal * (CPI_DATA[2000 + parseInt(y)] / baseCPI));
+      traces.push({
+        x: xLabels, y: infY, name: "Inflation Benchmark",
+        mode: 'lines', line: { color: '#ffcc66', dash: 'dot', width: 2 },
+        hovertemplate: 'Inflation-Adjusted 2005 Basis:<br>$%{y:,.0f}<extra></extra>'
+      });
+    }
+
+    // 4. Inflation + Population Overlay
+    if (state.pop) {
+      const baseVal = rawData[0];
+      const baseCPI = CPI_DATA[2005];
+      const basePop = getInterpolatedPop(2005);
+      const popY = YEARS.map(y => {
+        const fullYear = 2000 + parseInt(y);
+        const infFactor = CPI_DATA[fullYear] / baseCPI;
+        const popFactor = getInterpolatedPop(fullYear) / basePop;
+        return baseVal * infFactor * popFactor;
+      });
+      traces.push({
+        x: xLabels, y: popY, name: "Infl + Pop Benchmark",
+        mode: 'lines', line: { color: '#44d17a', dash: 'dashdot', width: 2 },
+        hovertemplate: 'Infl+Pop Adjusted 2005 Basis:<br>$%{y:,.0f}<extra></extra>'
+      });
+    }
+
+    const layout = {
+      paper_bgcolor: 'rgba(0,0,0,0)', plot_bgcolor: 'rgba(0,0,0,0)',
+      margin: { l: 65, r: 25, t: 20, b: 40 },
+      font: { color: '#e7eef8', family: 'system-ui' },
+      xaxis: { gridcolor: '#1c2740', linecolor: '#24324a', zeroline: false },
+      yaxis: { gridcolor: '#1c2740', linecolor: '#24324a', tickformat: '$,.0f', zeroline: false },
+      legend: { orientation: 'h', x: 0, y: -0.2, font: { size: 10 } },
+      hovermode: 'closest'
+    };
+
+    Plotly.react('chart', traces, layout, { responsive: true, displaylogo: false });
   }
 
-  // --- UI CONTROLS ---
-  document.getElementById("seriesSelect").onchange = (e) => { state.series = e.target.value; render(); };
-  document.getElementById("trendToggle").onchange = (e) => { state.trend = e.target.checked; render(); };
-  document.getElementById("inflationToggle").onchange = (e) => { state.inflation = e.target.checked; render(); };
-  document.getElementById("inflationPopToggle").onchange = (e) => { state.pop = e.target.checked; render(); };
+  // --- INITIALIZATION & EVENTS ---
+  document.getElementById("seriesSelect").onchange = (e) => { state.series = e.target.value; updateChart(); };
+  document.getElementById("trendToggle").onchange = (e) => { state.trend = e.target.checked; updateChart(); };
+  document.getElementById("inflationToggle").onchange = (e) => { state.inflation = e.target.checked; updateChart(); };
+  document.getElementById("inflationPopToggle").onchange = (e) => { state.pop = e.target.checked; updateChart(); };
   
-  const toolbox = document.getElementById("slidingToolbox");
-  document.getElementById("toolboxTrigger").onclick = () => toolbox.style.display = "block";
-  document.getElementById("doneBtn").onclick = () => toolbox.style.display = "none";
-  document.getElementById("closeReportBtn").onclick = () => window.parent.postMessage({type: 'CLOSE_DASHBOARD'}, '*');
+  document.getElementById("closeReportBtn").onclick = () => {
+    if (window.parent) window.parent.postMessage({ type: 'CLOSE_DASHBOARD' }, '*');
+  };
 
-  window.addEventListener("resize", render);
-  document.addEventListener("click", (e) => { if (!e.target.closest("#chart") && !e.target.closest("#tooltip")) document.getElementById("tooltip").style.display="none"; });
+  // PDF Click Handling
+  document.getElementById('chart').on('plotly_click', (data) => {
+    const url = data.points[0].customdata;
+    if (url) window.open(url, "_blank");
+  });
 
-  render();
+  // Start the chart
+  updateChart();
 </script>
 
 </body>

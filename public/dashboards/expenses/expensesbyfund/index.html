@@ -387,6 +387,34 @@
     @media (min-width: 760px){
       #toolboxRow{ margin-top:-10px !important; }
     }
+
+    /* Force Landscape on Mobile Portrait */
+    @media screen and (orientation: portrait) and (max-width: 768px) {
+      body {
+        overflow: hidden;
+        background: #000; /* Black bars if aspect ratio differs */
+      }
+      .wrap {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vh;
+        /* Use padding to avoid the 'notch' or 'home indicator' on modern phones */
+        height: calc(100vw - env(safe-area-inset-bottom));
+        transform: rotate(90deg);
+        transform-origin: top left;
+        margin-top: 0;
+        margin-left: 100vw;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding-top: env(safe-area-inset-top);
+      }
+      /* Make the button slightly larger for thumb-tapping on mobile */
+      #closeReportBtn {
+        padding: 10px 18px !important;
+        font-size: 12px !important;
+      }
+    }
   </style>
 
 </head>
@@ -394,13 +422,7 @@
 
 <body>
 
-<header>
-  <h1>Expense Explorer (FY05–FY25)</h1>
-  <div class="sub">
-    <span>Top-level: <b>Primary Government</b> vs <b>Schools</b></span>
-    <span>Overlay labels reserved: <b>Inflation</b>, <b>Inflation + Population</b></span>
-  </div>
-</header>
+
 
 <div class="wrap" style="position:relative;">
 
@@ -410,7 +432,7 @@
   </div>
 
   <!-- Settings Drawer -->
-  <div id="slidingToolbox" class="panel" style="position:absolute; top:50px; left:14px; right:14px; z-index:100; transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease; transform:translateY(-150%); opacity:0; pointer-events:none; border-color:var(--accent); box-shadow:0 20px 40px rgba(0,0,0,0.6);">
+  <div id="slidingToolbox" class="panel" style="display:none; position:relative; z-index:100; margin-bottom:20px; border-color:var(--accent); box-shadow:0 10px 20px rgba(0,0,0,0.3);">
                <div class="row" style="justify-content:space-between; width:100%">
       <div class="tabs" id="topGroupTabs"></div>
 
@@ -483,7 +505,10 @@
             <div class="chartTitle" id="chartTitle">Loading…</div>
             <div class="chartSubtitle" id="chartSubtitle">Tap a point to see details and open the source PDF.</div>
           </div>
-          <div class="small" id="chartMeta"></div>
+          <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+            <button id="closeReportBtn" style="background:var(--danger); color:white; border:none; padding:8px 14px; border-radius:10px; font-weight:bold; font-size:11px; letter-spacing:0.5px; cursor:pointer; box-shadow:0 4px 10px rgba(255,90,106,0.2);">CLOSE REPORT</button>
+            <div class="small" id="chartMeta" style="text-align:right; font-size:10px; opacity:0.8;"></div>
+          </div>
         </div>
 
         <svg id="chart" viewBox="0 0 900 360" preserveAspectRatio="none" aria-label="Line chart"></svg>
@@ -2818,6 +2843,10 @@ function renderChart(fund){
 
   // Ensure we use the most up-to-date list of discovered years
   const years = [...dataStore.years].sort((a, b) => a.localeCompare(b));
+  if (years.length === 0) {
+    $("chartTitle").textContent = "No data found in CSV";
+    return;
+  }
   const W = 900, H = 360;
 
   // Slightly wider left padding to avoid y-label clipping
@@ -3887,24 +3916,32 @@ async function init(){
   const label = $("triggerLabel");
 
   function toggleSettings() {
-    const isOpen = drawer.style.opacity === "1";
+    const isOpen = drawer.style.display === "block";
     if (isOpen) {
-      drawer.style.transform = "translateY(-150%)";
-      drawer.style.opacity = "0";
-      drawer.style.pointerEvents = "none";
+      drawer.style.display = "none";
       arrow.textContent = "▼";
       label.textContent = "Settings";
     } else {
-      drawer.style.transform = "translateY(0)";
-      drawer.style.opacity = "1";
-      drawer.style.pointerEvents = "auto";
+      drawer.style.display = "block";
       arrow.textContent = "▲";
       label.textContent = "Close";
     }
+    // Recalculate chart height because the drawer pushed content down
+    if (typeof recalcChartHeight === "function") recalcChartHeight();
   }
 
   trigger.onclick = toggleSettings;
   doneBtn.onclick = toggleSettings;
+
+  // Communication logic to close the report via the Host App (app.tsx)
+  const closeBtn = document.getElementById('closeReportBtn');
+  if (closeBtn) {
+    closeBtn.onclick = () => {
+      if (window.parent) {
+        window.parent.postMessage({ type: 'CLOSE_DASHBOARD' }, '*');
+      }
+    };
+  }
 
   refreshUI();
 }

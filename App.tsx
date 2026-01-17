@@ -124,6 +124,14 @@ export default function App() {
       else { setProfile(null); setCurrentPage('home'); setSelectedPoll(null); }
     });
 
+    // Listen for the 'Close Report' signal from the embedded dashboard iframe
+    const handleDashboardMessage = (event: MessageEvent) => {
+      if (event.data && event.data.type === 'CLOSE_DASHBOARD') {
+        setActiveDashboard(null);
+      }
+    };
+    window.addEventListener('message', handleDashboardMessage);
+
     fetchAllData();
 
     // Refresh admin data whenever switching to admin page
@@ -144,6 +152,7 @@ export default function App() {
     return () => {
       subscription.unsubscribe();
       supabase.removeChannel(votesSubscription);
+      window.removeEventListener('message', handleDashboardMessage);
     };
   }, []);
 
@@ -164,6 +173,14 @@ export default function App() {
   // --- BROWSER HISTORY SYNC ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
+      // If a dashboard is active, the first 'Back' press should just close the dashboard
+      if (activeDashboard) {
+        setActiveDashboard(null);
+        // We push home state again so they don't exit the app on the next back press
+        window.history.pushState({ page: 'home', category: null, poll: null, dashboard: null }, '');
+        return;
+      }
+
       // If user hits back, use the history state to update the app view
       const state = event.state || { page: 'home', category: null, poll: null, dashboard: null };
       setCurrentPage(state.page || 'home');
@@ -654,7 +671,7 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden">
-        <div className="p-4 flex justify-end bg-white border-b border-gray-100"><button onClick={() => setActiveDashboard(null)} className="bg-gray-900 text-white px-5 py-2 rounded-xl text-[10px] font-black uppercase">Close Report</button></div>
+        {/* The 'Close Report' button is now rendered inside the Dashboard HTML file itself */}
         <iframe src={activeDashboard.folderPath} className="w-full h-full border-0" title="Dashboard" />
       </div>
     );

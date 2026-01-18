@@ -26,8 +26,9 @@ serve(async (req) => {
       fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
     }
 
-    // 2. Routing Check: Only proceed if this email was sent to admin@concernedcitizensofmc.com
-    const recipients = Array.isArray(payload.to) ? payload.to : [payload.to || ""];
+    // 2. Routing Check: Handle both strings and objects from Resend
+    const rawTo = payload.to || payload.headers?.to || "";
+    const recipients = Array.isArray(rawTo) ? rawTo : [rawTo];
     const isAdminEmail = recipients.some((email: string) => 
       email.toLowerCase().includes('admin@concernedcitizensofmc.com')
     );
@@ -104,6 +105,26 @@ serve(async (req) => {
     if (insertErr) throw insertErr;
     return new Response(JSON.stringify({ success: true }), { status: 200, headers: corsHeaders });
   } catch (err: any) {
+    console.error("ADMIN_INBOX_ERROR:", err.message);
     return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
   }
 });
+
+// Helper to find the email body if standard keys are missing
+const findGreedyContent = (obj: any): string => {
+  if (!obj) return "";
+  const priorityKeys = ['text', 'html', 'body', 'content', 'body_text', 'stripped-text'];
+  for (const k of priorityKeys) {
+    if (obj[k] && typeof obj[k] === 'string' && obj[k].length > 1) return obj[k];
+  }
+  for (const key in obj) {
+    const val = obj[key];
+    if (typeof val === 'string' && val.length > 3 && !['from', 'to', 'subject'].includes(key.toLowerCase())) {
+      if (val.includes(" ") || val.includes("\n")) return val;
+    } else if (typeof val === 'object' && val !== null) {
+      const deep = findGreedyContent(val);
+      if (deep) return deep;
+    }
+  }
+  return "";
+};

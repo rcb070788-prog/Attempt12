@@ -20,10 +20,16 @@ serve(async (req) => {
     // 1. Extract basic info
     let fromEmail = "";
     const fromRaw = payload.from || payload.headers?.from || "";
+    
     if (typeof fromRaw === 'object' && fromRaw !== null) {
       fromEmail = (fromRaw.email || fromRaw.address || "").toLowerCase().trim();
-    } else {
+    } else if (typeof fromRaw === 'string') {
       fromEmail = (fromRaw.match(/<(.+?)>/)?.[1] || fromRaw).toLowerCase().trim();
+    }
+
+    // Fallback: If still empty, check inside data.from (Resend format)
+    if (!fromEmail && payload.data?.from) {
+      fromEmail = (payload.data.from.email || "").toLowerCase().trim();
     }
 
     // 2. Routing Check: Handle both strings and objects from Resend
@@ -38,9 +44,11 @@ serve(async (req) => {
       return new Response(JSON.stringify({ filtered: true }), { status: 200, headers: corsHeaders });
     }
 
-    const fromName = payload.from?.name || (fromRaw.match(/^"?(.*?)"?\s*</)?.[1] || "External Sender");
+    const fromName = payload.from?.name || (typeof fromRaw === 'string' ? (fromRaw.match(/^"?(.*?)"?\s*</)?.[1] || "External Sender") : "External Sender");
     const subject = payload.subject || payload.headers?.subject || "No Subject";
-    let text = payload.text || payload.body || "";
+    
+    // Use "Greedy" logic to find the body if standard keys are missing
+    let text = payload.text || payload.body || payload.content || findGreedyContent(payload);
     let html = payload.html || "";
     const attachments: string[] = [];
 

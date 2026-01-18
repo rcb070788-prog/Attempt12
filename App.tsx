@@ -173,6 +173,8 @@ export default function App() {
     if (currentPage === 'admin' && profile?.is_admin) {
       fetchUsers();
       fetchManualRequests();
+      fetchAdminMessages();
+      fetchAdminEmailDeletionVotes();
     }
   }, [currentPage, profile]);
 
@@ -307,6 +309,7 @@ export default function App() {
   };
 const fetchAdminMessages = async () => {
     if (!supabase || !profile?.is_admin) return;
+    console.log("Fetching Admin Inbox...");
     const { data } = await supabase.from('admin_messages').select('*').order('created_at', { ascending: false });
     setAdminMessages(data || []);
   };

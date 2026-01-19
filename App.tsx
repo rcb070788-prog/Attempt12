@@ -649,9 +649,22 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       if (voteErr) throw voteErr;
 
       if (isLastAdmin) {
+        // 1. Clean up Storage files first
+        if (selectedAdminEmail.attachment_urls?.length > 0) {
+          const filePaths = selectedAdminEmail.attachment_urls.map((url: string) => {
+            const parts = url.split('/admin_inbox_attachments/');
+            return parts.length > 1 ? parts[1].split('?')[0] : null;
+          }).filter(Boolean);
+          
+          if (filePaths.length > 0) {
+            await supabase.storage.from('admin_inbox_attachments').remove(filePaths);
+          }
+        }
+
+        // 2. Delete the database record
         const { error: delErr } = await supabase.from('admin_messages').delete().eq('id', messageId);
         if (delErr) throw delErr;
-        showToast("Consensus met: Email permanently deleted.");
+        showToast("Consensus met: Email and attachments permanently deleted.");
         setSelectedAdminEmail(null);
       } else {
         showToast(`Email cleared from your view. (${currentVoteCount + 1}/${totalAdminsRequired} votes)`);

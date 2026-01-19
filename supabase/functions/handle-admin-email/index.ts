@@ -69,10 +69,44 @@ serve(async (req) => {
 
     // 4. Path B: Fetch full content if missing
     if (!text && !html && emailId && RESEND_API_KEY) {
+      console.log(`PATH_B_FETCH: Downloading full email content for ${emailId}`);
       const fetchRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}`, {
         headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
       });
       if (fetchRes.ok) {
+        const full = await fetchRes.json();
+        const d = full.data || full;
+        text = d.text || "";
+        html = d.html || "";
+        
+        if (d.attachments && Array.isArray(d.attachments)) {
+          for (const att of d.attachments) {
+            try {
+              const attRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}/attachments/${att.id}`, {
+                headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Accept': 'application/octet-stream' }
+              });
+              if (attRes.ok) {
+                const attData = await attRes.arrayBuffer();
+                const safeName = att.filename.replace(/[^a-z0-9.]/gi, '_');
+                const filePath = `${emailId}/${Date.now()}_${safeName}`;
+                
+                const { error: uploadErr } = await supabase.storage
+                  .from('admin_inbox_attachments')
+                  .upload(filePath, attData, { 
+                    contentType: att.content_type || 'application/octet-stream',
+                    upsert: true 
+                  });
+
+                if (!uploadErr) {
+                  const { data: urlData } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
+                  attachments.push(`${urlData.publicUrl}?filename=${encodeURIComponent(att.filename)}`);
+                }
+              }
+            } catch (e) { console.error("Attach Error:", e); }
+          }
+        }
+      }
+    }
         const full = await fetchRes.json();
         const d = full.data || full;
         text = d.text || "";

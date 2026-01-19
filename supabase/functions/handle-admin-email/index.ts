@@ -107,30 +107,6 @@ serve(async (req) => {
         }
       }
     }
-        const full = await fetchRes.json();
-        const d = full.data || full;
-        text = d.text || "";
-        html = d.html || "";
-        
-        // Handle Inbound Attachments
-        if (d.attachments && Array.isArray(d.attachments)) {
-          for (const att of d.attachments) {
-            const attRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}/attachments/${att.id}`, {
-              headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Accept': 'application/octet-stream' }
-            });
-            if (attRes.ok) {
-              const attData = await attRes.arrayBuffer();
-              const filePath = `inbound/${emailId}_${att.filename.replace(/[^a-z0-9.]/gi, '_')}`;
-              const { error: uploadErr } = await supabase.storage.from('admin_inbox_attachments').upload(filePath, attData, { contentType: att.content_type || 'application/octet-stream' });
-              if (!uploadErr) {
-                const { data: urlData } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
-                attachments.push(`${urlData.publicUrl}?filename=${encodeURIComponent(att.filename)}`);
-              }
-            }
-          }
-        }
-      }
-    }
 
     // 5. Insert into Database
     const { error: insertErr } = await supabase.from('admin_messages').insert({

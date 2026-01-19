@@ -439,7 +439,8 @@ const handleSuggestionFileUpload = async (files: FileList) => {
         continue;
       }
 
-      const { data: { publicUrl } } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
+      const { data } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
+      const publicUrl = `${data.publicUrl}?filename=${encodeURIComponent(file.name)}`;
       setStagedAdminReplyFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
     }
     setIsUploading(false);

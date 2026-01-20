@@ -1137,8 +1137,24 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           <div className="max-w-4xl mx-auto space-y-12 py-10">
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
 
-            {/* TIER 1 CHART: Total Government Health */}
-            <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-2xl text-white">
+            {/* TIER 1 CHART: County-at-a-glance Solvency */}
+            <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all" onClick={() => setSelectedCategory('solvency')}>
+              <div className="mb-6">
+                <h3 className="text-xl font-black uppercase">County Solvency at a Glance</h3>
+                <p className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Aggregate Financial Health (20 Year Trend)</p>
+              </div>
+              <div className="h-[200px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData}>
+                    <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} dot={false} />
+                    <Tooltip contentStyle={{ display: 'none' }} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+              <div className="mt-4 text-center">
+                <span className="text-[10px] font-black uppercase bg-white/10 px-4 py-2 rounded-full">Click to View Detailed Solvency & Liabilities</span>
+              </div>
+            </div>
               <div className="mb-6">
                 <h3 className="text-xl font-black uppercase">Tier 1: County Solvency</h3>
                 <p className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Total Assets vs. Total Liabilities (Aggregate)</p>
@@ -1277,6 +1293,88 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             </div>
 
             <div className="grid grid-cols-1 gap-4 mt-8">
+              {/* DYNAMIC EXHIBIT A: ASSETS VIEW */}
+              {selectedCategory === 'assets' && (
+                <div className="bg-white p-8 rounded-[2.5rem] border-2 border-indigo-600 shadow-xl mb-4">
+                  <div className="flex justify-between items-center mb-6">
+                    <div>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-[18.66px] font-black uppercase text-indigo-600 tracking-tighter">Exhibit A: Asset Trends</h3>
+                        <span className="px-2 py-0.5 bg-indigo-100 text-[10px] font-black uppercase rounded text-indigo-600">Live Database</span>
+                      </div>
+                      <p className="text-gray-400 text-[14px] font-medium leading-tight">20-Year comparison of Primary Government vs. School Department assets.</p>
+                    </div>
+                    <i className="fa-solid fa-chart-line text-indigo-600 text-2xl"></i>
+                  </div>
+                  
+                  <div className="h-[300px] w-full mt-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="year" fontSize={10} fontWeight="bold" />
+                        <YAxis fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <Tooltip contentStyle={{borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
+                        <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase'}} />
+                        <Line type="monotone" dataKey="primaryAssets" name="Primary Assets" stroke="#4f46e5" strokeWidth={4} dot={{r:4}} />
+                        <Line type="monotone" dataKey="schoolAssets" name="School Assets" stroke="#ec4899" strokeWidth={4} dot={{r:4}} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <p className="text-center text-[9px] font-black uppercase text-gray-300 mt-4 tracking-widest">Click a data point to verify against original PDF</p>
+                </div>
+              )}
+
+              {/* DYNAMIC EXHIBIT A: LIABILITIES/SOLVENCY VIEW */}
+              {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
+                <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-2xl text-white mb-4">
+                   <div className="mb-6">
+                    <h3 className="text-xl font-black uppercase">Exhibit A: Liability & Solvency</h3>
+                    <p className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Total Assets vs. Total Debt</p>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                        <XAxis dataKey="year" stroke="#ffffff50" />
+                        <YAxis stroke="#ffffff50" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e1b4b', border: 'none' }} />
+                        <Line type="step" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} />
+                        <Line type="step" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* TIER 3: GRANULAR VERIFICATION TABLE (Shown inside any financial category) */}
+              {selectedFinancialYear && (selectedCategory === 'assets' || selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
+                <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-indigo-600 overflow-hidden mb-8 animate-slide-up">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 className="text-lg font-black uppercase">Audit Details: {selectedFinancialYear}</h3>
+                    <button onClick={() => setSelectedFinancialYear(null)} className="text-gray-400 hover:text-red-500"><i className="fa-solid fa-circle-xmark text-xl"></i></button>
+                  </div>
+                  <div className="overflow-x-auto max-h-[300px] custom-scrollbar">
+                    <table className="w-full text-left">
+                      <thead className="bg-white sticky top-0 text-[9px] font-black uppercase text-gray-400">
+                        <tr><th className="p-4">Label</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">PDF</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {financialData.filter(r => r.year === selectedFinancialYear && (selectedCategory === 'solvency' || r.category.toLowerCase().includes(selectedCategory.slice(0,-1)))).map((row, i) => (
+                          <tr key={i} className="text-xs">
+                            <td className="p-4 font-bold">{row.label}</td>
+                            <td className="p-4 text-right font-mono">${Number(row.amount).toLocaleString()}</td>
+                            <td className="p-4 text-center">
+                               <a href={`${row.storage_url}#page=${row.pdf_page}`} target="_blank" rel="noreferrer" className="text-indigo-600"><i className="fa-solid fa-file-pdf"></i></a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* FOLDER-BASED DASHBOARDS (EXISTING) */}
               {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (
                 <div 
                   key={dash.id} 

@@ -1138,7 +1138,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
 
             {/* TIER 1 SPARKLINE: Total Government Solvency */}
-            <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all" onClick={() => setSelectedCategory('solvency')}>
+            <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all mb-12" onClick={() => setSelectedCategory('solvency')}>
               <div className="flex justify-between items-start mb-6">
                 <div>
                   <h3 className="text-xl font-black uppercase leading-none">County Solvency</h3>
@@ -1184,15 +1184,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
             <div className="grid grid-cols-1 gap-4 mt-8">
               
-              {/* ASSETS DRILLDOWN (EXHIBIT A) */}
+              {/* ASSETS VIEW (EXHIBIT A) */}
               {selectedCategory === 'assets' && (
-                <div className="bg-white p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6 overflow-hidden">
+                <div className="bg-white p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6">
                   <div className="flex justify-between items-start mb-8">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded">EXHIBIT A</span>
-                        <h3 className="text-2xl font-black uppercase text-gray-900 tracking-tighter">Asset Trend Analysis</h3>
-                      </div>
+                      <h3 className="text-2xl font-black uppercase text-gray-900 tracking-tighter mb-1">Asset Trend Analysis</h3>
                       <p className="text-gray-400 text-sm font-medium">Comparison of Primary Govt vs. School Dept holdings.</p>
                     </div>
                     <i className="fa-solid fa-chart-line text-indigo-600 text-2xl"></i>
@@ -1210,22 +1207,16 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="mt-6 pt-6 border-t border-gray-50 text-center">
-                     <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest animate-pulse">Click chart to verify rows against PDF</p>
-                  </div>
                 </div>
               )}
 
-              {/* LIABILITIES & SOLVENCY DRILLDOWN (EXHIBIT A) */}
+              {/* LIABILITIES VIEW (EXHIBIT A) */}
               {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-                <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white mb-6 overflow-hidden">
+                <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white mb-6">
                    <div className="flex justify-between items-start mb-8">
                     <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="bg-white text-indigo-900 text-[9px] font-black px-2 py-0.5 rounded">EXHIBIT A</span>
-                        <h3 className="text-2xl font-black uppercase tracking-tighter">Debt & Solvency trend</h3>
-                      </div>
-                      <p className="text-indigo-300 text-sm font-medium">Tracking Total Assets against total Liabilities.</p>
+                      <h3 className="text-2xl font-black uppercase tracking-tighter mb-1">Debt & Solvency Trend</h3>
+                      <p className="text-indigo-300 text-sm font-medium">Tracking Total Assets against Total Liabilities.</p>
                     </div>
                     <i className="fa-solid fa-scale-balanced text-white text-2xl"></i>
                   </div>
@@ -1236,44 +1227,44 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         <XAxis dataKey="year" stroke="#ffffff50" fontSize={10} fontWeight="bold" />
                         <YAxis stroke="#ffffff50" fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip contentStyle={{ backgroundColor: '#1e1b4b', border: 'none' }} />
-                        <Legend wrapperStyle={{paddingTop: '20px'}} />
                         <Line type="step" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />
                         <Line type="step" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth (Surplus)" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" />
+                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
-                </div>
-              )}
-                  <div className="flex justify-between items-center mb-6">
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-[18.66px] font-black uppercase text-indigo-600 tracking-tighter">Exhibit A: Asset Trends</h3>
-                        <span className="px-2 py-0.5 bg-indigo-100 text-[10px] font-black uppercase rounded text-indigo-600">Live Database</span>
-                      </div>
-                      <p className="text-gray-400 text-[14px] font-medium leading-tight">20-Year comparison of Primary Government vs. School Department assets.</p>
-                    </div>
-                    <i className="fa-solid fa-chart-line text-indigo-600 text-2xl"></i>
-                  </div>
-                  
-                  <div className="h-[300px] w-full mt-4">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={10} fontWeight="bold" />
-                        <YAxis fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip contentStyle={{borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}} />
-                        <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'black', textTransform: 'uppercase'}} />
-                        <Line type="monotone" dataKey="primaryAssets" name="Primary Assets" stroke="#4f46e5" strokeWidth={4} dot={{r:4}} />
-                        <Line type="monotone" dataKey="schoolAssets" name="School Assets" stroke="#ec4899" strokeWidth={4} dot={{r:4}} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <p className="text-center text-[9px] font-black uppercase text-gray-300 mt-4 tracking-widest">Click a data point to verify against original PDF</p>
                 </div>
               )}
 
-              {/* DYNAMIC EXHIBIT A: LIABILITIES/SOLVENCY VIEW */}
+              {/* PDF BREAKDOWN TABLE */}
+              {selectedFinancialYear && (selectedCategory === 'assets' || selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
+                <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-indigo-600 overflow-hidden mb-8 animate-slide-up">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <h3 className="text-lg font-black uppercase">Audit Details: {selectedFinancialYear}</h3>
+                    <button onClick={() => setSelectedFinancialYear(null)} className="text-gray-400 hover:text-red-500"><i className="fa-solid fa-circle-xmark text-xl"></i></button>
+                  </div>
+                  <div className="overflow-y-auto max-h-[300px] custom-scrollbar">
+                    <table className="w-full text-left">
+                      <thead className="bg-white sticky top-0 text-[9px] font-black uppercase text-gray-400">
+                        <tr><th className="p-4">Label</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">PDF</th></tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {financialData.filter(r => r.year === selectedFinancialYear && (selectedCategory === 'solvency' || r.category.toLowerCase().startsWith(selectedCategory.substring(0,4)))).map((row, i) => (
+                          <tr key={i} className="text-xs">
+                            <td className="p-4 font-bold">{row.label}</td>
+                            <td className="p-4 text-right font-mono">${Number(row.amount).toLocaleString()}</td>
+                            <td className="p-4 text-center">
+                               <a href={`${row.storage_url}#page=${row.pdf_page}`} target="_blank" rel="noreferrer" className="text-indigo-600"><i className="fa-solid fa-file-pdf"></i></a>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* FOLDER-BASED DASHBOARDS (EXISTING) */}
               {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
                 <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-2xl text-white mb-4">
                    <div className="mb-6">

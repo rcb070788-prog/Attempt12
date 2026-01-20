@@ -154,6 +154,7 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_comments' }, () => fetchPolls())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestions' }, () => fetchSuggestions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestion_comments' }, () => fetchSuggestions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'board_messages' }, () => fetchBoardMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_messages' }, () => fetchAdminMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_email_deletion_votes' }, () => fetchAdminEmailDeletionVotes())
       .subscribe();
@@ -329,7 +330,8 @@ const fetchAdminMessages = async () => {
     const { data, error } = await supabase
       .from('AFR_Exhibit_A')
       .select('*')
-      .order('year', { ascending: true });
+      .order('year', { ascending: true })
+      .limit(10000);
     
     if (error) {
       console.error("Financial Fetch Error:", error.message);
@@ -1240,9 +1242,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                           fontWeight="bold" 
                           type="category" 
                           allowDuplicatedCategory={false} 
+                          tickFormatter={(val) => `'${String(val).slice(-2)}`}
                         />
                         <YAxis fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', fontSize: '10px', border: '1px solid #e2e8f0' }}
+                        />
                         <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'bold'}} />
                         <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={{r:4}} />
                         <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={{r:4}} />
@@ -1266,12 +1271,21 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={10} fontWeight="bold" />
+                        <XAxis 
+                          dataKey="year" 
+                          stroke="#ffffff50" 
+                          fontSize={10} 
+                          fontWeight="bold" 
+                          tickFormatter={(val) => `'${String(val).slice(-2)}`}
+                        />
                         <YAxis stroke="#ffffff50" fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e1b4b', border: 'none' }} />
-                        <Line type="step" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />
-                        <Line type="step" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#1e1b4b', border: 'none', borderRadius: '12px', fontSize: '10px' }}
+                          itemStyle={{ padding: '0px' }}
+                        />
+                        <Line type="monotone" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={false} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>

@@ -322,6 +322,22 @@ const fetchAdminMessages = async () => {
     const { data } = await supabase.from('admin_email_deletion_votes').select('*');
     setAdminEmailDeletionVotes(data || []);
   };
+
+  const fetchFinancialData = async () => {
+    if (!supabase) return;
+    console.log("Fetching Financial Data...");
+    const { data, error } = await supabase
+      .from('AFR_Exhibit_A')
+      .select('*')
+      .order('year', { ascending: true });
+    
+    if (error) {
+      console.error("Financial Fetch Error:", error.message);
+    } else {
+      console.log("Financial Data Received:", data?.length, "rows");
+      setFinancialData(data || []);
+    }
+  };
   const fetchDeletionVotes = async () => {
     if (!supabase) return;
     const { data } = await supabase.from('admin_deletion_votes').select('*');
@@ -337,6 +353,7 @@ const fetchAdminMessages = async () => {
     fetchDeletionVotes();
     fetchAdminMessages();
     fetchAdminEmailDeletionVotes();
+    fetchFinancialData();
   };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -712,15 +729,19 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         });
       }
       const entry = yearMap.get(yr);
-      const amt = Number(row.amount);
+      const amt = isNaN(Number(row.amount)) ? 0 : Number(row.amount);
 
-      const isPrimary = row.hierarchy_path === 'Primary Government > Total';
-      const isSchool = row.hierarchy_path === 'Component Units > Metropolitan School Department';
+      // We use .trim() and .toLowerCase() to ensure matching even if the DB has "assets " or "Assets"
+      const path = (row.hierarchy_path || '').trim();
+      const cat = (row.category || '').trim().toLowerCase();
 
-      if (row.category === 'Assets') {
+      const isPrimary = path === 'Primary Government > Total';
+      const isSchool = path === 'Component Units > Metropolitan School Department';
+
+      if (cat === 'assets') {
         if (isPrimary) entry.primaryAssets += amt;
         if (isSchool) entry.schoolAssets += amt;
-      } else if (row.category === 'Liabilities') {
+      } else if (cat === 'liabilities') {
         if (isPrimary) entry.primaryLiabs += amt;
         if (isSchool) entry.schoolLiabs += amt;
       }
@@ -1198,7 +1219,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={10} fontWeight="bold" />
+                        <XAxis 
+                          dataKey="year" 
+                          fontSize={10} 
+                          fontWeight="bold" 
+                          type="category" 
+                          allowDuplicatedCategory={false} 
+                        />
                         <YAxis fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip />
                         <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'bold'}} />

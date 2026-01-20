@@ -757,9 +757,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       const path = (row.hierarchy_path || '').toLowerCase();
       const cat = (row.category || '').trim().toLowerCase();
 
-      // Flexible matching: Looks for the keywords regardless of symbols like ">" or "-"
-      const isPrimary = path.includes('primary') && path.includes('total');
-      const isSchool = path.includes('school');
+      // Standardized matching logic to handle 20 years of varying report nomenclature.
+      // We look for 'total' in Primary Government rows to avoid double-counting sub-categories.
+      const isPrimary = path.includes('primary') && (path.includes('total') || path.includes('aggregate'));
+      const isSchool = path.includes('school') && (path.includes('total') || path.includes('department'));
 
       if (cat === 'assets') {
         if (isPrimary) entry.primaryAssets += amt;
@@ -1279,10 +1280,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2005, 2025]} interval={1} />
-                        <YAxis fontSize={12} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
+                        <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2004, 2024]} interval={1} />
+                        <YAxis fontSize={14} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                        <Legend verticalAlign="bottom" height={50} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
                         <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={expandedChart === 'assets'} />
                         <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={expandedChart === 'assets'} />
                       </LineChart>
@@ -1365,11 +1366,11 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         {filteredTableRows.map((row, i) => (
                           <tr key={i} className="hover:bg-gray-50 transition-colors">
                             <td className="p-5">
-                              <p className="text-xs md:text-[18.66px] font-black text-gray-800 uppercase leading-tight">{row.label}</p>
-                              <p className="text-[9px] md:text-[12px] font-bold text-gray-400 uppercase">{row.hierarchy_path}</p>
+                              <p className="text-sm md:text-[18.66px] font-black text-gray-800 uppercase leading-tight">{row.label}</p>
+                              <p className="text-[10px] md:text-[14px] font-bold text-gray-400 uppercase">{row.hierarchy_path}</p>
                             </td>
-                            <td className="p-5 text-right font-mono text-sm md:text-[18.66px] font-bold text-indigo-600">
-                              ${Number(row.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            <td className="p-5 text-right font-mono text-base md:text-[18.66px] font-black text-indigo-600">
+                              ${Number(row.amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                             </td>
                             <td className="p-5 text-center">
                                <a 

@@ -82,6 +82,8 @@ export default function App() {
   const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
   const [financialData, setFinancialData] = useState<any[]>([]);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
+  const [expandedChart, setExpandedChart] = useState<string | null>(null);
+  const [hoveredData, setHoveredData] = useState<any>(null);
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);
@@ -327,18 +329,28 @@ const fetchAdminMessages = async () => {
   const fetchFinancialData = async () => {
     if (!supabase) return;
     
-    // Fetch ONLY the "Totals" needed for the charts to bypass the 1,000 row limit
-    const { data, error } = await supabase
+    // Batch 1: 2004 - 2013
+    const { data: batch1 } = await supabase
       .from('AFR_Exhibit_A')
       .select('*')
-      .or('hierarchy_path.eq.Primary Government > Total,hierarchy_path.eq.Component Units > Metropolitan School Department')
-      .order('year', { ascending: true });
+      .gte('year', 2004)
+      .lte('year', 2013)
+      .or('hierarchy_path.ilike.%Total%,hierarchy_path.ilike.%Metropolitan School%');
+
+    // Batch 2: 2014 - 2024
+    const { data: batch2 } = await supabase
+      .from('AFR_Exhibit_A')
+      .select('*')
+      .gte('year', 2014)
+      .lte('year', 2024)
+      .or('hierarchy_path.ilike.%Total%,hierarchy_path.ilike.%Metropolitan School%');
     
-    if (error) {
-      console.error("Chart Data Fetch Error:", error.message);
-    } else {
-      setFinancialData(data || []);
-    }
+    // Combine batches and remove any potential nulls
+    const combined = [...(batch1 || []), ...(batch2 || [])];
+    
+    // Sort them by year so the lines draw in order
+    const sorted = combined.sort((a, b) => a.year - b.year);
+    setFinancialData(sorted);
   };
 
   // New function to fetch the Tier 3 granular details ONLY when a year is clicked
@@ -751,11 +763,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       const amt = isNaN(Number(row.amount)) ? 0 : Number(row.amount);
 
       // We use .trim() and .toLowerCase() to ensure matching even if the DB has "assets " or "Assets"
-      const path = (row.hierarchy_path || '').trim();
+      const path = (row.hierarchy_path || '').toLowerCase();
       const cat = (row.category || '').trim().toLowerCase();
 
-      const isPrimary = path === 'Primary Government > Total';
-      const isSchool = path === 'Component Units > Metropolitan School Department';
+      // Flexible matching: Looks for the keywords regardless of symbols like ">" or "-"
+      const isPrimary = path.includes('primary') && path.includes('total');
+      const isSchool = path.includes('school');
 
       if (cat === 'assets') {
         if (isPrimary) entry.primaryAssets += amt;
@@ -1241,39 +1254,46 @@ const handleDeleteAdminEmail = async (messageId: string) => {
               
               {/* ASSETS VIEW (EXHIBIT A) */}
               {selectedCategory === 'assets' && (
-                <div className="bg-white p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6">
-                  <div className="flex justify-between items-start mb-8">
-                    <div>
-                      <h3 className="text-2xl font-black uppercase text-gray-900 tracking-tighter mb-1">Asset Trend Analysis</h3>
-                      <p className="text-gray-400 text-sm font-medium">Comparison of Primary Govt vs. School Dept holdings.</p>
+                <div className={`${expandedChart === 'assets' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-6 md:p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6'}`}>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-full">
+                      <div className="flex justify-between items-center w-full mb-2">
+                         <h3 className="text-xl md:text-[18.66px] font-black uppercase text-gray-900 tracking-tighter">Asset Trend Analysis</h3>
+                         <button onClick={() => setExpandedChart(expandedChart === 'assets' ? null : 'assets')} className="bg-gray-100 hover:bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl transition-all">
+                           <i className={`fa-solid ${expandedChart === 'assets' ? 'fa-compress' : 'fa-expand'}`}></i>
+                         </button>
+                      </div>
+                      
+                      {/* FIXED TOP TOOLTIP */}
+                      <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
+                        {hoveredData ? (
+                          <>
+                            <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">'{String(hoveredData.year).slice(-2)}</p></div>
+                            <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">${(hoveredData.primaryAssets / 1000000).toFixed(2)}M</p></div>
+                            <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">${(hoveredData.schoolAssets / 1000000).toFixed(2)}M</p></div>
+                          </>
+                        ) : (
+                          <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
+                        )}
+                      </div>
                     </div>
-                    <i className="fa-solid fa-chart-line text-indigo-600 text-2xl"></i>
                   </div>
-                  <div className="h-[300px] w-full">
+
+                  <div className={`${expandedChart === 'assets' ? 'h-[70vh]' : 'h-[300px]'} w-full`}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} onClick={(d) => {
-  if (d?.activeLabel) {
-    const yr = Number(d.activeLabel);
-    setSelectedFinancialYear(yr);
-    fetchYearDetails(yr);
-  }
-}} style={{cursor:'pointer'}}>
+                      <LineChart 
+                        data={chartData} 
+                        onMouseMove={(e) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
+                        onMouseLeave={() => setHoveredData(null)}
+                        onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
+                      >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis 
-                          dataKey="year" 
-                          fontSize={10} 
-                          fontWeight="bold" 
-                          type="category" 
-                          allowDuplicatedCategory={false} 
-                          tickFormatter={(val) => `'${String(val).slice(-2)}`}
-                        />
-                        <YAxis fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: '#ffffff', borderRadius: '12px', fontSize: '10px', border: '1px solid #e2e8f0' }}
-                        />
-                        <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'bold'}} />
-                        <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={{r:4}} />
-                        <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={{r:4}} />
+                        <XAxis dataKey="year" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2004, 2023]} interval={1} />
+                        <YAxis fontSize={12} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
+                        <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                        <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={expandedChart === 'assets'} />
+                        <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={expandedChart === 'assets'} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -1282,39 +1302,47 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
               {/* LIABILITIES VIEW (EXHIBIT A) */}
               {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-                <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white mb-6">
-                   <div className="flex justify-between items-start mb-8">
-                    <div>
-                      <h3 className="text-2xl font-black uppercase tracking-tighter mb-1">Debt & Solvency Trend</h3>
-                      <p className="text-indigo-300 text-sm font-medium">Tracking Total Assets against Total Liabilities.</p>
+                <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-indigo-950 p-4 md:p-10' : 'bg-indigo-900 p-6 md:p-8 rounded-[3rem] shadow-2xl text-white mb-6'}`}>
+                   <div className="flex justify-between items-start mb-4">
+                    <div className="w-full">
+                      <div className="flex justify-between items-center w-full mb-2">
+                        <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">Debt & Solvency Trend</h3>
+                        <button onClick={() => setExpandedChart(expandedChart === 'solvency' ? null : 'solvency')} className="bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-xl transition-all">
+                           <i className={`fa-solid ${expandedChart === 'solvency' ? 'fa-compress' : 'fa-expand'}`}></i>
+                         </button>
+                      </div>
+
+                      {/* FIXED TOP TOOLTIP (DARK VERSION) */}
+                      <div className="bg-white/5 rounded-2xl p-4 flex justify-around items-center border border-white/10 min-h-[60px]">
+                        {hoveredData ? (
+                          <>
+                            <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">'{String(hoveredData.year).slice(-2)}</p></div>
+                            <div className="text-center"><p className="text-[10px] font-black text-green-300 uppercase">Assets</p><p className="text-lg md:text-[18.66px] font-black text-green-400">${(hoveredData.totalAssets / 1000000).toFixed(2)}M</p></div>
+                            <div className="text-center"><p className="text-[10px] font-black text-red-300 uppercase">Debt</p><p className="text-lg md:text-[18.66px] font-black text-red-400">${(hoveredData.totalLiabs / 1000000).toFixed(2)}M</p></div>
+                            <div className="text-center"><p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p><p className="text-lg md:text-[18.66px] font-black text-white">${(hoveredData.totalNetWorth / 1000000).toFixed(2)}M</p></div>
+                          </>
+                        ) : (
+                          <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
+                        )}
+                      </div>
                     </div>
-                    <i className="fa-solid fa-scale-balanced text-white text-2xl"></i>
                   </div>
-                  <div className="h-[300px] w-full">
+                  <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[300px]'} w-full`}>
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} onClick={(d) => {
-  if (d?.activeLabel) {
-    const yr = Number(d.activeLabel);
-    setSelectedFinancialYear(yr);
-    fetchYearDetails(yr);
-  }
-}} style={{cursor:'pointer'}}>
+                      <LineChart 
+                        data={chartData} 
+                        onMouseMove={(e) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
+                        onMouseLeave={() => setHoveredData(null)}
+                        onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
+                      >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis 
-                          dataKey="year" 
-                          stroke="#ffffff50" 
-                          fontSize={10} 
-                          fontWeight="bold" 
-                          tickFormatter={(val) => `'${String(val).slice(-2)}`}
-                        />
-                        <YAxis stroke="#ffffff50" fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip 
-                          contentStyle={{ backgroundColor: '#1e1b4b', border: 'none', borderRadius: '12px', fontSize: '10px' }}
-                          itemStyle={{ padding: '0px' }}
-                        />
-                        <Line type="monotone" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={false} />
-                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={false} />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2004, 2023]} interval={1} />
+                        <YAxis stroke="#ffffff50" fontSize={12} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                        <Line type="monotone" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={expandedChart === 'solvency'} />
+                        <Line type="monotone" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={expandedChart === 'solvency'} />
+                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={expandedChart === 'solvency'} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -1335,7 +1363,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   </div>
                   <div className="overflow-y-auto max-h-[400px] custom-scrollbar">
                     <table className="w-full text-left">
-                      <thead className="bg-white sticky top-0 text-[10px] font-black uppercase text-gray-400 border-b">
+                      <thead className="bg-white sticky top-0 text-[10px] md:text-[14px] font-black uppercase text-gray-400 border-b">
                         <tr>
                           <th className="p-5">Account Label</th>
                           <th className="p-5 text-right">Verified Amount</th>
@@ -1346,10 +1374,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         {filteredTableRows.map((row, i) => (
                           <tr key={i} className="hover:bg-gray-50 transition-colors">
                             <td className="p-5">
-                              <p className="text-xs font-black text-gray-800 uppercase leading-tight">{row.label}</p>
-                              <p className="text-[9px] font-bold text-gray-400 uppercase">{row.hierarchy_path}</p>
+                              <p className="text-xs md:text-[18.66px] font-black text-gray-800 uppercase leading-tight">{row.label}</p>
+                              <p className="text-[9px] md:text-[12px] font-bold text-gray-400 uppercase">{row.hierarchy_path}</p>
                             </td>
-                            <td className="p-5 text-right font-mono text-sm font-bold text-indigo-600">
+                            <td className="p-5 text-right font-mono text-sm md:text-[18.66px] font-bold text-indigo-600">
                               ${Number(row.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
                             </td>
                             <td className="p-5 text-center">

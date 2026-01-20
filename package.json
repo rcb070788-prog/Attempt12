@@ -1,4 +1,3 @@
-
 {
   "name": "community-finance-hub",
   "private": true,
@@ -10,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "@supabase/supabase-js": "^2.39.0"
+    "recharts": "^3.6.0"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

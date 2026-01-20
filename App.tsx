@@ -755,6 +755,21 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     return Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
   }, [financialData]);
 
+  // TIER 3 FILTER: Determines which specific rows show up in the audit table
+  const filteredTableRows = useMemo(() => {
+    if (!selectedFinancialYear || !selectedCategory) return [];
+    
+    return financialData.filter(row => {
+      const isYearMatch = row.year === selectedFinancialYear;
+      const rowCat = (row.category || '').trim().toLowerCase();
+      
+      // If we're on the 'Solvency' view, show everything for that year.
+      // Otherwise, show only the category (Assets/Liabilities) matching the current dashboard.
+      if (selectedCategory === 'solvency') return isYearMatch;
+      return isYearMatch && rowCat.includes(selectedCategory.slice(0, -1)); // matches 'asset' in 'Assets'
+    });
+  }, [financialData, selectedFinancialYear, selectedCategory]);
+
   // --- RENDER HELPERS (RESTORING THREADED COMMENTS) ---
   const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0) => {
     return (comments || []).filter(c => c.parent_id === parentId).map(comment => {
@@ -1263,83 +1278,61 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                 </div>
               )}
 
-              {/* PDF BREAKDOWN TABLE */}
-              {selectedFinancialYear && (selectedCategory === 'assets' || selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
+              {/* TIER 3: GRANULAR VERIFICATION TABLE */}
+              {selectedFinancialYear && filteredTableRows.length > 0 && (
                 <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-indigo-600 overflow-hidden mb-8 animate-slide-up">
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-lg font-black uppercase">Audit Details: {selectedFinancialYear}</h3>
-                    <button onClick={() => setSelectedFinancialYear(null)} className="text-gray-400 hover:text-red-500"><i className="fa-solid fa-circle-xmark text-xl"></i></button>
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-indigo-50">
+                    <div>
+                      <h3 className="text-lg font-black uppercase text-indigo-900">Line Item Detail: {selectedFinancialYear}</h3>
+                      <p className="text-[10px] font-bold text-indigo-400 uppercase tracking-widest">Source: Annual Financial Report (Exh A)</p>
+                    </div>
+                    <button onClick={() => setSelectedFinancialYear(null)} className="text-gray-400 hover:text-red-500 transition-colors">
+                      <i className="fa-solid fa-circle-xmark text-2xl"></i>
+                    </button>
                   </div>
-                  <div className="overflow-y-auto max-h-[300px] custom-scrollbar">
+                  <div className="overflow-y-auto max-h-[400px] custom-scrollbar">
                     <table className="w-full text-left">
-                      <thead className="bg-white sticky top-0 text-[9px] font-black uppercase text-gray-400">
-                        <tr><th className="p-4">Label</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">PDF</th></tr>
+                      <thead className="bg-white sticky top-0 text-[10px] font-black uppercase text-gray-400 border-b">
+                        <tr>
+                          <th className="p-5">Account Label</th>
+                          <th className="p-5 text-right">Verified Amount</th>
+                          <th className="p-5 text-center">Audit Source</th>
+                        </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {financialData.filter(r => r.year === selectedFinancialYear && (selectedCategory === 'solvency' || r.category.toLowerCase().startsWith(selectedCategory.substring(0,4)))).map((row, i) => (
-                          <tr key={i} className="text-xs">
-                            <td className="p-4 font-bold">{row.label}</td>
-                            <td className="p-4 text-right font-mono">${Number(row.amount).toLocaleString()}</td>
-                            <td className="p-4 text-center">
-                               <a href={`${row.storage_url}#page=${row.pdf_page}`} target="_blank" rel="noreferrer" className="text-indigo-600"><i className="fa-solid fa-file-pdf"></i></a>
+                      <tbody className="divide-y divide-gray-100">
+                        {filteredTableRows.map((row, i) => (
+                          <tr key={i} className="hover:bg-gray-50 transition-colors">
+                            <td className="p-5">
+                              <p className="text-xs font-black text-gray-800 uppercase leading-tight">{row.label}</p>
+                              <p className="text-[9px] font-bold text-gray-400 uppercase">{row.hierarchy_path}</p>
+                            </td>
+                            <td className="p-5 text-right font-mono text-sm font-bold text-indigo-600">
+                              ${Number(row.amount).toLocaleString(undefined, {minimumFractionDigits: 2})}
+                            </td>
+                            <td className="p-5 text-center">
+                               <a 
+                                 href={`${row.storage_url}#page=${row.pdf_page}`} 
+                                 target="_blank" 
+                                 rel="noreferrer" 
+                                 className="inline-flex items-center justify-center w-10 h-10 bg-indigo-100 text-indigo-600 rounded-xl hover:bg-indigo-600 hover:text-white transition-all"
+                               >
+                                 <i className="fa-solid fa-file-pdf"></i>
+                               </a>
                             </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                  </div>
+                  <div className="p-4 bg-gray-50 text-center border-t border-gray-100">
+                    <p className="text-[9px] font-black text-gray-400 uppercase">Click the PDF icon to view this exact line item in the state audit.</p>
                   </div>
                 </div>
               )}
 
               {/* FOLDER-BASED DASHBOARDS (EXISTING) */}
-              {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-                <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-2xl text-white mb-4">
-                   <div className="mb-6">
-                    <h3 className="text-xl font-black uppercase">Exhibit A: Liability & Solvency</h3>
-                    <p className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Total Assets vs. Total Debt</p>
-                  </div>
-                  <div className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" />
-                        <YAxis stroke="#ffffff50" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip contentStyle={{ backgroundColor: '#1e1b4b', border: 'none' }} />
-                        <Line type="step" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} />
-                        <Line type="step" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
 
-              {/* TIER 3: GRANULAR VERIFICATION TABLE (Shown inside any financial category) */}
-              {selectedFinancialYear && (selectedCategory === 'assets' || selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-                <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-indigo-600 overflow-hidden mb-8 animate-slide-up">
-                  <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <h3 className="text-lg font-black uppercase">Audit Details: {selectedFinancialYear}</h3>
-                    <button onClick={() => setSelectedFinancialYear(null)} className="text-gray-400 hover:text-red-500"><i className="fa-solid fa-circle-xmark text-xl"></i></button>
-                  </div>
-                  <div className="overflow-x-auto max-h-[300px] custom-scrollbar">
-                    <table className="w-full text-left">
-                      <thead className="bg-white sticky top-0 text-[9px] font-black uppercase text-gray-400">
-                        <tr><th className="p-4">Label</th><th className="p-4 text-right">Amount</th><th className="p-4 text-center">PDF</th></tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {financialData.filter(r => r.year === selectedFinancialYear && (selectedCategory === 'solvency' || r.category.toLowerCase().includes(selectedCategory.slice(0,-1)))).map((row, i) => (
-                          <tr key={i} className="text-xs">
-                            <td className="p-4 font-bold">{row.label}</td>
-                            <td className="p-4 text-right font-mono">${Number(row.amount).toLocaleString()}</td>
-                            <td className="p-4 text-center">
-                               <a href={`${row.storage_url}#page=${row.pdf_page}`} target="_blank" rel="noreferrer" className="text-indigo-600"><i className="fa-solid fa-file-pdf"></i></a>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
+              {/* GRANULAR TABLE RENDERED ABOVE */}
 
               {/* FOLDER-BASED DASHBOARDS (EXISTING) */}
               {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (

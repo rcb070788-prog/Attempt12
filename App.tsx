@@ -329,26 +329,17 @@ const fetchAdminMessages = async () => {
   const fetchFinancialData = async () => {
     if (!supabase) return;
     
-    // Batch 1: 2004 - 2013
-    const { data: batch1 } = await supabase
-      .from('AFR_Exhibit_A')
-      .select('*')
-      .gte('year', 2004)
-      .lte('year', 2013)
-      .or('hierarchy_path.ilike.%Total%,hierarchy_path.ilike.%Metropolitan School%');
+    // We split into three distinct batches to stay well under the 1,000 row limit.
+    // We filter for 'Primary Government' and 'School Department' specifically at the database level.
+    const filter = 'hierarchy_path.ilike.%Primary Government%,hierarchy_path.ilike.%School Department%';
 
-    // Batch 2: 2014 - 2024
-    const { data: batch2 } = await supabase
-      .from('AFR_Exhibit_A')
-      .select('*')
-      .gte('year', 2014)
-      .lte('year', 2024)
-      .or('hierarchy_path.ilike.%Total%,hierarchy_path.ilike.%Metropolitan School%');
+    const { data: b1 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2004).lte('year', 2013).or(filter);
+    const { data: b2 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2014).lte('year', 2023).or(filter);
+    const { data: b3 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2024).lte('year', 2033).or(filter);
+
+    const combined = [...(b1 || []), ...(b2 || []), ...(b3 || [])];
     
-    // Combine batches and remove any potential nulls
-    const combined = [...(batch1 || []), ...(batch2 || [])];
-    
-    // Sort them by year so the lines draw in order
+    // This ensures the charts draw a continuous line from left to right.
     const sorted = combined.sort((a, b) => a.year - b.year);
     setFinancialData(sorted);
   };
@@ -1288,7 +1279,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2004, 2023]} interval={1} />
+                        <XAxis dataKey="year" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2005, 2025]} interval={1} />
                         <YAxis fontSize={12} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase'}} />
@@ -1336,7 +1327,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2004, 2023]} interval={1} />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2005, 2025]} interval={1} />
                         <YAxis stroke="#ffffff50" fontSize={12} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase'}} />
@@ -1363,7 +1354,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   </div>
                   <div className="overflow-y-auto max-h-[400px] custom-scrollbar">
                     <table className="w-full text-left">
-                      <thead className="bg-white sticky top-0 text-[10px] md:text-[14px] font-black uppercase text-gray-400 border-b">
+                      <thead className="bg-white sticky top-0 text-[10px] md:text-[18.66px] font-black uppercase text-gray-400 border-b">
                         <tr>
                           <th className="p-5">Account Label</th>
                           <th className="p-5 text-right">Verified Amount</th>

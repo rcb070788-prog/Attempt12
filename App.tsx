@@ -326,18 +326,35 @@ const fetchAdminMessages = async () => {
 
   const fetchFinancialData = async () => {
     if (!supabase) return;
-    console.log("Fetching Financial Data...");
+    
+    // Fetch ONLY the "Totals" needed for the charts to bypass the 1,000 row limit
     const { data, error } = await supabase
       .from('AFR_Exhibit_A')
       .select('*')
-      .order('year', { ascending: true })
-      .limit(10000);
+      .or('hierarchy_path.eq.Primary Government > Total,hierarchy_path.eq.Component Units > Metropolitan School Department')
+      .order('year', { ascending: true });
     
     if (error) {
-      console.error("Financial Fetch Error:", error.message);
+      console.error("Chart Data Fetch Error:", error.message);
     } else {
-      console.log("Financial Data Received:", data?.length, "rows");
       setFinancialData(data || []);
+    }
+  };
+
+  // New function to fetch the Tier 3 granular details ONLY when a year is clicked
+  const fetchYearDetails = async (year: number) => {
+    if (!supabase) return;
+    const { data, error } = await supabase
+      .from('AFR_Exhibit_A')
+      .select('*')
+      .eq('year', year);
+    
+    if (!error && data) {
+      // Temporarily combine the chart data with the new year details
+      setFinancialData(prev => {
+        const otherData = prev.filter(d => d.year !== year || !d.label); 
+        return [...prev, ...data];
+      });
     }
   };
   const fetchDeletionVotes = async () => {
@@ -1190,7 +1207,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
                     <Line type="monotone" dataKey="totalNetWorth" stroke="#ffffff" strokeWidth={4} dot={false} />
-                    <Tooltip contentStyle={{ display: 'none' }} />
+                    <Tooltip content={(() => null)} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -1234,7 +1251,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   </div>
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
+                      <LineChart data={chartData} onClick={(d) => {
+  if (d?.activeLabel) {
+    const yr = Number(d.activeLabel);
+    setSelectedFinancialYear(yr);
+    fetchYearDetails(yr);
+  }
+}} style={{cursor:'pointer'}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis 
                           dataKey="year" 
@@ -1269,7 +1292,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   </div>
                   <div className="h-[300px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
+                      <LineChart data={chartData} onClick={(d) => {
+  if (d?.activeLabel) {
+    const yr = Number(d.activeLabel);
+    setSelectedFinancialYear(yr);
+    fetchYearDetails(yr);
+  }
+}} style={{cursor:'pointer'}}>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                         <XAxis 
                           dataKey="year" 

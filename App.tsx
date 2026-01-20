@@ -1137,136 +1137,26 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           <div className="max-w-4xl mx-auto space-y-12 py-10">
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
 
-            {/* TIER 1 CHART: County-at-a-glance Solvency */}
-            <div className="bg-indigo-900 p-8 rounded-[2.5rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all" onClick={() => setSelectedCategory('solvency')}>
-              <div className="mb-6">
-                <h3 className="text-xl font-black uppercase">County Solvency at a Glance</h3>
-                <p className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Aggregate Financial Health (20 Year Trend)</p>
+            {/* TIER 1 SPARKLINE: Total Government Solvency */}
+            <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all" onClick={() => setSelectedCategory('solvency')}>
+              <div className="flex justify-between items-start mb-6">
+                <div>
+                  <h3 className="text-xl font-black uppercase leading-none">County Solvency</h3>
+                  <p className="text-indigo-300 text-[10px] font-bold uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
+                </div>
+                <div className="bg-white/10 px-4 py-2 rounded-full border border-white/10">
+                   <span className="text-[10px] font-black uppercase">Click for Details</span>
+                </div>
               </div>
-              <div className="h-[200px] w-full">
+              <div className="h-[180px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData}>
-                    <Line type="monotone" dataKey="totalNetWorth" name="Net Worth" stroke="#ffffff" strokeWidth={4} dot={false} />
+                    <Line type="monotone" dataKey="totalNetWorth" stroke="#ffffff" strokeWidth={4} dot={false} />
                     <Tooltip contentStyle={{ display: 'none' }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-              <div className="mt-4 text-center">
-                <span className="text-[10px] font-black uppercase bg-white/10 px-4 py-2 rounded-full">Click to View Detailed Solvency & Liabilities</span>
-              </div>
             </div>
-              <div className="mb-6">
-                <h3 className="text-xl font-black uppercase">Tier 1: County Solvency</h3>
-                <p className="text-indigo-300 text-[10px] font-black uppercase tracking-widest">Total Assets vs. Total Liabilities (Aggregate)</p>
-              </div>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={chartData} 
-                    onClick={(data) => data && data.activeLabel && setSelectedFinancialYear(Number(data.activeLabel))}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                    <XAxis dataKey="year" stroke="#ffffff50" fontSize={10} fontWeight="bold" />
-                    <YAxis stroke="#ffffff50" fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                    <Tooltip 
-                      contentStyle={{ backgroundColor: '#1e1b4b', border: 'none', borderRadius: '15px' }}
-                      itemStyle={{ fontSize: '12px', fontWeight: 'bold', textTransform: 'uppercase' }}
-                    />
-                    <Legend />
-                    <Line type="step" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />
-                    <Line type="step" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={false} />
-                    <Line type="monotone" dataKey="totalNetWorth" name="Net Worth (Surplus)" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={{ r: 4 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            
-            {/* TIER 2 CHART: Primary vs School Assets */}
-            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
-              <div className="mb-6">
-                <h3 className="text-xl font-black uppercase">Asset Growth Trends</h3>
-                <p className="text-gray-400 text-[10px] font-black uppercase tracking-widest">Primary Government vs. School Department</p>
-              </div>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart 
-                    data={chartData} 
-                    onClick={(data) => data && data.activeLabel && setSelectedFinancialYear(Number(data.activeLabel))}
-                    style={{ cursor: 'pointer' }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                    <XAxis dataKey="year" fontSize={10} fontWeight="bold" tickMargin={10} />
-                    <YAxis fontSize={10} fontWeight="bold" tickFormatter={(value) => `$${(value / 1000000).toFixed(1)}M`} />
-                    <Tooltip 
-                      contentStyle={{ borderRadius: '15px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, '']}
-                    />
-                    <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
-                    <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                    <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={{ r: 4 }} activeDot={{ r: 8 }} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-
-            {/* TIER 3: GRANULAR VERIFICATION TABLE */}
-            {selectedFinancialYear && (
-              <div className="bg-white rounded-[2.5rem] shadow-xl border-2 border-indigo-600 overflow-hidden animate-slide-up">
-                <div className="p-8 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                  <div>
-                    <h3 className="text-2xl font-black uppercase tracking-tighter">Year {selectedFinancialYear} Details</h3>
-                    <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Granular Line-Item Verification</p>
-                  </div>
-                  <button onClick={() => setSelectedFinancialYear(null)} className="text-gray-400 hover:text-red-500 transition-colors">
-                    <i className="fa-solid fa-circle-xmark text-2xl"></i>
-                  </button>
-                </div>
-                <div className="overflow-x-auto max-h-[500px] custom-scrollbar">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="sticky top-0 bg-white shadow-sm font-black uppercase text-gray-400 text-[10px] tracking-widest">
-                      <tr>
-                        <th className="p-6">Entity / Category</th>
-                        <th className="p-6">Label</th>
-                        <th className="p-6 text-right">Amount</th>
-                        <th className="p-6 text-center">Source</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {financialData
-                        .filter(row => row.year === selectedFinancialYear)
-                        .sort((a, b) => a.category.localeCompare(b.category))
-                        .map((row, idx) => (
-                          <tr key={idx} className="hover:bg-indigo-50/50 transition-colors">
-                            <td className="p-6 whitespace-nowrap">
-                              <span className="text-[10px] font-black uppercase text-gray-400 block">{row.hierarchy_path.split(' > ')[0]}</span>
-                              <span className="text-xs font-bold text-indigo-600 uppercase">{row.category}</span>
-                            </td>
-                            <td className="p-6 text-sm font-medium text-gray-900">{row.label}</td>
-                            <td className="p-6 text-right font-mono font-bold text-gray-900">${Number(row.amount).toLocaleString()}</td>
-                            <td className="p-6 text-center">
-                              {row.storage_url && (
-                                <a 
-                                  href={`${row.storage_url}#page=${row.pdf_page}`} 
-                                  target="_blank" 
-                                  rel="noreferrer"
-                                  className="inline-flex items-center justify-center w-8 h-8 bg-indigo-100 text-indigo-600 rounded-lg hover:bg-indigo-600 hover:text-white transition-all"
-                                  title={`Open PDF on Page ${row.pdf_page}`}
-                                >
-                                  <i className="fa-solid fa-file-pdf"></i>
-                                </a>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="p-6 bg-indigo-600 text-white text-center">
-                   <p className="text-[10px] font-black uppercase tracking-[0.2em]">End of Audit Data for Fiscal Year {selectedFinancialYear}</p>
-                </div>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                {CATEGORIES.map(cat => (
@@ -1293,9 +1183,68 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             </div>
 
             <div className="grid grid-cols-1 gap-4 mt-8">
-              {/* DYNAMIC EXHIBIT A: ASSETS VIEW */}
+              
+              {/* ASSETS DRILLDOWN (EXHIBIT A) */}
               {selectedCategory === 'assets' && (
-                <div className="bg-white p-8 rounded-[2.5rem] border-2 border-indigo-600 shadow-xl mb-4">
+                <div className="bg-white p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6 overflow-hidden">
+                  <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded">EXHIBIT A</span>
+                        <h3 className="text-2xl font-black uppercase text-gray-900 tracking-tighter">Asset Trend Analysis</h3>
+                      </div>
+                      <p className="text-gray-400 text-sm font-medium">Comparison of Primary Govt vs. School Dept holdings.</p>
+                    </div>
+                    <i className="fa-solid fa-chart-line text-indigo-600 text-2xl"></i>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                        <XAxis dataKey="year" fontSize={10} fontWeight="bold" />
+                        <YAxis fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <Tooltip />
+                        <Legend iconType="circle" wrapperStyle={{paddingTop: '20px', fontSize: '10px', fontWeight: 'bold'}} />
+                        <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={{r:4}} />
+                        <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={{r:4}} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-6 pt-6 border-t border-gray-50 text-center">
+                     <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest animate-pulse">Click chart to verify rows against PDF</p>
+                  </div>
+                </div>
+              )}
+
+              {/* LIABILITIES & SOLVENCY DRILLDOWN (EXHIBIT A) */}
+              {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
+                <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white mb-6 overflow-hidden">
+                   <div className="flex justify-between items-start mb-8">
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="bg-white text-indigo-900 text-[9px] font-black px-2 py-0.5 rounded">EXHIBIT A</span>
+                        <h3 className="text-2xl font-black uppercase tracking-tighter">Debt & Solvency trend</h3>
+                      </div>
+                      <p className="text-indigo-300 text-sm font-medium">Tracking Total Assets against total Liabilities.</p>
+                    </div>
+                    <i className="fa-solid fa-scale-balanced text-white text-2xl"></i>
+                  </div>
+                  <div className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} onClick={(d) => d?.activeLabel && setSelectedFinancialYear(Number(d.activeLabel))} style={{cursor:'pointer'}}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={10} fontWeight="bold" />
+                        <YAxis stroke="#ffffff50" fontSize={10} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <Tooltip contentStyle={{ backgroundColor: '#1e1b4b', border: 'none' }} />
+                        <Legend wrapperStyle={{paddingTop: '20px'}} />
+                        <Line type="step" dataKey="totalAssets" name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />
+                        <Line type="step" dataKey="totalLiabs" name="Total Liabilities" stroke="#f87171" strokeWidth={3} dot={false} />
+                        <Line type="monotone" dataKey="totalNetWorth" name="Net Worth (Surplus)" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
                   <div className="flex justify-between items-center mb-6">
                     <div>
                       <div className="flex items-center gap-3">

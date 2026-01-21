@@ -349,7 +349,7 @@ const fetchAdminMessages = async () => {
     setFinancialData(sorted);
   };
 
-  // New function to fetch the Tier 3 granular details ONLY when a year is clicked
+  // New function to fetch the Tier 3/4 granular details without duplicating data
   const fetchYearDetails = async (year: number) => {
     if (!supabase) return;
     const { data, error } = await supabase
@@ -358,10 +358,11 @@ const fetchAdminMessages = async () => {
       .eq('year', year);
     
     if (!error && data) {
-      // Temporarily combine the chart data with the new year details
       setFinancialData(prev => {
-        const otherData = prev.filter(d => d.year !== year || !d.label); 
-        return [...prev, ...data];
+        // Create a Map of existing IDs to prevent duplicates
+        const existingIds = new Set(prev.map(item => item.id));
+        const uniqueNewData = data.filter(item => !existingIds.has(item.id));
+        return [...prev, ...uniqueNewData].sort((a, b) => a.year - b.year);
       });
     }
   };
@@ -768,18 +769,19 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       if (chartLevel <= 2 && level === 2) {
         if (cat.includes('asset')) {
           if (path.includes('primary')) e.primaryAssets = amt;
-          if (path.includes('component')) e.schoolAssets = amt;
+          // Capture School Dept specifically if 'component' tag is missing
+          if (path.includes('component') || path.includes('school')) e.schoolAssets = amt;
           e.totalAssets += amt;
         } else if (cat.includes('liabilit')) {
           e.totalLiabs += amt;
         }
       }
 
-      // TIER 3: Entity Specific Solvency (Strict Parent Matching)
-      if (chartLevel === 3 && level === 3 && row.label?.toLowerCase() === selectedParent?.toLowerCase()) {
+      // TIER 3: Entity Specific Solvency (Robust matching for spacing/naming)
+      const isSelectedEntity = row.label?.toLowerCase().includes(selectedParent?.toLowerCase() || '___');
+      if (chartLevel === 3 && level === 3 && isSelectedEntity) {
         if (cat.includes('asset')) e.subAssets = amt;
         else if (cat.includes('liabilit')) e.subLiabs = amt;
-        // Note: Net Worth is calculated after the loop to ensure we have both assets and liabs
       }
 
       // TIER 4: Granular Line Items (Strict Parent + Label Matching)
@@ -1420,7 +1422,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                      <div className="flex flex-wrap gap-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
                        {Array.from(new Set(
                          financialData
-                           .filter(d => d.hierarchy_level === 4 && d.parent_entity?.toLowerCase() === selectedParent?.toLowerCase())
+                           .filter(d => {
+                             const isTier4 = d.hierarchy_level === 4;
+                             const belongsToParent = d.parent_entity?.toLowerCase() === selectedParent?.toLowerCase() || 
+                                                     d.hierarchy_path?.toLowerCase().includes(selectedParent?.toLowerCase() || '');
+                             return isTier4 && belongsToParent;
+                           })
                            .map(d => d.label)
                        )).sort().map(label => (
                          <button 

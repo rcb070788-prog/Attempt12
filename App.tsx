@@ -751,6 +751,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       const level = row.hierarchy_level;
       const cat = (row.category || '').trim().toLowerCase();
       const path = (row.hierarchy_path || '').toLowerCase();
+      const parent = (row.parent_entity || '').toLowerCase();
 
       if (!yearMap.has(yr)) {
         yearMap.set(yr, { 
@@ -763,8 +764,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
       const e = yearMap.get(yr);
 
-      // TIER 2: Main County/Entity Totals
-      if (level === 2) {
+      // TIER 1 & 2: Main County/Entity Totals
+      if (chartLevel <= 2 && level === 2) {
         if (cat.includes('asset')) {
           if (path.includes('primary')) e.primaryAssets = amt;
           if (path.includes('component')) e.schoolAssets = amt;
@@ -774,29 +775,28 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         }
       }
 
-      // TIER 3: Entity Specific Solvency (Governmental, School Dept, etc.)
-      if (level === 3 && path.includes(selectedParent?.toLowerCase() || '')) {
+      // TIER 3: Entity Specific Solvency (Strict Parent Matching)
+      if (chartLevel === 3 && level === 3 && row.label?.toLowerCase() === selectedParent?.toLowerCase()) {
         if (cat.includes('asset')) e.subAssets = amt;
         else if (cat.includes('liabilit')) e.subLiabs = amt;
-        e.subNetWorth = e.subAssets - e.subLiabs;
-        // Asset specific view
-        if (cat.includes(selectedCategory?.slice(0,-1).toLowerCase() || 'asset')) {
-          e.drillDownValue = amt;
-        }
+        // Note: Net Worth is calculated after the loop to ensure we have both assets and liabs
       }
 
-      // TIER 4: Granular Line Items (YoY Track)
-      if (chartLevel === 4 && level === 4 && row.label === selectedLineItem) {
-        if (cat.includes(selectedCategory?.slice(0,-1).toLowerCase() || 'asset')) {
-          e.drillDownValue = amt;
-        }
+      // TIER 4: Granular Line Items (Strict Parent + Label Matching)
+      if (chartLevel === 4 && level === 4 && 
+          row.label === selectedLineItem && 
+          parent === selectedParent?.toLowerCase()) {
+        e.drillDownValue = amt;
       }
-
-      e.totalNetWorth = e.totalAssets - e.totalLiabs;
     });
 
-    return Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
-  }, [financialData, chartLevel, selectedParent, selectedLineItem, selectedCategory]);
+    // Final Calculation Pass for Solvency
+    return Array.from(yearMap.values()).map(e => ({
+      ...e,
+      totalNetWorth: e.totalAssets - e.totalLiabs,
+      subNetWorth: e.subAssets - e.subLiabs
+    })).sort((a, b) => a.year - b.year);
+  }, [financialData, chartLevel, selectedParent, selectedLineItem]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {
@@ -1362,10 +1362,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={14} fontWeight="bold" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2005, 2025]} interval={1} />
-                        <YAxis stroke="#ffffff50" fontSize={12} fontWeight="bold" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2004, 2024]} interval={1} />
+                        <YAxis stroke="#ffffff50" fontSize={14} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={36} iconType="circle" wrapperStyle={{fontSize: '14px', fontWeight: 'bold', textTransform: 'uppercase'}} />
+                        <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
                         {chartLevel <= 3 ? (
                           <>
                             {/* Shows County-wide totals at Level 1/2, or Entity-specific totals at Level 3 */}
@@ -1415,14 +1415,18 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                    <div className="w-full p-8 bg-indigo-50 rounded-[2.5rem] border-2 border-indigo-100 shadow-inner">
                      <div className="flex justify-between items-center mb-6">
                         <p className="text-[18.66px] font-black text-indigo-900 uppercase">Track a specific {selectedParent} account YoY:</p>
-                        <button onClick={() => setChartLevel(2)} className="text-[14px] font-bold text-indigo-400 uppercase hover:text-indigo-600">Back</button>
+                        <button onClick={() => setChartLevel(2)} className="text-[18.66px] font-black text-indigo-400 uppercase hover:text-indigo-600">Back</button>
                      </div>
-                     <div className="flex flex-wrap gap-2 max-h-[250px] overflow-y-auto custom-scrollbar pr-2">
-                       {Array.from(new Set(financialData.filter(d => d.hierarchy_level === 4 && d.hierarchy_path?.includes(selectedParent || '')).map(d => d.label))).sort().map(label => (
+                     <div className="flex flex-wrap gap-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
+                       {Array.from(new Set(
+                         financialData
+                           .filter(d => d.hierarchy_level === 4 && d.parent_entity?.toLowerCase() === selectedParent?.toLowerCase())
+                           .map(d => d.label)
+                       )).sort().map(label => (
                          <button 
                            key={label}
                            onClick={() => { setChartLevel(4); setSelectedLineItem(label); }}
-                           className="px-4 py-2 bg-white border-2 border-indigo-100 rounded-xl text-[14px] font-bold text-indigo-600 hover:border-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
+                           className="px-6 py-3 bg-white border-2 border-indigo-200 rounded-xl text-[18.66px] font-black text-indigo-600 hover:border-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
                          >
                            {label}
                          </button>

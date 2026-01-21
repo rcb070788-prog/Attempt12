@@ -756,40 +756,36 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         yearMap.set(yr, { 
           year: yr, 
           primaryAssets: 0, schoolAssets: 0, totalAssets: 0, 
-          totalLiabs: 0, totalNetWorth: 0, drillDownValue: 0 
+          totalLiabs: 0, totalNetWorth: 0, 
+          subAssets: 0, subLiabs: 0, subNetWorth: 0,
+          drillDownValue: 0 
         });
       }
       const e = yearMap.get(yr);
 
-      // TIER 1 & 2: Main Solvency View
+      // TIER 2: Main County/Entity Totals
       if (level === 2) {
-        const isPrimary = path.includes('primary');
-        const isSchool = path.includes('component');
-
         if (cat.includes('asset')) {
-          if (isPrimary) e.primaryAssets = amt;
-          if (isSchool) e.schoolAssets = amt;
+          if (path.includes('primary')) e.primaryAssets = amt;
+          if (path.includes('component')) e.schoolAssets = amt;
           e.totalAssets += amt;
         } else if (cat.includes('liabilit')) {
           e.totalLiabs += amt;
         }
       }
 
-      // TIER 3: Entity Solvency (Assets, Liabs, and Net Worth for the specific sub-entity)
+      // TIER 3: Entity Specific Solvency (Governmental, School Dept, etc.)
       if (level === 3 && path.includes(selectedParent?.toLowerCase() || '')) {
         if (cat.includes('asset')) e.subAssets = amt;
         else if (cat.includes('liabilit')) e.subLiabs = amt;
-        e.subNetWorth = (e.subAssets || 0) - (e.subLiabs || 0);
-        
-        // Also set drillDownValue so the Assets-only chart continues to work
+        e.subNetWorth = e.subAssets - e.subLiabs;
+        // Asset specific view
         if (cat.includes(selectedCategory?.slice(0,-1).toLowerCase() || 'asset')) {
           e.drillDownValue = amt;
         }
       }
 
-      // TIER 4: Single Line Item Tracking
-      if (chartLevel === 4 && level === 4 && row.label === selectedLineItem) {
-      
+      // TIER 4: Granular Line Items (YoY Track)
       if (chartLevel === 4 && level === 4 && row.label === selectedLineItem) {
         if (cat.includes(selectedCategory?.slice(0,-1).toLowerCase() || 'asset')) {
           e.drillDownValue = amt;
@@ -1338,9 +1334,18 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         {hoveredData ? (
                           <>
                             <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">'{String(hoveredData.year).slice(-2)}</p></div>
-                            <div className="text-center"><p className="text-[10px] font-black text-green-300 uppercase">Assets</p><p className="text-lg md:text-[18.66px] font-black text-green-400">${((chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets) / 1000000).toFixed(2)}M</p></div>
-                            <div className="text-center"><p className="text-[10px] font-black text-red-300 uppercase">Debt</p><p className="text-lg md:text-[18.66px] font-black text-red-400">${((chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs) / 1000000).toFixed(2)}M</p></div>
-                            <div className="text-center"><p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p><p className="text-lg md:text-[18.66px] font-black text-white">${((chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth) / 1000000).toFixed(2)}M</p></div>
+                            <div className="text-center">
+                              <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
+                              <p className="text-lg md:text-[18.66px] font-black text-green-400">${(((chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets) || 0) / 1000000).toFixed(2)}M</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[10px] font-black text-red-300 uppercase">Debt</p>
+                              <p className="text-lg md:text-[18.66px] font-black text-red-400">${(((chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs) || 0) / 1000000).toFixed(2)}M</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p>
+                              <p className="text-lg md:text-[18.66px] font-black text-white">${(((chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth) || 0) / 1000000).toFixed(2)}M</p>
+                            </div>
                           </>
                         ) : (
                           <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>

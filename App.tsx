@@ -747,71 +747,68 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     });
   }, [boardMessages, searchQuery]);
 
-  // DATA TRANSFORMER: Orchestrates YoY Trends based on cleaned Hierarchy (Tiers 2 & 3)
+  // DATA TRANSFORMER: Orchestrates YoY Trends based on standardized Hierarchy
   const chartData = useMemo(() => {
     const yearMap = new Map();
 
     financialData.forEach(row => {
       const yr = row.year;
-      const amt = isNaN(Number(row.amount)) ? 0 : Number(row.amount);
-      const level = row.hierarchy_level;
-      const cat = (row.category || '').trim().toLowerCase();
-      const path = (row.hierarchy_path || '').toLowerCase();
+      const amt = Number(row.amount || 0);
+      const level = Number(row.hierarchy_level);
+      const label = (row.label || '').trim();
+      const cat = (row.category || '').toLowerCase();
 
       if (!yearMap.has(yr)) {
         yearMap.set(yr, { 
           year: yr, 
-          primaryAssets: 0, schoolAssets: 0, 
-          primaryLiabs: 0, schoolLiabs: 0,
-          primaryNetWorth: 0, schoolNetWorth: 0,
+          totalAssets: 0, totalLiabs: 0, totalNetWorth: 0,
+          primaryAssets: 0, primaryLiabs: 0, primaryNetWorth: 0,
+          schoolAssets: 0, schoolLiabs: 0, schoolNetWorth: 0,
           subAssets: 0, subLiabs: 0, subNetWorth: 0
         });
       }
       const e = yearMap.get(yr);
 
-      // TIER 2: Grand Totals
+      // Tier 1: Pull Moore County Grand Total
+      if (level === 1) {
+        if (cat.includes('asset')) e.totalAssets = amt;
+        else if (cat.includes('liabilit')) e.totalLiabs = amt;
+        else if (cat.includes('net')) e.totalNetWorth = amt;
+      }
+
+      // Tier 2: Pull Pillars for Comparison
       if (level === 2) {
-        if (cat.includes('asset')) {
-          if (path.includes('primary')) e.primaryAssets = amt;
-          if (path.includes('school') || path.includes('component')) e.schoolAssets = amt;
-        } else if (cat.includes('liabilit')) {
-          if (path.includes('primary')) e.primaryLiabs = amt;
-          if (path.includes('school') || path.includes('component')) e.schoolLiabs = amt;
-        } else if (cat.includes('net position') || cat.includes('net assets')) {
-          if (path.includes('primary')) e.primaryNetWorth = amt;
-          if (path.includes('school') || path.includes('component')) e.schoolNetWorth = amt;
+        if (label === 'Primary Government') {
+          if (cat.includes('asset')) e.primaryAssets = amt;
+          else if (cat.includes('liabilit')) e.primaryLiabs = amt;
+          else if (cat.includes('net')) e.primaryNetWorth = amt;
+        } else if (label === 'Total Component Units') {
+          if (cat.includes('asset')) e.schoolAssets = amt;
+          else if (cat.includes('liabilit')) e.schoolLiabs = amt;
+          else if (cat.includes('net')) e.schoolNetWorth = amt;
         }
       }
 
-      // TIER 3: Entity Specific Solvency
-      const pathStr = (row.hierarchy_path || '').toLowerCase();
-      const isSchoolSearch = selectedParent === 'School';
-      
-      // Match if path contains the name, OR if searching schools and path contains "component"
-      const isMatch = selectedParent && (
-        pathStr.includes(selectedParent.toLowerCase()) || 
-        (isSchoolSearch && pathStr.includes('component'))
-      );
-
-      // Logic: Schools and 2020 Gaps use Level 2 as a proxy for Level 3
-      const isCorrectLevel = (level === 3) || (level === 2 && (isSchoolSearch || yr === 2020));
-
-      if (chartLevel === 3 && isCorrectLevel && isMatch) {
-        if (cat.includes('asset')) e.subAssets = amt;
-        else if (cat.includes('liabilit')) e.subLiabs = amt;
-        else if (cat.includes('net position') || cat.includes('net assets')) e.subNetWorth = amt;
+      // Tier 3: Drill-down logic for specific Entities
+      if (level === 3 && chartLevel === 3) {
+        // Map UI selection to Database labels
+        const dbTarget = selectedParent === 'School' ? 'School Department' : 
+                         selectedParent === 'Emergency' ? 'Emergency Communications District' : 
+                         selectedParent === 'Business-type' ? 'Business-type Activities' : 
+                         'Governmental Activities';
+        
+        if (label === dbTarget) {
+          if (cat.includes('asset')) e.subAssets = amt;
+          else if (cat.includes('liabilit')) e.subLiabs = amt;
+          else if (cat.includes('net')) e.subNetWorth = amt;
+        }
       }
 
-      // Handle 2020 Business-type Activities gap
-      if (yr === 2020 && selectedParent === 'Business-type') {
-        e.isCovidGap = true;
-      }
+      if (yr === 2020 && selectedParent === 'Business-type') e.isCovidGap = true;
     });
 
-    const sortedArr = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
-
-    return sortedArr.map((e, idx, arr) => {
-      // Interpolate Business-type Activities for 2020 to create a straight line
+    return Array.from(yearMap.values()).sort((a, b) => a.year - b.year).map((e, idx, arr) => {
+      // COVID Interpolation for Business-type (Tier 3)
       if (e.year === 2020 && selectedParent === 'Business-type' && e.isCovidGap) {
         const prev = arr.find(r => r.year === 2019);
         const next = arr.find(r => r.year === 2021);
@@ -821,17 +818,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           e.subNetWorth = (prev.subNetWorth + next.subNetWorth) / 2;
         }
       }
-
-      const drillDownValue = selectedCategory === 'assets' ? e.subAssets : e.subNetWorth;
-      return {
-        ...e,
-        drillDownValue,
-        totalAssets: e.primaryAssets + e.schoolAssets,
-        totalLiabs: e.primaryLiabs + e.schoolLiabs,
-        totalNetWorth: (e.primaryNetWorth + e.schoolNetWorth) || (e.primaryAssets + e.schoolAssets - (e.primaryLiabs + e.schoolLiabs)),
-        subNetWorth: e.subNetWorth || (e.subAssets - e.subLiabs)
-      };
-    }).sort((a, b) => a.year - b.year);
+      return e;
+    });
   }, [financialData, chartLevel, selectedParent]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
@@ -1355,9 +1343,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                             ) : (
                               <>
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{hoveredData.year}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-green-600 uppercase">Assets</p><p className="text-lg md:text-[18.66px] font-black text-green-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-red-500 uppercase">Debt</p><p className="text-lg md:text-[18.66px] font-black text-red-600">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p><p className="text-lg md:text-[18.66px] font-black text-indigo-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-600 uppercase">Total Assets</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p></div>
+                                {chartLevel < 3 && (
+                                  <>
+                                    <div className="text-center"><p className="text-[10px] font-black text-[#4f46e5] uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">{formatCurrency(Number(hoveredData.primaryAssets))}</p></div>
+                                    <div className="text-center"><p className="text-[10px] font-black text-[#ec4899] uppercase">Component Units</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">{formatCurrency(Number(hoveredData.schoolAssets))}</p></div>
+                                  </>
+                                )}
                               </>
                             )}
                           </>

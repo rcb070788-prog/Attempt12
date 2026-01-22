@@ -81,6 +81,7 @@ export default function App() {
   const [stagedAdminReplyFiles, setStagedAdminReplyFiles] = useState<{url: string, name: string}[]>([]);
   const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
   const [financialData, setFinancialData] = useState<any[]>([]);
+  const [yearDetailData, setYearDetailData] = useState<any[]>([]);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   // Navigation State for YoY Drill-down
@@ -349,7 +350,7 @@ const fetchAdminMessages = async () => {
     setFinancialData(sorted);
   };
 
-  // New function to fetch the Tier 3/4 granular details without duplicating data
+  // Isolates drill-down data so the main graph doesn't "jump"
   const fetchYearDetails = async (year: number) => {
     if (!supabase) return;
     const { data, error } = await supabase
@@ -358,12 +359,7 @@ const fetchAdminMessages = async () => {
       .eq('year', year);
     
     if (!error && data) {
-      setFinancialData(prev => {
-        // Create a Map of existing IDs to prevent duplicates
-        const existingIds = new Set(prev.map(item => item.id));
-        const uniqueNewData = data.filter(item => !existingIds.has(item.id));
-        return [...prev, ...uniqueNewData].sort((a, b) => a.year - b.year);
-      });
+      setYearDetailData(data);
     }
   };
   const fetchDeletionVotes = async () => {
@@ -742,7 +738,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     });
   }, [boardMessages, searchQuery]);
 
-  // DATA TRANSFORMER: Orchestrates YoY Trends across 4 Tiers of government data
+  // DATA TRANSFORMER: Orchestrates YoY Trends based on cleaned Hierarchy (Tiers 2 & 3)
   const chartData = useMemo(() => {
     const yearMap = new Map();
 
@@ -752,54 +748,56 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       const level = row.hierarchy_level;
       const cat = (row.category || '').trim().toLowerCase();
       const path = (row.hierarchy_path || '').toLowerCase();
-      const parent = (row.parent_entity || '').toLowerCase();
 
       if (!yearMap.has(yr)) {
         yearMap.set(yr, { 
           year: yr, 
-          primaryAssets: 0, schoolAssets: 0, totalAssets: 0, 
-          totalLiabs: 0, totalNetWorth: 0, 
-          subAssets: 0, subLiabs: 0, subNetWorth: 0,
-          drillDownValue: 0 
+          primaryAssets: 0, schoolAssets: 0, 
+          primaryLiabs: 0, schoolLiabs: 0,
+          subAssets: 0, subLiabs: 0, subNetWorth: 0
         });
       }
       const e = yearMap.get(yr);
 
-      // TIER 1 & 2: Main County/Entity Totals
-      if (chartLevel <= 2 && level === 2) {
+      // TIER 2: Grand Totals (Cleaned Hierarchy - Locks in 79M accuracy)
+      if (level === 2) {
         if (cat.includes('asset')) {
           if (path.includes('primary')) e.primaryAssets = amt;
-          // Capture School Dept specifically if 'component' tag is missing
-          if (path.includes('component') || path.includes('school')) e.schoolAssets = amt;
-          e.totalAssets += amt;
+          if (path.includes('school') || path.includes('component')) e.schoolAssets = amt;
         } else if (cat.includes('liabilit')) {
-          e.totalLiabs += amt;
+          if (path.includes('primary')) e.primaryLiabs = amt;
+          if (path.includes('school') || path.includes('component')) e.schoolLiabs = amt;
         }
       }
 
-      // TIER 3: Entity Specific Solvency (Robust matching for spacing/naming)
-      const isSelectedEntity = row.label?.toLowerCase().includes(selectedParent?.toLowerCase() || '___');
-      if (chartLevel === 3 && level === 3 && isSelectedEntity) {
+      // TIER 3: Entity Specific Solvency (Drill-down data)
+      const isMatch = row.label?.toLowerCase() === selectedParent?.toLowerCase() || 
+                      row.label?.toLowerCase().includes(selectedParent?.toLowerCase() || '___');
+      if (chartLevel === 3 && level === 3 && isMatch) {
         if (cat.includes('asset')) e.subAssets = amt;
-        else if (cat.includes('liabilit')) e.subLiabs = amt;
+        if (cat.includes('liabilit')) e.subLiabs = amt;
+        if (cat.includes('net position') || cat.includes('net assets')) e.subNetWorth = amt;
       }
+    });
 
-      });
-
-    // Final Calculation Pass for Solvency
-    return Array.from(yearMap.values()).map(e => ({
-      ...e,
-      totalNetWorth: e.totalAssets - e.totalLiabs,
-      subNetWorth: e.subAssets - e.subLiabs
-    })).sort((a, b) => a.year - b.year);
+    return Array.from(yearMap.values()).map(e => {
+      const totalAssets = e.primaryAssets + e.schoolAssets;
+      const totalLiabs = e.primaryLiabs + e.schoolLiabs;
+      return {
+        ...e,
+        totalAssets,
+        totalLiabs,
+        totalNetWorth: totalAssets - totalLiabs,
+        subNetWorth: e.subNetWorth || (e.subAssets - e.subLiabs)
+      };
+    }).sort((a, b) => a.year - b.year);
   }, [financialData, chartLevel, selectedParent]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {
     if (!selectedFinancialYear || !selectedCategory) return [];
     
-    return financialData.filter(row => {
-      const isYearMatch = row.year === selectedFinancialYear;
+    return yearDetailData.filter(row => {
       const rowCat = (row.category || '').trim().toLowerCase();
       
       // If we're on the 'Solvency' view, show everything for that year.
@@ -1359,9 +1357,9 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
                         <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2004, 2024]} interval={1} />
-                        <YAxis stroke="#ffffff50" fontSize={14} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
+                        <YAxis stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
+                        <Legend verticalAlign="bottom" height={80} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />
                         <>
                           {/* Shows County-wide totals at Level 1/2, or Entity-specific totals at Level 3 */}
                           <Line type="monotone" dataKey={chartLevel === 3 ? "subAssets" : "totalAssets"} name={chartLevel === 3 ? `${selectedParent} Assets` : "Total Assets"} stroke="#4ade80" strokeWidth={3} dot={chartLevel === 3} />

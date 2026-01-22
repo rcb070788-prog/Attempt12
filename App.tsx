@@ -774,25 +774,29 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
 
       // TIER 3: Entity Specific Solvency
-      // Matching entity names against parent_entity or hierarchy_path instead of the generic label
-      const isMatch = selectedParent && (
-        row.parent_entity?.toLowerCase().includes(selectedParent.toLowerCase()) || 
-        row.hierarchy_path?.toLowerCase().includes(selectedParent.toLowerCase())
-      );
+      const isMatch = selectedParent && (row.hierarchy_path || '').toLowerCase().includes(selectedParent.toLowerCase());
       
-      if (chartLevel === 3 && level === 3 && isMatch) {
+      // In 2020 (COVID Gap), specific entities were promoted to Tier 2. 
+      // We allow Level 2 or 3 to count here to bridge that gap.
+      if (chartLevel === 3 && (level === 3 || (level === 2 && yr === 2020)) && isMatch) {
         if (cat.includes('asset')) e.subAssets = amt;
         if (cat.includes('liabilit')) e.subLiabs = amt;
         if (cat.includes('net position') || cat.includes('net assets')) e.subNetWorth = amt;
       }
+
+      // Handle 2020 Business-type Activities gap
+      if (yr === 2020 && selectedParent === 'Business-type') {
+        e.isCovidGap = true;
+      }
     });
 
     return Array.from(yearMap.values()).map(e => {
+      const drillDownValue = selectedCategory === 'assets' ? e.subAssets : e.subNetWorth;
       return {
         ...e,
+        drillDownValue,
         totalAssets: e.primaryAssets + e.schoolAssets,
         totalLiabs: e.primaryLiabs + e.schoolLiabs,
-        // Use verified Net Position total, fallback to calculation if auditor row is missing
         totalNetWorth: (e.primaryNetWorth + e.schoolNetWorth) || (e.primaryAssets + e.schoolAssets - (e.primaryLiabs + e.schoolLiabs)),
         subNetWorth: e.subNetWorth || (e.subAssets - e.subLiabs)
       };
@@ -805,13 +809,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     
     return yearDetailData.filter(row => {
       const rowCat = (row.category || '').trim().toLowerCase();
-      
-      // If we're on the 'Solvency' view, show everything for that year.
-      // Otherwise, show only the category (Assets/Liabilities) matching the current dashboard.
-      if (selectedCategory === 'solvency') return isYearMatch;
-      return isYearMatch && rowCat.includes(selectedCategory.slice(0, -1)); // matches 'asset' in 'Assets'
+      if (selectedCategory === 'solvency') return true;
+      return rowCat.includes(selectedCategory.slice(0, -1));
     });
-  }, [financialData, selectedFinancialYear, selectedCategory]);
+  }, [yearDetailData, selectedFinancialYear, selectedCategory]);
 
   // --- RENDER HELPERS (RESTORING THREADED COMMENTS) ---
   const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0) => {
@@ -1303,7 +1304,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} stroke="#94a3b8" domain={[2004, 2025]} interval={1} />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} domain={[2004, 2025]} interval={1} />
                         <YAxis fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />

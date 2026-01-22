@@ -1279,7 +1279,11 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
                         {hoveredData ? (
                           <>
-                            <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">'{String(hoveredData.year).slice(-2)}</p></div>
+                            {hoveredData.isCovidGap ? (
+                              <p className="text-[14px] font-black text-indigo-600 uppercase italic">This data was not reported due to COVID-19.</p>
+                            ) : (
+                              <>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{String(hoveredData.year).slice(-2)}</p></div>
                             <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">${(hoveredData.primaryAssets / 1000000).toFixed(2)}M</p></div>
                             <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">${(hoveredData.schoolAssets / 1000000).toFixed(2)}M</p></div>
                           </>
@@ -1333,7 +1337,11 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       <div className="bg-white/5 rounded-2xl p-4 flex justify-around items-center border border-white/10 min-h-[60px]">
                         {hoveredData ? (
                           <>
-                            <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">'{String(hoveredData.year).slice(-2)}</p></div>
+                            {hoveredData.isCovidGap ? (
+                              <p className="text-[14px] font-black text-white uppercase italic">This data was not reported due to COVID-19.</p>
+                            ) : (
+                              <>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{String(hoveredData.year).slice(-2)}</p></div>
                             <div className="text-center">
                               <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
                               <p className="text-lg md:text-[18.66px] font-black text-green-400">${(((chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets) || 0) / 1000000).toFixed(2)}M</p>

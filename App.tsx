@@ -763,6 +763,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           year: yr, 
           primaryAssets: 0, schoolAssets: 0, 
           primaryLiabs: 0, schoolLiabs: 0,
+          primaryNetWorth: 0, schoolNetWorth: 0,
           subAssets: 0, subLiabs: 0, subNetWorth: 0
         });
       }
@@ -821,7 +822,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         }
       }
 
-      const drillDownValue = selectedCategory === 'assets' ? e.subAssets : e.subNetWorth;
       const drillDownValue = selectedCategory === 'assets' ? e.subAssets : e.subNetWorth;
       return {
         ...e,
@@ -1335,7 +1335,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart 
                         data={chartData} 
-                        onMouseMove={(e) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
+                        onMouseMove={(e) => (e && e.activePayload) ? setHoveredData(e.activePayload[0].payload) : null}
                         onMouseLeave={() => setHoveredData(null)}
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >

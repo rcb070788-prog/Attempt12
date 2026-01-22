@@ -65,14 +65,6 @@ export const DASHBOARDS: (DashboardConfig & { status?: string })[] = [
     status: 'Official'
   },
   {
-    id: 'education-budget',
-    category: 'expenses',
-    title: 'School District Allocation',
-    description: 'Transparency report on how local taxes are being used for school infrastructure.',
-    folderPath: '/dashboards/expenses/education/index.html',
-    status: 'Planned'
-  },
-  {
     id: 'property-tax-revenue',
     category: 'revenues',
     title: 'Property Tax Collection',

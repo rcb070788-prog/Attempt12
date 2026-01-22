@@ -1259,11 +1259,47 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                    <span className="text-[10px] font-black uppercase">Click for Details</span>
                 </div>
               </div>
-              <div className="h-[180px] w-full">
+              <div className="h-[250px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <Line type="monotone" dataKey="totalNetWorth" stroke="#ffffff" strokeWidth={4} dot={false} />
-                    <Tooltip content={(() => null)} />
+                  <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
+                    <XAxis 
+                      dataKey="year" 
+                      stroke="#94a3b8" 
+                      fontSize={12} 
+                      fontWeight="900" 
+                      ticks={[2005, 2010, 2015, 2020, 2025]}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <YAxis 
+                      stroke="#94a3b8" 
+                      fontSize={12} 
+                      fontWeight="900" 
+                      tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+                    <Tooltip 
+                      cursor={{stroke: '#ffffff', strokeWidth: 1}}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-4 rounded-2xl shadow-xl border border-gray-100">
+                              <p className="text-[10px] font-black text-indigo-600 mb-2 uppercase">{data.year} Totals</p>
+                              <div className="space-y-1 text-left">
+                                <p className="text-xs font-bold text-gray-900 flex justify-between gap-4">Assets: <span className="font-mono">{formatCurrency(Number(data.totalAssets || 0))}</span></p>
+                                <p className="text-xs font-bold text-gray-900 flex justify-between gap-4">Debt: <span className="font-mono">{formatCurrency(Number(data.totalLiabs || 0))}</span></p>
+                                <p className="text-xs font-bold text-indigo-600 border-t pt-1 flex justify-between gap-4">Net Worth: <span className="font-mono">{formatCurrency(Number(data.totalNetWorth || 0))}</span></p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Line type="monotone" dataKey="totalNetWorth" stroke="#ffffff" strokeWidth={4} dot={{ r: 4, fill: '#ffffff' }} activeDot={{ r: 6 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -1318,9 +1354,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                               </div>
                             ) : (
                               <>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{String(hoveredData.year).slice(-2)}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">{formatCurrency(hoveredData?.primaryAssets)}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">{formatCurrency(hoveredData?.schoolAssets)}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{hoveredData.year}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-green-600 uppercase">Assets</p><p className="text-lg md:text-[18.66px] font-black text-green-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-red-500 uppercase">Debt</p><p className="text-lg md:text-[18.66px] font-black text-red-600">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p><p className="text-lg md:text-[18.66px] font-black text-indigo-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}</p></div>
                               </>
                             )}
                           </>
@@ -1340,7 +1377,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} stroke="#94a3b8" domain={[2004, 2025]} interval={1} />
+                        <XAxis dataKey="year" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} stroke="#94a3b8" />
                         <YAxis fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
@@ -1381,18 +1418,18 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                               </div>
                             ) : (
                               <>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{String(hoveredData.year).slice(-2)}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{hoveredData.year}</p></div>
                                 <div className="text-center">
                                   <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-green-400">{formatCurrency(chartLevel === 3 ? hoveredData?.subAssets : hoveredData?.totalAssets)}</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-green-400">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p>
                                 </div>
                                 <div className="text-center">
                                   <p className="text-[10px] font-black text-red-300 uppercase">Debt</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-red-400">{formatCurrency(chartLevel === 3 ? hoveredData?.subLiabs : hoveredData?.totalLiabs)}</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-red-400">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}</p>
                                 </div>
                                 <div className="text-center">
                                   <p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-white">{formatCurrency(chartLevel === 3 ? hoveredData?.subNetWorth : hoveredData?.totalNetWorth)}</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-white">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}</p>
                                 </div>
                               </>
                             )}
@@ -1412,7 +1449,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} domain={[2004, 2025]} interval={1} />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} />
                         <YAxis stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={100} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />

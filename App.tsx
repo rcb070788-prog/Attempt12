@@ -784,13 +784,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         else if (cat.includes('liabilit')) e.subLiabs = amt;
       }
 
-      // TIER 4: Granular Line Items (Strict Parent + Label Matching)
-      if (chartLevel === 4 && level === 4 && 
-          row.label === selectedLineItem && 
-          parent === selectedParent?.toLowerCase()) {
-        e.drillDownValue = amt;
-      }
-    });
+      });
 
     // Final Calculation Pass for Solvency
     return Array.from(yearMap.values()).map(e => ({
@@ -798,7 +792,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       totalNetWorth: e.totalAssets - e.totalLiabs,
       subNetWorth: e.subAssets - e.subLiabs
     })).sort((a, b) => a.year - b.year);
-  }, [financialData, chartLevel, selectedParent, selectedLineItem]);
+  }, [financialData, chartLevel, selectedParent]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {
@@ -1368,17 +1362,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         <YAxis stroke="#ffffff50" fontSize={14} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
-                        {chartLevel <= 3 ? (
-                          <>
-                            {/* Shows County-wide totals at Level 1/2, or Entity-specific totals at Level 3 */}
-                            <Line type="monotone" dataKey={chartLevel === 3 ? "subAssets" : "totalAssets"} name={chartLevel === 3 ? "Entity Assets" : "Total Assets"} stroke="#4ade80" strokeWidth={3} dot={chartLevel === 3} />
-                            <Line type="monotone" dataKey={chartLevel === 3 ? "subLiabs" : "totalLiabs"} name={chartLevel === 3 ? "Entity Debt" : "Total Liabilities"} stroke="#f87171" strokeWidth={3} dot={chartLevel === 3} />
-                            <Line type="monotone" dataKey={chartLevel === 3 ? "subNetWorth" : "totalNetWorth"} name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={chartLevel === 3} />
-                          </>
-                        ) : (
-                          /* Only Tier 4 (Line Items) shows a single trend line */
-                          <Line type="monotone" dataKey="drillDownValue" name={selectedLineItem} stroke="#ffffff" strokeWidth={6} dot={true} />
-                        )}
+                        <>
+                          {/* Shows County-wide totals at Level 1/2, or Entity-specific totals at Level 3 */}
+                          <Line type="monotone" dataKey={chartLevel === 3 ? "subAssets" : "totalAssets"} name={chartLevel === 3 ? `${selectedParent} Assets` : "Total Assets"} stroke="#4ade80" strokeWidth={3} dot={chartLevel === 3} />
+                          <Line type="monotone" dataKey={chartLevel === 3 ? "subLiabs" : "totalLiabs"} name={chartLevel === 3 ? `${selectedParent} Debt` : "Total Liabilities"} stroke="#f87171" strokeWidth={3} dot={chartLevel === 3} />
+                          <Line type="monotone" dataKey={chartLevel === 3 ? "subNetWorth" : "totalNetWorth"} name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={chartLevel === 3} />
+                        </>
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -1414,41 +1403,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                 )}
                 
                 {chartLevel === 3 && (
-                   <div className="w-full p-8 bg-indigo-50 rounded-[2.5rem] border-2 border-indigo-100 shadow-inner">
-                     <div className="flex justify-between items-center mb-6">
-                        <p className="text-[18.66px] font-black text-indigo-900 uppercase">Track a specific {selectedParent} account YoY:</p>
-                        <button onClick={() => setChartLevel(2)} className="text-[18.66px] font-black text-indigo-400 uppercase hover:text-indigo-600">Back</button>
-                     </div>
-                     <div className="flex flex-wrap gap-3 max-h-[400px] overflow-y-auto custom-scrollbar pr-2">
-                       {Array.from(new Set(
-                         financialData
-                           .filter(d => {
-                             const isTier4 = d.hierarchy_level === 4;
-                             const belongsToParent = d.parent_entity?.toLowerCase() === selectedParent?.toLowerCase() || 
-                                                     d.hierarchy_path?.toLowerCase().includes(selectedParent?.toLowerCase() || '');
-                             return isTier4 && belongsToParent;
-                           })
-                           .map(d => d.label)
-                       )).sort().map(label => (
-                         <button 
-                           key={label}
-                           onClick={() => { setChartLevel(4); setSelectedLineItem(label); }}
-                           className="px-6 py-3 bg-white border-2 border-indigo-200 rounded-xl text-[18.66px] font-black text-indigo-600 hover:border-indigo-600 hover:bg-indigo-600 hover:text-white transition-all shadow-sm"
-                         >
-                           {label}
-                         </button>
-                       ))}
-                     </div>
-                   </div>
-                )}
-
-                {chartLevel === 4 && (
                   <div className="w-full bg-white p-6 rounded-2xl border-2 border-indigo-600 flex justify-between items-center">
                     <div>
-                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Currently Viewing YoY Trend:</p>
-                      <h4 className="text-[18.66px] font-black text-gray-900 uppercase">{selectedLineItem}</h4>
+                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Currently Viewing Entity Solvency:</p>
+                      <h4 className="text-[18.66px] font-black text-gray-900 uppercase">{selectedParent}</h4>
                     </div>
-                    <button onClick={() => { setChartLevel(3); setSelectedLineItem(null); }} className="px-6 py-2 bg-gray-100 rounded-xl text-[14px] font-black uppercase text-gray-400 hover:bg-gray-200">Select Different Account</button>
+                    <button onClick={() => { setChartLevel(2); setSelectedParent(null); }} className="px-6 py-2 bg-gray-100 rounded-xl text-[18.66px] font-black uppercase text-gray-400 hover:bg-gray-200 transition-all">Back to Comparison</button>
                   </div>
                 )}
               </div>

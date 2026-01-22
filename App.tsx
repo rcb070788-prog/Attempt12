@@ -35,6 +35,22 @@ const formatDate = (dateString: string) => {
     minute: '2-digit',
   }).toUpperCase();
 };
+
+const formatCurrency = (value: number) => {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value);
+};
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).toUpperCase();
+};
 const UserAvatar = ({ url, isAnonymous, size = "md" }: { url?: string, isAnonymous?: boolean, size?: "sm" | "md" | "lg" }) => {
   const dims = size === "sm" ? "w-6 h-6 text-[8px]" : size === "lg" ? "w-16 h-16 text-xl" : "w-10 h-10 text-xs";
   if (isAnonymous) {
@@ -774,11 +790,19 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
 
       // TIER 3: Entity Specific Solvency
-      const isMatch = selectedParent && (row.hierarchy_path || '').toLowerCase().includes(selectedParent.toLowerCase());
+      const pathStr = (row.hierarchy_path || '').toLowerCase();
+      const isSchoolSearch = selectedParent === 'School';
       
-      // In 2020 (COVID Gap), specific entities were promoted to Tier 2. 
-      // We allow Level 2 or 3 to count here to bridge that gap.
-      if (chartLevel === 3 && (level === 3 || (level === 2 && yr === 2020)) && isMatch) {
+      // Match if path contains the name, OR if searching schools and path contains "component"
+      const isMatch = selectedParent && (
+        pathStr.includes(selectedParent.toLowerCase()) || 
+        (isSchoolSearch && pathStr.includes('component'))
+      );
+
+      // Logic: Allow Level 3 rows, OR Level 2 rows for Schools/2020 Gaps
+      const isCorrectLevel = (level === 3) || (level === 2 && (isSchoolSearch || yr === 2020));
+
+      if (chartLevel === 3 && isCorrectLevel && isMatch) {
         if (cat.includes('asset')) e.subAssets = amt;
         if (cat.includes('liabilit')) e.subLiabs = amt;
         if (cat.includes('net position') || cat.includes('net assets')) e.subNetWorth = amt;
@@ -1285,8 +1309,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                             ) : (
                               <>
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{String(hoveredData.year).slice(-2)}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">${(hoveredData.primaryAssets / 1000000).toFixed(2)}M</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">${(hoveredData.schoolAssets / 1000000).toFixed(2)}M</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">{formatCurrency(hoveredData.primaryAssets)}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">{formatCurrency(hoveredData.schoolAssets)}</p></div>
                               </>
                             )}
                           </>
@@ -1347,15 +1371,15 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{String(hoveredData.year).slice(-2)}</p></div>
                                 <div className="text-center">
                                   <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-green-400">${(((chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets) || 0) / 1000000).toFixed(2)}M</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-green-400">{formatCurrency(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets)}</p>
                                 </div>
                                 <div className="text-center">
                                   <p className="text-[10px] font-black text-red-300 uppercase">Debt</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-red-400">${(((chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs) || 0) / 1000000).toFixed(2)}M</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-red-400">{formatCurrency(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs)}</p>
                                 </div>
                                 <div className="text-center">
                                   <p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-white">${(((chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth) || 0) / 1000000).toFixed(2)}M</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-white">{formatCurrency(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth)}</p>
                                 </div>
                               </>
                             )}

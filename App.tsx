@@ -335,13 +335,13 @@ const fetchAdminMessages = async () => {
   const fetchFinancialData = async () => {
     if (!supabase) return;
     
-    // We split into three distinct batches to stay well under the 1,000 row limit.
-    // We filter for 'Primary Government' and 'School Department' specifically at the database level.
-    const filter = 'hierarchy_path.ilike.%Primary Government%,hierarchy_path.ilike.%School Department%';
+    // We filter for Tier 2 (County Pillars) and Tier 3 (Entities) specifically.
+    // This prevents Tier 4 line items from inflating the charts.
+    const levelFilter = 'hierarchy_level.in.(2,3)';
 
-    const { data: b1 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2004).lte('year', 2013).or(filter);
-    const { data: b2 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2014).lte('year', 2023).or(filter);
-    const { data: b3 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2024).lte('year', 2033).or(filter);
+    const { data: b1 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2004).lte('year', 2013).or(levelFilter);
+    const { data: b2 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2014).lte('year', 2023).or(levelFilter);
+    const { data: b3 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2024).lte('year', 2033).or(levelFilter);
 
     const combined = [...(b1 || []), ...(b2 || []), ...(b3 || [])];
     
@@ -759,7 +759,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
       const e = yearMap.get(yr);
 
-      // TIER 2: Grand Totals (Cleaned Hierarchy - Locks in 79M accuracy)
+      // TIER 2: Grand Totals
       if (level === 2) {
         if (cat.includes('asset')) {
           if (path.includes('primary')) e.primaryAssets = amt;
@@ -767,12 +767,14 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         } else if (cat.includes('liabilit')) {
           if (path.includes('primary')) e.primaryLiabs = amt;
           if (path.includes('school') || path.includes('component')) e.schoolLiabs = amt;
+        } else if (cat.includes('net position') || cat.includes('net assets')) {
+          if (path.includes('primary')) e.primaryNetWorth = amt;
+          if (path.includes('school') || path.includes('component')) e.schoolNetWorth = amt;
         }
       }
 
-      // TIER 3: Entity Specific Solvency (Drill-down data)
-      const isMatch = row.label?.toLowerCase() === selectedParent?.toLowerCase() || 
-                      row.label?.toLowerCase().includes(selectedParent?.toLowerCase() || '___');
+      // TIER 3: Entity Specific Solvency
+      const isMatch = row.label?.trim().toLowerCase() === selectedParent?.trim().toLowerCase();
       if (chartLevel === 3 && level === 3 && isMatch) {
         if (cat.includes('asset')) e.subAssets = amt;
         if (cat.includes('liabilit')) e.subLiabs = amt;
@@ -781,13 +783,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     });
 
     return Array.from(yearMap.values()).map(e => {
-      const totalAssets = e.primaryAssets + e.schoolAssets;
-      const totalLiabs = e.primaryLiabs + e.schoolLiabs;
       return {
         ...e,
-        totalAssets,
-        totalLiabs,
-        totalNetWorth: totalAssets - totalLiabs,
+        totalAssets: e.primaryAssets + e.schoolAssets,
+        totalLiabs: e.primaryLiabs + e.schoolLiabs,
+        // Use verified Net Position total, fallback to calculation if auditor row is missing
+        totalNetWorth: (e.primaryNetWorth + e.schoolNetWorth) || (e.primaryAssets + e.schoolAssets - (e.primaryLiabs + e.schoolLiabs)),
         subNetWorth: e.subNetWorth || (e.subAssets - e.subLiabs)
       };
     }).sort((a, b) => a.year - b.year);
@@ -1294,9 +1295,9 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2004, 2024]} interval={1} />
-                        <YAxis fontSize={14} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
+                        <YAxis fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={50} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
+                        <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
                         {chartLevel <= 2 ? (
                           <>
                             <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={expandedChart === 'assets'} />
@@ -1359,7 +1360,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2004, 2024]} interval={1} />
                         <YAxis stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={80} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />
+                        <Legend verticalAlign="bottom" height={100} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />
                         <>
                           {/* Shows County-wide totals at Level 1/2, or Entity-specific totals at Level 3 */}
                           <Line type="monotone" dataKey={chartLevel === 3 ? "subAssets" : "totalAssets"} name={chartLevel === 3 ? `${selectedParent} Assets` : "Total Assets"} stroke="#4ade80" strokeWidth={3} dot={chartLevel === 3} />

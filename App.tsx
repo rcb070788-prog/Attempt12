@@ -807,7 +807,21 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
     });
 
-    return Array.from(yearMap.values()).map(e => {
+    const sortedArr = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
+
+    return sortedArr.map((e, idx, arr) => {
+      // Interpolate Business-type Activities for 2020 to create a straight line
+      if (e.year === 2020 && selectedParent === 'Business-type' && e.isCovidGap) {
+        const prev = arr.find(r => r.year === 2019);
+        const next = arr.find(r => r.year === 2021);
+        if (prev && next) {
+          e.subAssets = (prev.subAssets + next.subAssets) / 2;
+          e.subLiabs = (prev.subLiabs + next.subLiabs) / 2;
+          e.subNetWorth = (prev.subNetWorth + next.subNetWorth) / 2;
+        }
+      }
+
+      const drillDownValue = selectedCategory === 'assets' ? e.subAssets : e.subNetWorth;
       const drillDownValue = selectedCategory === 'assets' ? e.subAssets : e.subNetWorth;
       return {
         ...e,
@@ -1298,7 +1312,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         {hoveredData ? (
                           <>
                             {hoveredData.isCovidGap ? (
-                              <p className="text-[14px] font-black text-indigo-600 uppercase italic">This data was not reported due to COVID-19.</p>
+                              <div className="flex items-center gap-3">
+                                <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
+                                <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
+                              </div>
                             ) : (
                               <>
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{String(hoveredData.year).slice(-2)}</p></div>
@@ -1358,7 +1375,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         {hoveredData ? (
                           <>
                             {hoveredData.isCovidGap ? (
-                              <p className="text-[14px] font-black text-white uppercase italic">This data was not reported due to COVID-19.</p>
+                              <div className="flex items-center gap-3">
+                                <i className="fa-solid fa-circle-exclamation text-indigo-300"></i>
+                                <p className="text-[14px] font-black text-white uppercase italic">Data not collected due to COVID.</p>
+                              </div>
                             ) : (
                               <>
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{String(hoveredData.year).slice(-2)}</p></div>

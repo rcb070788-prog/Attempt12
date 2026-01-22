@@ -1285,8 +1285,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                             ) : (
                               <>
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{String(hoveredData.year).slice(-2)}</p></div>
-                            <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">${(hoveredData.primaryAssets / 1000000).toFixed(2)}M</p></div>
-                            <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">${(hoveredData.schoolAssets / 1000000).toFixed(2)}M</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">${(hoveredData.primaryAssets / 1000000).toFixed(2)}M</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">School Dept</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">${(hoveredData.schoolAssets / 1000000).toFixed(2)}M</p></div>
+                              </>
+                            )}
                           </>
                         ) : (
                           <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
@@ -1304,7 +1306,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} domain={[2004, 2025]} interval={1} />
+                        <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} stroke="#94a3b8" domain={[2004, 2025]} interval={1} />
                         <YAxis fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
@@ -1343,18 +1345,20 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                             ) : (
                               <>
                                 <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{String(hoveredData.year).slice(-2)}</p></div>
-                            <div className="text-center">
-                              <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
-                              <p className="text-lg md:text-[18.66px] font-black text-green-400">${(((chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets) || 0) / 1000000).toFixed(2)}M</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-[10px] font-black text-red-300 uppercase">Debt</p>
-                              <p className="text-lg md:text-[18.66px] font-black text-red-400">${(((chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs) || 0) / 1000000).toFixed(2)}M</p>
-                            </div>
-                            <div className="text-center">
-                              <p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p>
-                              <p className="text-lg md:text-[18.66px] font-black text-white">${(((chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth) || 0) / 1000000).toFixed(2)}M</p>
-                            </div>
+                                <div className="text-center">
+                                  <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-green-400">${(((chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets) || 0) / 1000000).toFixed(2)}M</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[10px] font-black text-red-300 uppercase">Debt</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-red-400">${(((chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs) || 0) / 1000000).toFixed(2)}M</p>
+                                </div>
+                                <div className="text-center">
+                                  <p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-white">${(((chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth) || 0) / 1000000).toFixed(2)}M</p>
+                                </div>
+                              </>
+                            )}
                           </>
                         ) : (
                           <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>

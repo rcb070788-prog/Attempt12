@@ -774,8 +774,12 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
 
       // TIER 3: Entity Specific Solvency
-      // We use includes() to catch rows like "Governmental Activities - Primary Government"
-      const isMatch = selectedParent && row.label?.toLowerCase().includes(selectedParent.toLowerCase());
+      // Matching entity names against parent_entity or hierarchy_path instead of the generic label
+      const isMatch = selectedParent && (
+        row.parent_entity?.toLowerCase().includes(selectedParent.toLowerCase()) || 
+        row.hierarchy_path?.toLowerCase().includes(selectedParent.toLowerCase())
+      );
+      
       if (chartLevel === 3 && level === 3 && isMatch) {
         if (cat.includes('asset')) e.subAssets = amt;
         if (cat.includes('liabilit')) e.subLiabs = amt;
@@ -1295,7 +1299,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} stroke="#94a3b8" domain={[2004, 2024]} interval={1} />
+                        <XAxis dataKey="year" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} stroke="#94a3b8" domain={[2004, 2025]} interval={1} />
                         <YAxis fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
@@ -1358,7 +1362,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => `'${String(val).slice(-2)}`} domain={[2004, 2024]} interval={1} />
+                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(val) => String(val).slice(-2)} domain={[2004, 2025]} interval={1} />
                         <YAxis stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={100} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />
@@ -1396,10 +1400,10 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
                 {chartLevel === 2 && (
                   <>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Governmental Activities'); }} className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Governmental Activities</button>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Business-type Activities'); }} className="px-6 py-3 bg-cyan-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Business-type Activities</button>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Metropolitan School Department'); }} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">School Dept</button>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Emergency Communications District'); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Emerg Comm Dist</button>
+                    <button onClick={() => { setChartLevel(3); setSelectedParent('Governmental'); }} className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Governmental Activities</button>
+                    <button onClick={() => { setChartLevel(3); setSelectedParent('Business-type'); }} className="px-6 py-3 bg-cyan-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Business-type Activities</button>
+                    <button onClick={() => { setChartLevel(3); setSelectedParent('School'); }} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">School Dept</button>
+                    <button onClick={() => { setChartLevel(3); setSelectedParent('Emergency'); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Emerg Comm Dist</button>
                   </>
                 )}
                 

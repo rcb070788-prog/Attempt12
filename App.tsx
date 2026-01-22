@@ -774,7 +774,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
       }
 
       // TIER 3: Entity Specific Solvency
-      const isMatch = row.label?.trim().toLowerCase() === selectedParent?.trim().toLowerCase();
+      // We use includes() to catch rows like "Governmental Activities - Primary Government"
+      const isMatch = selectedParent && row.label?.toLowerCase().includes(selectedParent.toLowerCase());
       if (chartLevel === 3 && level === 3 && isMatch) {
         if (cat.includes('asset')) e.subAssets = amt;
         if (cat.includes('liabilit')) e.subLiabs = amt;
@@ -1398,6 +1399,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                     <button onClick={() => { setChartLevel(3); setSelectedParent('Governmental Activities'); }} className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Governmental Activities</button>
                     <button onClick={() => { setChartLevel(3); setSelectedParent('Business-type Activities'); }} className="px-6 py-3 bg-cyan-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Business-type Activities</button>
                     <button onClick={() => { setChartLevel(3); setSelectedParent('Metropolitan School Department'); }} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">School Dept</button>
+                    <button onClick={() => { setChartLevel(3); setSelectedParent('Emergency Communications District'); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Emerg Comm Dist</button>
                   </>
                 )}
                 

@@ -747,15 +747,16 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     });
   }, [boardMessages, searchQuery]);
 
-  // DATA TRANSFORMER: Orchestrates YoY Trends based on standardized Hierarchy
+  // DATA TRANSFORMER: Orchestrates YoY Trends based on the verified 3-Tier Flat Hierarchy
   const chartData = useMemo(() => {
     const yearMap = new Map();
 
     financialData.forEach(row => {
-      const yr = row.year;
+      const yr = Number(row.year);
       const amt = Number(row.amount || 0);
       const level = Number(row.hierarchy_level);
       const label = (row.label || '').trim();
+      const parent = (row.parent_entity || '').trim();
       const cat = (row.category || '').toLowerCase();
 
       if (!yearMap.has(yr)) {
@@ -764,63 +765,38 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           totalAssets: 0, totalLiabs: 0, totalNetWorth: 0,
           primaryAssets: 0, primaryLiabs: 0, primaryNetWorth: 0,
           schoolAssets: 0, schoolLiabs: 0, schoolNetWorth: 0,
-          subAssets: 0, subLiabs: 0, subNetWorth: 0
+          ecdAssets: 0, ecdLiabs: 0, ecdNetWorth: 0,
+          subAssets: 0, subLiabs: 0, subNetWorth: 0,
+          isCovidGap: false
         });
       }
       const e = yearMap.get(yr);
 
-      // Tier 1: Pull Moore County Grand Total
+      // Level 1: Home Page Line (Moore County Grand Total)
       if (level === 1) {
         if (cat.includes('asset')) e.totalAssets = amt;
         else if (cat.includes('liabilit')) e.totalLiabs = amt;
         else if (cat.includes('net')) e.totalNetWorth = amt;
       }
-
-      // Tier 2: Pull Pillars for Comparison
+      
+      // Level 2: Pillars (Primary Gov, School Dept, ECD)
       if (level === 2) {
         if (label === 'Primary Government') {
           if (cat.includes('asset')) e.primaryAssets = amt;
           else if (cat.includes('liabilit')) e.primaryLiabs = amt;
           else if (cat.includes('net')) e.primaryNetWorth = amt;
-        } else if (label === 'Total Component Units') {
+        } else if (label === 'School Department') {
           if (cat.includes('asset')) e.schoolAssets = amt;
           else if (cat.includes('liabilit')) e.schoolLiabs = amt;
           else if (cat.includes('net')) e.schoolNetWorth = amt;
+        } else if (label === 'Emergency Communications District') {
+          if (cat.includes('asset')) e.ecdAssets = amt;
+          else if (cat.includes('liabilit')) e.ecdLiabs = amt;
+          else if (cat.includes('net')) e.ecdNetWorth = amt;
         }
       }
 
-      // Tier 3: Drill-down logic for specific Entities
-      if (level === 3 && chartLevel === 3) {
-        // Map UI selection to Database labels
-        const dbTarget = selectedParent === 'School' ? 'School Department' : 
-                         selectedParent === 'Emergency' ? 'Emergency Communications District' : 
-                         selectedParent === 'Business-type' ? 'Business-type Activities' : 
-                         'Governmental Activities';
-        
-        if (label === dbTarget) {
-          if (cat.includes('asset')) e.subAssets = amt;
-          else if (cat.includes('liabilit')) e.subLiabs = amt;
-          else if (cat.includes('net')) e.subNetWorth = amt;
-        }
-      }
-
-      if (yr === 2020 && selectedParent === 'Business-type') e.isCovidGap = true;
-    });
-
-    return Array.from(yearMap.values()).sort((a, b) => a.year - b.year).map((e, idx, arr) => {
-      // COVID Interpolation for Business-type (Tier 3)
-      if (e.year === 2020 && selectedParent === 'Business-type' && e.isCovidGap) {
-        const prev = arr.find(r => r.year === 2019);
-        const next = arr.find(r => r.year === 2021);
-        if (prev && next) {
-          e.subAssets = (prev.subAssets + next.subAssets) / 2;
-          e.subLiabs = (prev.subLiabs + next.subLiabs) / 2;
-          e.subNetWorth = (prev.subNetWorth + next.subNetWorth) / 2;
-        }
-      }
-      return e;
-    });
-  }, [financialData, chartLevel, selectedParent]);
+      // Level 3: Details for Prim
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {
@@ -1481,8 +1457,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                   <>
                     <button onClick={() => { setChartLevel(3); setSelectedParent('Governmental'); }} className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Governmental Activities</button>
                     <button onClick={() => { setChartLevel(3); setSelectedParent('Business-type'); }} className="px-6 py-3 bg-cyan-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Business-type Activities</button>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('School'); }} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">School Dept</button>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Emergency'); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Emerg Comm Dist</button>
+                    <button onClick={() => { setChartLevel(2); setSelectedParent('School Department'); }} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">School Dept</button>
+                    <button onClick={() => { setChartLevel(2); setSelectedParent('Emergency Communications District'); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Emerg Comm Dist</button>
                   </>
                 )}
                 

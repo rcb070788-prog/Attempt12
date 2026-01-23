@@ -2923,6 +2923,5 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
       `}</style>
     </div>
-    )
   );
 }

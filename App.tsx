@@ -796,7 +796,46 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         }
       }
 
-      // Level 3: Details for Prim
+      // Level 3: Details for Primary Gov Drill-down
+      if (level === 3 && chartLevel === 3) {
+        const targetMap: Record<string, string> = {
+          'Governmental': 'Governmental Activities',
+          'Business-type': 'Business-type Activities'
+        };
+        if (parent === targetMap[selectedParent || '']) {
+          if (cat.includes('asset')) e.subAssets = amt;
+          else if (cat.includes('liabilit')) e.subLiabs = amt;
+          else if (cat.includes('net')) e.subNetWorth = amt;
+        }
+      }
+
+      // Flag for 2020 gaps (Gov and Business-type missing data)
+      if (yr === 2020 && (selectedParent === 'Business-type' || selectedParent === 'Governmental' || chartLevel < 3)) {
+        e.isCovidGap = true;
+      }
+    });
+
+    return Array.from(yearMap.values()).sort((a, b) => a.year - b.year).map((e, idx, arr) => {
+      // Interpolate 2020 gaps for smooth trend lines
+      if (e.year === 2020 && e.isCovidGap) {
+        const prev = arr.find(r => r.year === 2019);
+        const next = arr.find(r => r.year === 2021);
+        if (prev && next) {
+          if (chartLevel === 3) {
+            e.subAssets = (Number(prev.subAssets || 0) + Number(next.subAssets || 0)) / 2;
+            e.subLiabs = (Number(prev.subLiabs || 0) + Number(next.subLiabs || 0)) / 2;
+            e.subNetWorth = (Number(prev.subNetWorth || 0) + Number(next.subNetWorth || 0)) / 2;
+          } else {
+            e.totalAssets = (Number(prev.totalAssets || 0) + Number(next.totalAssets || 0)) / 2;
+            e.totalLiabs = (Number(prev.totalLiabs || 0) + Number(next.totalLiabs || 0)) / 2;
+            e.totalNetWorth = (Number(prev.totalNetWorth || 0) + Number(next.totalNetWorth || 0)) / 2;
+            e.primaryNetWorth = (Number(prev.primaryNetWorth || 0) + Number(next.primaryNetWorth || 0)) / 2;
+          }
+        }
+      }
+      return e;
+    });
+  }, [financialData, chartLevel, selectedParent]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {

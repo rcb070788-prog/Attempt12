@@ -4,92 +4,17 @@ import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.t
 import { DashboardConfig } from './types.ts';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// Modular Imports
+import { renderTextWithLinks, formatDate } from './utils/formatUtils';
+import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils';
+import { UserAvatar } from './components/UserAvatar';
+import { Toast } from './components/Toast';
+
 // --- CONFIGURATION ---
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
 const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
-// --- UTILITIES ---
-const renderTextWithLinks = (text: string) => {
-  if (!text) return null;
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  const parts = text.split(urlRegex);
-  return parts.map((part, i) => {
-    if (part.match(urlRegex)) {
-      return (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:underline break-all" onClick={(e) => e.stopPropagation()}>
-          {part} <i className="fa-solid fa-external-link text-[8px] ml-1"></i>
-        </a>
-      );
-    }
-    return part;
-  });
-};
-const formatDate = (dateString: string) => {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).toUpperCase();
-};
-
-const formatCurrency = (value: number | undefined | null) => {
-  if (value === undefined || value === null || isNaN(value)) return "$0";
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-    maximumFractionDigits: 0,
-  }).format(value);
-};
-const getRealValue = (amount: number, year: number, baseYear: number) => {
-  const currentCPI = CPI_ANNUAL_AVG[year];
-  const baseCPI = CPI_ANNUAL_AVG[baseYear];
-  if (!currentCPI || !baseCPI) return amount;
-  return (amount / currentCPI) * baseCPI;
-};
-
-const calculateTrendLine = (data: any[], key: string) => {
-  const n = data.length;
-  if (n < 2) return data;
-  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
-  data.forEach((d, i) => {
-    const val = Number(d[key] || 0);
-    sumX += i;
-    sumY += val;
-    sumXY += i * val;
-    sumXX += i * i;
-  });
-  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
-  const intercept = (sumY - slope * sumX) / n;
-  return data.map((d, i) => ({ ...d, [`${key}Trend`]: slope * i + intercept }));
-};
-const UserAvatar = ({ url, isAnonymous, size = "md" }: { url?: string, isAnonymous?: boolean, size?: "sm" | "md" | "lg" }) => {
-  const dims = size === "sm" ? "w-6 h-6 text-[8px]" : size === "lg" ? "w-16 h-16 text-xl" : "w-10 h-10 text-xs";
-  if (isAnonymous) {
-    return (
-      <div className={`${dims} bg-gray-200 text-gray-500 rounded-full flex items-center justify-center border-2 border-white shadow-sm shrink-0`}>
-        <i className="fa-solid fa-user-shield"></i>
-      </div>
-    );
-  }
-  return (
-    <div className={`${dims} bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center border-2 border-white shadow-sm overflow-hidden shrink-0`}>
-      {url ? <img src={url} alt="Avatar" className="w-full h-full object-cover" /> : <i className="fa-solid fa-user"></i>}
-    </div>
-  );
-};
-
-const Toast = ({ message, type }: { message: string, type: 'success' | 'error' }) => (
-  <div className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-xl text-white z-[300] transition-all transform animate-bounce ${type === 'success' ? 'bg-green-600' : 'bg-red-600'}`}>
-    <i className={`fa-solid ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-triangle'} mr-2`}></i>
-    {message}
-  </div>
-);
-
-export default function App() {
   // --- CORE STATE ---
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -1607,7 +1532,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       </div>
                     ))}
                     
-                    <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+                    <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
                     {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
                       const base = key.replace('Trend', '');
                       return (
@@ -1617,7 +1542,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       );
                     })}
 
-                    <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+                    <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
                     {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
                       <div key={key} className="flex justify-center">
                         <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>

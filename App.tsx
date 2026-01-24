@@ -9,14 +9,16 @@ import { renderTextWithLinks, formatDate } from './utils/formatUtils';
 import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils';
 import { UserAvatar } from './components/UserAvatar';
 import { Toast } from './components/Toast';
+import { useAuth } from './hooks/useAuth';
+import { useFinanceData } from './hooks/useFinanceData';
 
 export default function App() {
   // --- CORE STATE ---
+  const { user, profile, setProfile, setUser } = useAuth();
+  const { chartData, yearDetailData, fetchFinancialData, fetchYearDetails } = useFinanceData(selectedParents, toggles, chartLevel);
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
   // --- FEATURE DATA ---
@@ -32,8 +34,6 @@ export default function App() {
   const [selectedAdminEmail, setSelectedAdminEmail] = useState<any>(null);
   const [stagedAdminReplyFiles, setStagedAdminReplyFiles] = useState<{url: string, name: string}[]>([]);
   const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
-  const [financialData, setFinancialData] = useState<any[]>([]);
-  const [yearDetailData, setYearDetailData] = useState<any[]>([]);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   // Navigation State for YoY Drill-down
@@ -89,19 +89,15 @@ export default function App() {
 
   // --- INITIALIZATION ---
   useEffect(() => {
-    if (!supabase) return;
-    const initSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-    };
-    initSession();
+    if (!user) {
+      setCurrentPage('home');
+      setSelectedPoll(null);
+    }
+  }, [user]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else { setProfile(null); setCurrentPage('home'); setSelectedPoll(null); }
-    });
+  useEffect(() => {
+    fetchAllData();
+  }, []);
 
     // Listen for the 'Close Report' signal from the embedded dashboard iframe
     const handleDashboardMessage = (event: MessageEvent) => {
@@ -213,11 +209,6 @@ export default function App() {
   }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
 
   // --- DATA FETCHING ---
-  const fetchProfile = async (userId: string) => {
-    if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (data) setProfile(data);
-  };
 
   const fetchPolls = async () => {
     if (!supabase) return;
@@ -283,7 +274,7 @@ export default function App() {
     if (error) console.error("Manual Request Fetch Error:", error.message);
     setManualRequests(data || []);
   };
-const fetchAdminMessages = async () => {
+  const fetchAdminMessages = async () => {
     if (!supabase || !profile?.is_admin) return;
     console.log("Fetching Admin Inbox...");
     const { data } = await supabase.from('admin_messages').select('*').order('created_at', { ascending: false });
@@ -296,37 +287,6 @@ const fetchAdminMessages = async () => {
     setAdminEmailDeletionVotes(data || []);
   };
 
-  const fetchFinancialData = async () => {
-    if (!supabase) return;
-    
-    // We filter for Tier 2 (County Pillars) and Tier 3 (Entities) specifically.
-    // This prevents Tier 4 line items from inflating the charts.
-    // Include Level 1 (Grand Totals) for the Hero Chart
-    const levelFilter = 'hierarchy_level.in.(1,2,3)';
-
-    const { data: b1 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2004).lte('year', 2013).or(levelFilter);
-    const { data: b2 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2014).lte('year', 2023).or(levelFilter);
-    const { data: b3 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2024).lte('year', 2033).or(levelFilter);
-
-    const combined = [...(b1 || []), ...(b2 || []), ...(b3 || [])];
-    
-    // This ensures the charts draw a continuous line from left to right.
-    const sorted = combined.sort((a, b) => a.year - b.year);
-    setFinancialData(sorted);
-  };
-
-  // Isolates drill-down data so the main graph doesn't "jump"
-  const fetchYearDetails = async (year: number) => {
-    if (!supabase) return;
-    const { data, error } = await supabase
-      .from('AFR_Exhibit_A')
-      .select('*')
-      .eq('year', year);
-    
-    if (!error && data) {
-      setYearDetailData(data);
-    }
-  };
   const fetchDeletionVotes = async () => {
     if (!supabase) return;
     const { data } = await supabase.from('admin_deletion_votes').select('*');
@@ -702,108 +662,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
              recipients.toLowerCase().includes(q);
     });
   }, [boardMessages, searchQuery]);
-
-  // DATA TRANSFORMER: Orchestrates YoY Trends based on the verified 3-Tier Flat Hierarchy
-  const chartData = useMemo(() => {
-    const yearMap = new Map();
-    const years = financialData.map(d => Number(d.year));
-    const baseYear = years.length > 0 ? Math.min(...years) : 2005;
-
-    financialData.forEach(row => {
-      const yr = Number(row.year);
-      const amt = Number(row.amount || 0);
-      const level = Number(row.hierarchy_level);
-      const label = (row.label || '').trim();
-      const parent = (row.parent_entity || '').trim();
-      const cat = (row.category || '').toLowerCase();
-
-      if (!yearMap.has(yr)) {
-        yearMap.set(yr, { 
-          year: yr, totalAssets: 0, totalLiabs: 0, totalNetWorth: 0,
-          primaryNetWorth: 0, schoolNetWorth: 0, ecdNetWorth: 0,
-          isCovidGap: false
-        });
-      }
-      const e = yearMap.get(yr);
-      const isAsset = cat.includes('asset');
-      const isLiab = cat.includes('liabilit');
-      const isNet = cat.includes('net');
-
-      if (level === 1) {
-        if (isAsset) e.totalAssets = amt;
-        else if (isLiab) e.totalLiabs = amt;
-        else if (isNet) e.totalNetWorth = amt;
-      }
-      
-      // Map Peers and Specific Entities for Overlay
-      if (level === 2) {
-        if (label.includes('Primary')) e.primaryNetWorth = amt;
-        if (label.includes('School')) e.schoolNetWorth = amt;
-        if (label.includes('Emergency')) e.ecdNetWorth = amt;
-      }
-
-      // Dynamic Mapping for any Selected Entity (Level 2 or 3)
-      selectedParents.forEach(sel => {
-        const keyBase = sel.replace(/\s+/g, '');
-        // Match if label matches selection (Level 2) OR parent matches selection (Level 3)
-        if (label.includes(sel) || parent.includes(sel)) {
-          if (isAsset) e[`${keyBase}Assets`] = amt;
-          else if (isLiab) e[`${keyBase}Liabs`] = amt;
-          else if (isNet) e[`${keyBase}NetWorth`] = amt;
-        }
-      });
-
-      // COVID Gap Logic (Preserved)
-      if (yr === 2020 && (selectedParents.includes('Business-type') || selectedParents.includes('Governmental') || chartLevel < 3)) {
-        e.isCovidGap = true;
-      }
-    });
-
-    let list = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
-    
-    // Interpolation and Inflation Calculations
-    list = list.map((e, idx, arr) => {
-      if (e.year === 2020 && e.isCovidGap) {
-        const prev = arr[idx-1], next = arr[idx+1];
-        if (prev && next) {
-          ['totalAssets', 'totalLiabs', 'totalNetWorth', 'primaryNetWorth', 'schoolNetWorth', 'ecdNetWorth'].forEach(k => {
-            e[k] = (Number(prev[k] || 0) + Number(next[k] || 0)) / 2;
-          });
-          selectedParents.forEach(sel => {
-            const kb = sel.replace(/\s+/g, '');
-            ['Assets', 'Liabs', 'NetWorth'].forEach(suffix => {
-              e[`${kb}${suffix}`] = (Number(prev[`${kb}${suffix}`] || 0) + Number(next[`${kb}${suffix}`] || 0)) / 2;
-            });
-          });
-        }
-      }
-
-      // Inflation Math
-      e.totalNetWorthReal = getRealValue(e.totalNetWorth, e.year, baseYear);
-      e.totalAssetsReal = getRealValue(e.totalAssets, e.year, baseYear);
-      e.totalLiabsReal = getRealValue(e.totalLiabs, e.year, baseYear);
-      selectedParents.forEach(sel => {
-        const kb = sel.replace(/\s+/g, '');
-        if (e[`${kb}NetWorth`]) e[`${kb}NetWorthReal`] = getRealValue(e[`${kb}NetWorth`], e.year, baseYear);
-        if (e[`${kb}Assets`]) e[`${kb}AssetsReal`] = getRealValue(e[`${kb}Assets`], e.year, baseYear);
-        if (e[`${kb}Liabs`]) e[`${kb}LiabsReal`] = getRealValue(e[`${kb}Liabs`], e.year, baseYear);
-      });
-      return e;
-    });
-
-    // Trend Calculations
-    list = calculateTrendLine(list, 'totalNetWorth');
-    list = calculateTrendLine(list, 'totalAssets');
-    list = calculateTrendLine(list, 'totalLiabs');
-    selectedParents.forEach(sel => {
-      const kb = sel.replace(/\s+/g, '');
-      list = calculateTrendLine(list, `${kb}NetWorth`);
-      list = calculateTrendLine(list, `${kb}Assets`);
-      list = calculateTrendLine(list, `${kb}Liabs`);
-    });
-    
-    return list;
-  }, [financialData, selectedParents, toggles, chartLevel]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {

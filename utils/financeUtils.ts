@@ -1,4 +1,5 @@
-import { CPI_ANNUAL_AVG } from '../constants.ts';
+// src/utils/financeUtils.ts
+import { CPI_ANNUAL_AVG } from '../constants';
 
 export const formatCurrency = (value: number | undefined | null) => {
   if (value === undefined || value === null || isNaN(value)) return "$0";

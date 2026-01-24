@@ -1,3 +1,4 @@
+// src/utils/formatUtils.ts
 import React from 'react';
 
 export const renderTextWithLinks = (text: string) => {

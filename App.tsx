@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from './supabaseClient';
 import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.ts';
 import { DashboardConfig } from './types.ts';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -9,11 +9,6 @@ import { renderTextWithLinks, formatDate } from './utils/formatUtils';
 import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils';
 import { UserAvatar } from './components/UserAvatar';
 import { Toast } from './components/Toast';
-
-// --- CONFIGURATION ---
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
 
 export default function App() {
   // --- CORE STATE ---

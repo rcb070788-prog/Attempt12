@@ -44,6 +44,21 @@ const formatCurrency = (value: number | undefined | null) => {
     maximumFractionDigits: 0,
   }).format(value);
 };
+const calculateTrendLine = (data: any[], key: string) => {
+  const n = data.length;
+  if (n < 2) return data;
+  let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+  data.forEach((d, i) => {
+    const val = Number(d[key] || 0);
+    sumX += i;
+    sumY += val;
+    sumXY += i * val;
+    sumXX += i * i;
+  });
+  const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+  return data.map((d, i) => ({ ...d, [`${key}Trend`]: slope * i + intercept }));
+};
 const UserAvatar = ({ url, isAnonymous, size = "md" }: { url?: string, isAnonymous?: boolean, size?: "sm" | "md" | "lg" }) => {
   const dims = size === "sm" ? "w-6 h-6 text-[8px]" : size === "lg" ? "w-16 h-16 text-xl" : "w-10 h-10 text-xs";
   if (isAnonymous) {
@@ -346,7 +361,8 @@ const fetchAdminMessages = async () => {
     
     // We filter for Tier 2 (County Pillars) and Tier 3 (Entities) specifically.
     // This prevents Tier 4 line items from inflating the charts.
-    const levelFilter = 'hierarchy_level.in.(2,3)';
+    // Include Level 1 (Grand Totals) for the Hero Chart
+    const levelFilter = 'hierarchy_level.in.(1,2,3)';
 
     const { data: b1 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2004).lte('year', 2013).or(levelFilter);
     const { data: b2 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2014).lte('year', 2023).or(levelFilter);
@@ -844,6 +860,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     return yearDetailData.filter(row => {
       const rowCat = (row.category || '').trim().toLowerCase();
       if (selectedCategory === 'solvency') return true;
+      if (selectedCategory === 'revenues') return rowCat.includes('revenue');
+      if (selectedCategory === 'expenses') return rowCat.includes('expenditure') || rowCat.includes('expense');
       return rowCat.includes(selectedCategory.slice(0, -1));
     });
   }, [yearDetailData, selectedFinancialYear, selectedCategory]);
@@ -1303,18 +1321,37 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       }}
                     />
                     <Line type="monotone" dataKey="totalNetWorth" stroke="#ffffff" strokeWidth={4} dot={{ r: 4, fill: '#ffffff' }} activeDot={{ r: 6 }} />
+                    <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#ffffff" strokeWidth={1} strokeDasharray="5 5" dot={false} activeDot={false} opacity={0.5} />
                   </LineChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-               {CATEGORIES.map(cat => (
-                 <div key={cat.id} onClick={() => setSelectedCategory(cat.id)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border hover:shadow-xl transition-all cursor-pointer flex items-center gap-6">
-                   <div className={`${cat.color} w-16 h-16 rounded-2xl flex items-center justify-center text-white text-2xl`}><i className={`fa-solid ${cat.icon}`}></i></div>
-                   <div><h3 className="text-xl font-black uppercase">{cat.label}</h3><p className="text-gray-400 text-xs font-bold uppercase">Review Logs</p></div>
+            <div className="flex flex-col md:flex-row gap-6">
+               {CATEGORIES.filter(c => ['revenues', 'expenses'].includes(c.id)).map(cat => (
+                 <div 
+                   key={cat.id} 
+                   onClick={() => setSelectedCategory(cat.id)} 
+                   className="flex-1 bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-indigo-600 hover:shadow-2xl transition-all cursor-pointer group"
+                 >
+                   <div className="flex items-center justify-between">
+                     <div className="flex items-center gap-6">
+                        <div className={`${cat.color} w-20 h-20 rounded-[1.5rem] flex items-center justify-center text-white text-3xl shadow-lg group-hover:scale-110 transition-transform`}>
+                          <i className={`fa-solid ${cat.icon}`}></i>
+                        </div>
+                        <div>
+                          <h3 className="text-2xl font-black uppercase tracking-tighter text-gray-900">{cat.label}</h3>
+                          <p className="text-indigo-600 text-xs font-black uppercase tracking-widest opacity-60">View Operational Logs</p>
+                        </div>
+                     </div>
+                     <i className="fa-solid fa-arrow-right text-gray-200 group-hover:text-indigo-600 group-hover:translate-x-2 transition-all text-2xl"></i>
+                   </div>
                  </div>
                ))}
+            </div>
+
+            <div className="text-center pt-4">
+              <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.3em]">Comprehensive Assets & Liabilities are now integrated into the Solvency Trends above</p>
             </div>
           </div>
         )}
@@ -1465,6 +1502,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                           <Line type="monotone" dataKey={chartLevel === 3 ? "subAssets" : "totalAssets"} name={chartLevel === 3 ? `${selectedParent} Assets` : "Total Assets"} stroke="#4ade80" strokeWidth={3} dot={chartLevel === 3} />
                           <Line type="monotone" dataKey={chartLevel === 3 ? "subLiabs" : "totalLiabs"} name={chartLevel === 3 ? `${selectedParent} Debt` : "Total Liabilities"} stroke="#f87171" strokeWidth={3} dot={chartLevel === 3} />
                           <Line type="monotone" dataKey={chartLevel === 3 ? "subNetWorth" : "totalNetWorth"} name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={chartLevel === 3} />
+                          <Line type="monotone" dataKey={chartLevel === 3 ? "subNetWorthTrend" : "totalNetWorthTrend"} name="Long-term Trend" stroke="#ffffff" strokeWidth={1} strokeDasharray="3 3" dot={false} opacity={0.6} />
                         </>
                       </LineChart>
                     </ResponsiveContainer>

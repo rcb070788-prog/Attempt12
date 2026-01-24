@@ -119,13 +119,18 @@ export default function App() {
   // chartLevel: 1 (Grand Total), 2 (Primary vs Component), 3 (Activities/Entities), 4 (Line Items)
   const [chartLevel, setChartLevel] = useState(1);
   const [selectedParents, setSelectedParents] = useState<string[]>([]);
+  const [selectedParent, setSelectedParent] = useState<string | null>(null);
   const [selectedLineItem, setSelectedLineItem] = useState<string | null>(null);
   const [toggles, setToggles] = useState({ 
     assets: false, 
     liabs: false, 
     netWorth: true, 
-    trends: false, 
-    inflation: false 
+    assetsTrend: false, 
+    liabsTrend: false, 
+    netWorthTrend: false, 
+    assetsInf: false, 
+    liabsInf: false, 
+    netWorthInf: false 
   });
   const [hoveredData, setHoveredData] = useState<any>(null);
   
@@ -1296,70 +1301,34 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
 
             {/* TIER 1 SPARKLINE: Total Government Solvency */}
-            <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all mb-12" onClick={() => setSelectedCategory('solvency')}>
-              <div className="flex justify-between items-start mb-6">
+            <div className="bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 cursor-pointer hover:scale-[1.01] transition-all mb-12 border border-gray-100" onClick={() => setSelectedCategory('solvency')}>
+              <div className="flex justify-between items-start mb-10">
                 <div>
-                  <h3 className="text-xl font-black uppercase leading-none">County Net Worth</h3>
-                  <p className="text-indigo-300 text-[10px] font-bold uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
+                  <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Solvency</h3>
+                  <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
                 </div>
-                <div className="bg-white/10 px-4 py-2 rounded-full border border-white/10">
-                   <span className="text-[10px] font-black uppercase">Click for Details</span>
-                </div>
-              </div>
-              {/* Chart Controls */}
-              <div className="bg-white/5 p-4 rounded-2xl mb-4 space-y-3 border border-white/10">
-                <div className="flex flex-wrap items-center gap-4">
-                  <span className="text-[10px] font-black uppercase text-indigo-300 w-24">Data Views:</span>
-                  {[
-                    { id: 'netWorth', label: 'Net Worth', color: 'bg-blue-500' },
-                    { id: 'assets', label: 'Total Assets', color: 'bg-green-500' },
-                    { id: 'liabs', label: 'Total Debt', color: 'bg-red-500' }
-                  ].map(t => (
-                    <button key={t.id} onClick={(e) => { e.stopPropagation(); setToggles({...toggles, [t.id]: !toggles[t.id] as any}); }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${toggles[t.id as keyof typeof toggles] ? t.color + ' text-white' : 'bg-white/10 text-white/40'}`}>
-                      <i className={`fa-solid ${toggles[t.id as keyof typeof toggles] ? 'fa-check-circle' : 'fa-circle'}`}></i> {t.label}
-                    </button>
-                  ))}
-                </div>
-                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-white/5">
-                  <span className="text-[10px] font-black uppercase text-indigo-300 w-24">Trend Toggle:</span>
-                  <button onClick={(e) => { e.stopPropagation(); setToggles({...toggles, trends: !toggles.trends}); }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${toggles.trends ? 'bg-indigo-500 text-white' : 'bg-white/10 text-white/40'}`}>Dashed Trend Lines</button>
-                  <button onClick={(e) => { e.stopPropagation(); setToggles({...toggles, inflation: !toggles.inflation}); }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${toggles.inflation ? 'bg-amber-500 text-white' : 'bg-white/10 text-white/40'}`}>Inflation Adjusted (Real $)</button>
+                <div className="bg-indigo-50 px-5 py-2 rounded-full border border-indigo-100">
+                   <span className="text-[10px] font-black uppercase text-indigo-600">Click for Detailed Analysis</span>
                 </div>
               </div>
-
-              <div className="h-[250px] w-full mt-4">
+              <div className="h-[400px] w-full mb-12">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff20" />
-                    <XAxis 
-                      dataKey="year" 
-                      stroke="#94a3b8" 
-                      fontSize={12} 
-                      fontWeight="900" 
-                      ticks={[2005, 2010, 2015, 2020, 2025]}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <YAxis 
-                      stroke="#94a3b8" 
-                      fontSize={12} 
-                      fontWeight="900" 
-                      tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`}
-                      tickLine={false}
-                      axisLine={false}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
+                    <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
                     <Tooltip 
-                      cursor={{stroke: '#ffffff', strokeWidth: 1}}
+                      cursor={{stroke: '#cbd5e1', strokeWidth: 1}}
                       content={({ active, payload }) => {
                         if (active && payload && payload.length) {
                           const data = payload[0].payload;
                           return (
-                            <div className="bg-white p-4 rounded-2xl shadow-xl border border-gray-100">
-                              <p className="text-[10px] font-black text-indigo-600 mb-2 uppercase">{data.year} Totals</p>
-                              <div className="space-y-1 text-left">
-                                <p className="text-xs font-bold text-gray-900 flex justify-between gap-4">Assets: <span className="font-mono">{formatCurrency(Number(data.totalAssets || 0))}</span></p>
-                                <p className="text-xs font-bold text-gray-900 flex justify-between gap-4">Debt: <span className="font-mono">{formatCurrency(Number(data.totalLiabs || 0))}</span></p>
-                                <p className="text-xs font-bold text-indigo-600 border-t pt-1 flex justify-between gap-4">Net Worth: <span className="font-mono">{formatCurrency(Number(data.totalNetWorth || 0))}</span></p>
+                            <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
+                              <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">{data.year} Records</p>
+                              <div className="space-y-2">
+                                <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Net Worth</span><span className="text-sm font-black text-blue-600">{formatCurrency(data.totalNetWorth)}</span></div>
+                                <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Assets</span><span className="text-sm font-black text-green-600">{formatCurrency(data.totalAssets)}</span></div>
+                                <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Debt</span><span className="text-sm font-black text-red-600">{formatCurrency(data.totalLiabs)}</span></div>
                               </div>
                             </div>
                           );
@@ -1367,15 +1336,46 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         return null;
                       }}
                     />
-                    {toggles.netWorth && <Line type="monotone" dataKey={toggles.inflation ? "totalNetWorthReal" : "totalNetWorth"} stroke="#3b82f6" strokeWidth={4} dot={false} name="Net Worth" />}
-                    {toggles.assets && <Line type="monotone" dataKey={toggles.inflation ? "totalAssetsReal" : "totalAssets"} stroke="#4ade80" strokeWidth={3} dot={false} name="Assets" />}
-                    {toggles.liabs && <Line type="monotone" dataKey={toggles.inflation ? "totalLiabsReal" : "totalLiabs"} stroke="#f87171" strokeWidth={3} dot={false} name="Debt" />}
+                    {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={4} dot={false} />}
+                    {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+                    {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                     
-                    {toggles.trends && toggles.netWorth && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                    {toggles.trends && toggles.assets && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                    {toggles.trends && toggles.liabs && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                    {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={4} dot={false} />}
+                    {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+                    {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                    
+                    {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={5} dot={false} />}
+                    {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+                    {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                   </LineChart>
                 </ResponsiveContainer>
+              </div>
+
+              {/* 3-Row Legend Grid */}
+              <div className="grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center px-4" onClick={(e) => e.stopPropagation()}>
+                <div />
+                {['assets', 'liabs', 'netWorth'].map(key => (
+                  <div key={key} className="text-center">
+                    <button onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`text-[12px] font-black uppercase transition-all ${toggles[key as keyof typeof toggles] ? 'text-gray-900' : 'text-gray-300'}`}>
+                      {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                    </button>
+                  </div>
+                ))}
+                <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+                {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                   const base = key.replace('Trend', '');
+                   return (
+                    <div key={key} className="flex justify-center">
+                      <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                    </div>
+                  );
+                })}
+                <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+                {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                  <div key={key} className="flex justify-center">
+                    <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -1474,16 +1474,27 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       >
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                         <XAxis dataKey="year" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} stroke="#94a3b8" />
-                        <YAxis fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#94a3b8" />
+                        <YAxis fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#374151" axisLine={false} tickLine={false} />
                         <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
-                        {chartLevel <= 2 ? (
-                          <>
-                            <Line type="monotone" dataKey="primaryAssets" name="Primary Govt" stroke="#4f46e5" strokeWidth={4} dot={expandedChart === 'assets'} />
-                            <Line type="monotone" dataKey="schoolAssets" name="School Dept" stroke="#ec4899" strokeWidth={4} dot={expandedChart === 'assets'} />
-                          </>
+                        <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
+                        {selectedParents.length === 0 ? (
+                          <Line type="monotone" dataKey="totalAssets" name="Moore County Total" stroke="#4ade80" strokeWidth={5} dot={false} />
                         ) : (
-                          <Line type="monotone" dataKey="drillDownValue" name={selectedLineItem || selectedParent} stroke="#4f46e5" strokeWidth={6} dot={true} />
+                          selectedParents.map((sel, idx) => {
+                            const kb = sel.replace(/\s+/g, '');
+                            const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
+                            return (
+                              <Line 
+                                key={sel}
+                                type="monotone" 
+                                dataKey={`${kb}Assets`} 
+                                name={`${sel}`} 
+                                stroke={colors[idx % colors.length]} 
+                                strokeWidth={4} 
+                                dot={expandedChart === 'assets'} 
+                              />
+                            );
+                          })
                         )}
                       </LineChart>
                     </ResponsiveContainer>
@@ -1493,7 +1504,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
               {/* LIABILITIES VIEW (EXHIBIT A) */}
               {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-                <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-indigo-950 p-4 md:p-10' : 'bg-indigo-900 p-6 md:p-8 rounded-[3rem] shadow-2xl text-white mb-6'}`}>
+                <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100'}`}>
                    <div className="flex justify-between items-start mb-4">
                     <div className="w-full">
                       <div className="flex justify-between items-center w-full mb-2">
@@ -1503,29 +1514,29 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                          </button>
                       </div>
 
-                      {/* FIXED TOP TOOLTIP (DARK VERSION) */}
-                      <div className="bg-white/5 rounded-2xl p-4 flex justify-around items-center border border-white/10 min-h-[60px]">
+                      {/* FIXED TOP TOOLTIP (LIGHT VERSION) */}
+                      <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
                         {hoveredData ? (
                           <>
                             {hoveredData.isCovidGap ? (
                               <div className="flex items-center gap-3">
-                                <i className="fa-solid fa-circle-exclamation text-indigo-300"></i>
-                                <p className="text-[14px] font-black text-white uppercase italic">Data not collected due to COVID.</p>
+                                <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
+                                <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
                               </div>
                             ) : (
                               <>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-300 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-white">{hoveredData.year}</p></div>
+                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p></div>
                                 <div className="text-center">
-                                  <p className="text-[10px] font-black text-green-300 uppercase">Assets</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-green-400">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p>
+                                  <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-green-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-[10px] font-black text-red-300 uppercase">Debt</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-red-400">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}</p>
+                                  <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-red-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}</p>
                                 </div>
                                 <div className="text-center">
-                                  <p className="text-[10px] font-black text-indigo-200 uppercase">Net Worth</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-white">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}</p>
+                                  <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
+                                  <p className="text-lg md:text-[18.66px] font-black text-blue-600">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}</p>
                                 </div>
                               </>
                             )}
@@ -1536,7 +1547,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                       </div>
                     </div>
                   </div>
-                  <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[300px]'} w-full`}>
+                  <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
                     <ResponsiveContainer width="100%" height="100%">
                       <LineChart 
                         data={chartData} 
@@ -1544,45 +1555,38 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         onMouseLeave={() => setHoveredData(null)}
                         onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                       >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                        <XAxis dataKey="year" stroke="#ffffff50" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} />
-                        <YAxis stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
-                        <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={100} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
+                        <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
+                        <Tooltip content={<div className="hidden" />} />
+                        
                         <React.Fragment>
                           {selectedParents.length === 0 ? (
-                            // DEFAULT VIEW (If nothing selected)
                             <React.Fragment>
-                              {toggles.netWorth && <Line type="monotone" dataKey={toggles.inflation ? "totalNetWorthReal" : "totalNetWorth"} name="Total Net Worth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                              {toggles.assets && <Line type="monotone" dataKey={toggles.inflation ? "totalAssetsReal" : "totalAssets"} name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                              {toggles.liabs && <Line type="monotone" dataKey={toggles.inflation ? "totalLiabsReal" : "totalLiabs"} name="Total Debt" stroke="#f87171" strokeWidth={3} dot={false} />}
+                              {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
+                              {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                              {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                              
+                              {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
+                              {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                              {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+
+                              {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
+                              {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                              {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                             </React.Fragment>
                           ) : (
-                            // MULTI-OVERLAY VIEW
                             selectedParents.map((sel, idx) => {
                               const kb = sel.replace(/\s+/g, '');
-                              const baseColors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
-                              const color = baseColors[idx % baseColors.length];
+                              const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
+                              const color = colors[idx % colors.length];
                               return (
                                 <React.Fragment key={sel}>
-                                  {toggles.netWorth && (
-                                    <React.Fragment>
-                                      <Line type="monotone" dataKey={toggles.inflation ? `${kb}NetWorthReal` : `${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />
-                                      {toggles.trends && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                                    </React.Fragment>
-                                  )}
-                                  {toggles.assets && (
-                                    <React.Fragment>
-                                      <Line type="monotone" dataKey={toggles.inflation ? `${kb}AssetsReal` : `${kb}Assets`} name={`${sel} Assets`} stroke="#4ade80" strokeWidth={2} strokeDasharray="2 2" dot={false} />
-                                      {toggles.trends && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="10 10" dot={false} opacity={0.3} />}
-                                    </React.Fragment>
-                                  )}
-                                  {toggles.liabs && (
-                                    <React.Fragment>
-                                      <Line type="monotone" dataKey={toggles.inflation ? `${kb}LiabsReal` : `${kb}Liabs`} name={`${sel} Debt`} stroke="#f87171" strokeWidth={2} strokeDasharray="2 2" dot={false} />
-                                      {toggles.trends && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="10 10" dot={false} opacity={0.3} />}
-                                    </React.Fragment>
-                                  )}
+                                  {toggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
+                                  {toggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                                  {toggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
+                                  {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} strokeDasharray="3 3" dot={false} />}
+                                  {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} strokeDasharray="3 3" dot={false} />}
                                 </React.Fragment>
                               );
                             })
@@ -1590,6 +1594,90 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         </React.Fragment>
                       </LineChart>
                     </ResponsiveContainer>
+                  </div>
+
+                  <div className="grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center px-4 mb-12" onClick={(e) => e.stopPropagation()}>
+                    <div />
+                    {['assets', 'liabs', 'netWorth'].map(key => (
+                      <div key={key} className="text-center">
+                        <button onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`text-[12px] font-black uppercase transition-all flex flex-col items-center gap-1 ${toggles[key as keyof typeof toggles] ? 'text-gray-900' : 'text-gray-300'}`}>
+                          <div className={`w-8 h-1 rounded-full mb-1 ${key === 'assets' ? 'bg-green-500' : key === 'liabs' ? 'bg-red-500' : 'bg-blue-500'} ${toggles[key as keyof typeof toggles] ? 'opacity-100' : 'opacity-20'}`} />
+                          {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+                    {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                      const base = key.replace('Trend', '');
+                      return (
+                        <div key={key} className="flex justify-center">
+                          <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                        </div>
+                      );
+                    })}
+
+                    <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+                    {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                      <div key={key} className="flex justify-center">
+                        <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* TIER 4: GRANULAR AUDIT TABLE (Shown when a year is clicked) */}
+              {selectedFinancialYear && (
+                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden mb-8 animate-slide-up">
+                  <div className="bg-indigo-600 p-6 flex justify-between items-center">
+                    <div>
+                      <h3 className="text-white font-black uppercase text-xl leading-none">{selectedFinancialYear} Audit Details</h3>
+                      <p className="text-indigo-200 text-[10px] font-black uppercase mt-1">Official Line-Item Records (Level 4)</p>
+                    </div>
+                    <button onClick={() => setSelectedFinancialYear(null)} className="text-white/50 hover:text-white transition-colors">
+                      <i className="fa-solid fa-circle-xmark text-2xl"></i>
+                    </button>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="bg-gray-50 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400">
+                        <tr>
+                          <th className="p-6">Line Item / Entity</th>
+                          <th className="p-6">Category</th>
+                          <th className="p-6 text-right">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {yearDetailData
+                          .filter(row => {
+                            // Only show Tier 4 items for the audit table
+                            if (Number(row.hierarchy_level) !== 4) return false;
+                            // If we have selected parents (Pillars), only show children of those parents
+                            if (selectedParents.length > 0) {
+                              return selectedParents.some(p => row.parent_entity?.includes(p));
+                            }
+                            return true;
+                          })
+                          .sort((a, b) => Number(b.amount) - Number(a.amount))
+                          .map((row, idx) => (
+                            <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
+                              <td className="p-6">
+                                <p className="font-black uppercase text-gray-900 text-sm leading-none">{row.label}</p>
+                                <p className="text-[10px] font-bold text-indigo-400 uppercase mt-1">{row.parent_entity}</p>
+                              </td>
+                              <td className="p-6">
+                                <span className="px-3 py-1 bg-gray-100 rounded text-[10px] font-black uppercase text-gray-400 border border-gray-200">
+                                  {row.category}
+                                </span>
+                              </td>
+                              <td className="p-6 text-right font-black text-gray-900 text-sm">
+                                {formatCurrency(Number(row.amount))}
+                              </td>
+                            </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               )}
@@ -3057,6 +3145,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
         @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
         .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .slider-oval { width: 44px; height: 20px; border-radius: 20px; position: relative; transition: all 0.3s ease; cursor: pointer; border: 2px solid #e2e8f0; background: #f8fafc; }
+        .slider-circle { width: 12px; height: 12px; border-radius: 50%; background: white; position: absolute; top: 2px; left: 3px; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .slider-active .slider-circle { left: 25px; }
+        .slider-assets-on { background: #4ade80 !important; border-color: #22c55e !important; }
+        .slider-liabs-on { background: #f87171 !important; border-color: #ef4444 !important; }
+        .slider-netWorth-on { background: #3b82f6 !important; border-color: #2563eb !important; }
+        .slider-inf-on { background: #fb923c !important; border-color: #f97316 !important; }
       `}</style>
     </div>
   );

@@ -29,10 +29,14 @@ export default function App() {
   
   // --- FEATURE DATA ---
   const { 
-  financialData, setFinancialData, yearDetailData, setYearDetailData, 
-  polls, setPolls, suggestions, setSuggestions, 
-  fetchPolls, fetchSuggestions, fetchFinancialData, fetchYearDetails 
-} = useDatabase();
+    financialData, setFinancialData, yearDetailData, setYearDetailData, 
+    polls, setPolls, suggestions, setSuggestions, boardMessages, setBoardMessages,
+    allUsers, setAllUsers, manualRequests, setManualRequests, adminMessages, setAdminMessages,
+    adminEmailDeletionVotes, setAdminEmailDeletionVotes, deletionVotes, setDeletionVotes,
+    fetchPolls, fetchSuggestions, fetchBoardMessages, fetchUsers, fetchManualRequests,
+    fetchAdminMessages, fetchAdminEmailDeletionVotes, fetchDeletionVotes,
+    fetchFinancialData, fetchYearDetails, fetchAllData
+  } = useDatabase();
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { supabase } from '../App'; // We will export supabase from App.tsx in the next step
+import { supabase } from '../App';
 
 export function useDatabase() {
   const [financialData, setFinancialData] = useState<any[]>([]);
@@ -22,7 +22,43 @@ export function useDatabase() {
   const fetchSuggestions = async () => {
     if (!supabase) return;
     const { data } = await supabase.from('suggestions').select(`*, profiles(full_name, district, avatar_url), suggestion_comments(*, profiles(full_name, district, avatar_url), suggestion_reactions(*))`).order('created_at', { ascending: false });
-    if (data) setSuggestions(data || []);
+    setSuggestions(data || []);
+  };
+
+  const fetchBoardMessages = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('board_messages').select(`*, profiles(full_name, district, avatar_url)`).order('created_at', { ascending: false });
+    setBoardMessages(data || []);
+  };
+
+  const fetchUsers = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('profiles').select('*').order('full_name', { ascending: true });
+    setAllUsers(data || []);
+  };
+
+  const fetchManualRequests = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('manual_access_requests').select('*').order('created_at', { ascending: false });
+    setManualRequests(data || []);
+  };
+
+  const fetchAdminMessages = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('admin_messages').select('*').order('created_at', { ascending: false });
+    setAdminMessages(data || []);
+  };
+
+  const fetchAdminEmailDeletionVotes = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('admin_email_deletion_votes').select('*');
+    setAdminEmailDeletionVotes(data || []);
+  };
+
+  const fetchDeletionVotes = async () => {
+    if (!supabase) return;
+    const { data } = await supabase.from('admin_deletion_votes').select('*');
+    setDeletionVotes(data || []);
   };
 
   const fetchFinancialData = async () => {
@@ -41,16 +77,25 @@ export function useDatabase() {
     if (data) setYearDetailData(data);
   };
 
-  // Add more fetchers as needed here following the same pattern
+  const fetchAllData = () => {
+    fetchPolls();
+    fetchSuggestions();
+    fetchBoardMessages();
+    fetchUsers();
+    fetchManualRequests();
+    fetchDeletionVotes();
+    fetchAdminMessages();
+    fetchAdminEmailDeletionVotes();
+    fetchFinancialData();
+  };
 
   return {
-    financialData, setFinancialData,
-    yearDetailData, setYearDetailData,
-    polls, setPolls,
-    suggestions, setSuggestions,
-    fetchPolls,
-    fetchSuggestions,
-    fetchFinancialData,
-    fetchYearDetails
+    financialData, setFinancialData, yearDetailData, setYearDetailData,
+    polls, setPolls, suggestions, setSuggestions, boardMessages, setBoardMessages,
+    allUsers, setAllUsers, manualRequests, setManualRequests, adminMessages, setAdminMessages,
+    adminEmailDeletionVotes, setAdminEmailDeletionVotes, deletionVotes, setDeletionVotes,
+    fetchPolls, fetchSuggestions, fetchBoardMessages, fetchUsers, fetchManualRequests,
+    fetchAdminMessages, fetchAdminEmailDeletionVotes, fetchDeletionVotes,
+    fetchFinancialData, fetchYearDetails, fetchAllData
   };
 }

@@ -13,7 +13,10 @@ import { Toast } from './components/Toast';
 // --- CONFIGURATION ---
 const supabaseUrl = process.env.SUPABASE_URL || '';
 const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || '';
-const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
+export const supabase = (supabaseUrl && supabaseAnonKey) ? createClient(supabaseUrl, supabaseAnonKey) : null;
+
+// Import our new custom hook
+import { useDatabase } from './hooks/useDatabase';
 
 export default function App() {
   // --- CORE STATE ---
@@ -25,40 +28,11 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
   // --- FEATURE DATA ---
-  const [polls, setPolls] = useState<any[]>([]);
-  const [selectedPoll, setSelectedPoll] = useState<any>(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [boardMessages, setBoardMessages] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [manualRequests, setManualRequests] = useState<any[]>([]);
-  const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
-  const [adminMessages, setAdminMessages] = useState<any[]>([]);
-  const [adminEmailDeletionVotes, setAdminEmailDeletionVotes] = useState<any[]>([]);
-  const [selectedAdminEmail, setSelectedAdminEmail] = useState<any>(null);
-  const [stagedAdminReplyFiles, setStagedAdminReplyFiles] = useState<{url: string, name: string}[]>([]);
-  const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
-  const [financialData, setFinancialData] = useState<any[]>([]);
-  const [yearDetailData, setYearDetailData] = useState<any[]>([]);
-  const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
-  const [expandedChart, setExpandedChart] = useState<string | null>(null);
-  // Navigation State for YoY Drill-down
-  // chartLevel: 1 (Grand Total), 2 (Primary vs Component), 3 (Activities/Entities), 4 (Line Items)
-  const [chartLevel, setChartLevel] = useState(1);
-  const [selectedParents, setSelectedParents] = useState<string[]>([]);
-  const [selectedParent, setSelectedParent] = useState<string | null>(null);
-  const [selectedLineItem, setSelectedLineItem] = useState<string | null>(null);
-  const [toggles, setToggles] = useState({ 
-    assets: false, 
-    liabs: false, 
-    netWorth: true, 
-    assetsTrend: false, 
-    liabsTrend: false, 
-    netWorthTrend: false, 
-    assetsInf: false, 
-    liabsInf: false, 
-    netWorthInf: false 
-  });
-  const [hoveredData, setHoveredData] = useState<any>(null);
+  const { 
+  financialData, setFinancialData, yearDetailData, setYearDetailData, 
+  polls, setPolls, suggestions, setSuggestions, 
+  fetchPolls, fetchSuggestions, fetchFinancialData, fetchYearDetails 
+} = useDatabase();
   
   // --- UI STATE ---
   const [isVerifying, setIsVerifying] = useState(false);
@@ -218,137 +192,6 @@ export default function App() {
   }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
 
   // --- DATA FETCHING ---
-  const fetchProfile = async (userId: string) => {
-    if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (data) setProfile(data);
-  };
-
-  const fetchPolls = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('polls').select(`*, poll_options(*), poll_votes(*, profiles(full_name, district, avatar_url)), poll_comments(*, profiles(full_name, district, avatar_url), comment_reactions(*))`).order('created_at', { ascending: false });
-    if (data) setPolls(data);
-  };
-
-  const fetchSuggestions = async () => {
-    if (!supabase) return;
-    try {
-      const { data, error } = await supabase
-        .from('suggestions')
-        .select(`
-          *, 
-          profiles(full_name, district, avatar_url),
-          suggestion_comments(*, profiles(full_name, district, avatar_url), suggestion_reactions(*))
-        `)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Suggestion Fetch Error:", error.message);
-        // Fallback: try fetching without comments if the join is the problem
-        const { data: fallbackData } = await supabase.from('suggestions').select('*, profiles(full_name, district, avatar_url)').order('created_at', { ascending: false });
-        setSuggestions(fallbackData || []);
-      } else {
-        setSuggestions(data || []);
-      }
-    } catch (err) {
-      console.error("Critical Fetch Error:", err);
-    }
-  };
-
-  const fetchBoardMessages = async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase
-      .from('board_messages')
-      .select(`
-        *,
-        profiles (
-          full_name,
-          district,
-          avatar_url
-        )
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Fetch Error:", error.message);
-    } else {
-      setBoardMessages(data || []);
-    }
-  };
-
-  const fetchUsers = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('*').order('full_name', { ascending: true });
-    setAllUsers(data || []);
-  };
-
-  const fetchManualRequests = async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase.from('manual_access_requests').select('*').order('created_at', { ascending: false });
-    if (error) console.error("Manual Request Fetch Error:", error.message);
-    setManualRequests(data || []);
-  };
-const fetchAdminMessages = async () => {
-    if (!supabase || !profile?.is_admin) return;
-    console.log("Fetching Admin Inbox...");
-    const { data } = await supabase.from('admin_messages').select('*').order('created_at', { ascending: false });
-    setAdminMessages(data || []);
-  };
-
-  const fetchAdminEmailDeletionVotes = async () => {
-    if (!supabase || !profile?.is_admin) return;
-    const { data } = await supabase.from('admin_email_deletion_votes').select('*');
-    setAdminEmailDeletionVotes(data || []);
-  };
-
-  const fetchFinancialData = async () => {
-    if (!supabase) return;
-    
-    // We filter for Tier 2 (County Pillars) and Tier 3 (Entities) specifically.
-    // This prevents Tier 4 line items from inflating the charts.
-    // Include Level 1 (Grand Totals) for the Hero Chart
-    const levelFilter = 'hierarchy_level.in.(1,2,3)';
-
-    const { data: b1 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2004).lte('year', 2013).or(levelFilter);
-    const { data: b2 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2014).lte('year', 2023).or(levelFilter);
-    const { data: b3 } = await supabase.from('AFR_Exhibit_A').select('*').gte('year', 2024).lte('year', 2033).or(levelFilter);
-
-    const combined = [...(b1 || []), ...(b2 || []), ...(b3 || [])];
-    
-    // This ensures the charts draw a continuous line from left to right.
-    const sorted = combined.sort((a, b) => a.year - b.year);
-    setFinancialData(sorted);
-  };
-
-  // Isolates drill-down data so the main graph doesn't "jump"
-  const fetchYearDetails = async (year: number) => {
-    if (!supabase) return;
-    const { data, error } = await supabase
-      .from('AFR_Exhibit_A')
-      .select('*')
-      .eq('year', year);
-    
-    if (!error && data) {
-      setYearDetailData(data);
-    }
-  };
-  const fetchDeletionVotes = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('admin_deletion_votes').select('*');
-    setDeletionVotes(data || []);
-  };
-
-  const fetchAllData = () => { 
-    fetchPolls(); 
-    fetchSuggestions(); 
-    fetchBoardMessages(); 
-    fetchUsers(); 
-    fetchManualRequests(); 
-    fetchDeletionVotes();
-    fetchAdminMessages();
-    fetchAdminEmailDeletionVotes();
-    fetchFinancialData();
-  };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
   // --- HANDLERS ---

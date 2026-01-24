@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { CATEGORIES, DASHBOARDS, OFFICIALS } from './constants.ts';
+import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.ts';
 import { DashboardConfig } from './types.ts';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -44,6 +44,13 @@ const formatCurrency = (value: number | undefined | null) => {
     maximumFractionDigits: 0,
   }).format(value);
 };
+const getRealValue = (amount: number, year: number, baseYear: number) => {
+  const currentCPI = CPI_ANNUAL_AVG[year];
+  const baseCPI = CPI_ANNUAL_AVG[baseYear];
+  if (!currentCPI || !baseCPI) return amount;
+  return (amount / currentCPI) * baseCPI;
+};
+
 const calculateTrendLine = (data: any[], key: string) => {
   const n = data.length;
   if (n < 2) return data;
@@ -111,8 +118,15 @@ export default function App() {
   // Navigation State for YoY Drill-down
   // chartLevel: 1 (Grand Total), 2 (Primary vs Component), 3 (Activities/Entities), 4 (Line Items)
   const [chartLevel, setChartLevel] = useState(1);
-  const [selectedParent, setSelectedParent] = useState<string | null>(null);
+  const [selectedParents, setSelectedParents] = useState<string[]>([]);
   const [selectedLineItem, setSelectedLineItem] = useState<string | null>(null);
+  const [toggles, setToggles] = useState({ 
+    assets: false, 
+    liabs: false, 
+    netWorth: true, 
+    trends: false, 
+    inflation: false 
+  });
   const [hoveredData, setHoveredData] = useState<any>(null);
   
   // --- UI STATE ---
@@ -766,6 +780,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
   // DATA TRANSFORMER: Orchestrates YoY Trends based on the verified 3-Tier Flat Hierarchy
   const chartData = useMemo(() => {
     const yearMap = new Map();
+    const years = financialData.map(d => Number(d.year));
+    const baseYear = years.length > 0 ? Math.min(...years) : 2005;
 
     financialData.forEach(row => {
       const yr = Number(row.year);
@@ -777,81 +793,91 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
       if (!yearMap.has(yr)) {
         yearMap.set(yr, { 
-          year: yr, 
-          totalAssets: 0, totalLiabs: 0, totalNetWorth: 0,
-          primaryAssets: 0, primaryLiabs: 0, primaryNetWorth: 0,
-          schoolAssets: 0, schoolLiabs: 0, schoolNetWorth: 0,
-          ecdAssets: 0, ecdLiabs: 0, ecdNetWorth: 0,
-          subAssets: 0, subLiabs: 0, subNetWorth: 0,
+          year: yr, totalAssets: 0, totalLiabs: 0, totalNetWorth: 0,
+          primaryNetWorth: 0, schoolNetWorth: 0, ecdNetWorth: 0,
           isCovidGap: false
         });
       }
       const e = yearMap.get(yr);
+      const isAsset = cat.includes('asset');
+      const isLiab = cat.includes('liabilit');
+      const isNet = cat.includes('net');
 
-      // Level 1: Home Page Line (Moore County Grand Total)
       if (level === 1) {
-        if (cat.includes('asset')) e.totalAssets = amt;
-        else if (cat.includes('liabilit')) e.totalLiabs = amt;
-        else if (cat.includes('net')) e.totalNetWorth = amt;
+        if (isAsset) e.totalAssets = amt;
+        else if (isLiab) e.totalLiabs = amt;
+        else if (isNet) e.totalNetWorth = amt;
       }
       
-      // Level 2: Pillars (Primary Gov, School Dept, ECD)
+      // Map Peers and Specific Entities for Overlay
       if (level === 2) {
-        if (label === 'Primary Government') {
-          if (cat.includes('asset')) e.primaryAssets = amt;
-          else if (cat.includes('liabilit')) e.primaryLiabs = amt;
-          else if (cat.includes('net')) e.primaryNetWorth = amt;
-        } else if (label === 'School Department') {
-          if (cat.includes('asset')) e.schoolAssets = amt;
-          else if (cat.includes('liabilit')) e.schoolLiabs = amt;
-          else if (cat.includes('net')) e.schoolNetWorth = amt;
-        } else if (label === 'Emergency Communications District') {
-          if (cat.includes('asset')) e.ecdAssets = amt;
-          else if (cat.includes('liabilit')) e.ecdLiabs = amt;
-          else if (cat.includes('net')) e.ecdNetWorth = amt;
-        }
+        if (label.includes('Primary')) e.primaryNetWorth = amt;
+        if (label.includes('School')) e.schoolNetWorth = amt;
+        if (label.includes('Emergency')) e.ecdNetWorth = amt;
       }
 
-      // Level 3: Details for Primary Gov Drill-down
-      if (level === 3 && chartLevel === 3) {
-        const targetMap: Record<string, string> = {
-          'Governmental': 'Governmental Activities',
-          'Business-type': 'Business-type Activities'
-        };
-        if (parent === targetMap[selectedParent || '']) {
-          if (cat.includes('asset')) e.subAssets = amt;
-          else if (cat.includes('liabilit')) e.subLiabs = amt;
-          else if (cat.includes('net')) e.subNetWorth = amt;
+      // Dynamic Mapping for any Selected Entity (Level 2 or 3)
+      selectedParents.forEach(sel => {
+        const keyBase = sel.replace(/\s+/g, '');
+        // Match if label matches selection (Level 2) OR parent matches selection (Level 3)
+        if (label.includes(sel) || parent.includes(sel)) {
+          if (isAsset) e[`${keyBase}Assets`] = amt;
+          else if (isLiab) e[`${keyBase}Liabs`] = amt;
+          else if (isNet) e[`${keyBase}NetWorth`] = amt;
         }
-      }
+      });
 
-      // Flag for 2020 gaps (Gov and Business-type missing data)
-      if (yr === 2020 && (selectedParent === 'Business-type' || selectedParent === 'Governmental' || chartLevel < 3)) {
+      // COVID Gap Logic (Preserved)
+      if (yr === 2020 && (selectedParents.includes('Business-type') || selectedParents.includes('Governmental') || chartLevel < 3)) {
         e.isCovidGap = true;
       }
     });
 
-    return Array.from(yearMap.values()).sort((a, b) => a.year - b.year).map((e, idx, arr) => {
-      // Interpolate 2020 gaps for smooth trend lines
+    let list = Array.from(yearMap.values()).sort((a, b) => a.year - b.year);
+    
+    // Interpolation and Inflation Calculations
+    list = list.map((e, idx, arr) => {
       if (e.year === 2020 && e.isCovidGap) {
-        const prev = arr.find(r => r.year === 2019);
-        const next = arr.find(r => r.year === 2021);
+        const prev = arr[idx-1], next = arr[idx+1];
         if (prev && next) {
-          if (chartLevel === 3) {
-            e.subAssets = (Number(prev.subAssets || 0) + Number(next.subAssets || 0)) / 2;
-            e.subLiabs = (Number(prev.subLiabs || 0) + Number(next.subLiabs || 0)) / 2;
-            e.subNetWorth = (Number(prev.subNetWorth || 0) + Number(next.subNetWorth || 0)) / 2;
-          } else {
-            e.totalAssets = (Number(prev.totalAssets || 0) + Number(next.totalAssets || 0)) / 2;
-            e.totalLiabs = (Number(prev.totalLiabs || 0) + Number(next.totalLiabs || 0)) / 2;
-            e.totalNetWorth = (Number(prev.totalNetWorth || 0) + Number(next.totalNetWorth || 0)) / 2;
-            e.primaryNetWorth = (Number(prev.primaryNetWorth || 0) + Number(next.primaryNetWorth || 0)) / 2;
-          }
+          ['totalAssets', 'totalLiabs', 'totalNetWorth', 'primaryNetWorth', 'schoolNetWorth', 'ecdNetWorth'].forEach(k => {
+            e[k] = (Number(prev[k] || 0) + Number(next[k] || 0)) / 2;
+          });
+          selectedParents.forEach(sel => {
+            const kb = sel.replace(/\s+/g, '');
+            ['Assets', 'Liabs', 'NetWorth'].forEach(suffix => {
+              e[`${kb}${suffix}`] = (Number(prev[`${kb}${suffix}`] || 0) + Number(next[`${kb}${suffix}`] || 0)) / 2;
+            });
+          });
         }
       }
+
+      // Inflation Math
+      e.totalNetWorthReal = getRealValue(e.totalNetWorth, e.year, baseYear);
+      e.totalAssetsReal = getRealValue(e.totalAssets, e.year, baseYear);
+      e.totalLiabsReal = getRealValue(e.totalLiabs, e.year, baseYear);
+      selectedParents.forEach(sel => {
+        const kb = sel.replace(/\s+/g, '');
+        if (e[`${kb}NetWorth`]) e[`${kb}NetWorthReal`] = getRealValue(e[`${kb}NetWorth`], e.year, baseYear);
+        if (e[`${kb}Assets`]) e[`${kb}AssetsReal`] = getRealValue(e[`${kb}Assets`], e.year, baseYear);
+        if (e[`${kb}Liabs`]) e[`${kb}LiabsReal`] = getRealValue(e[`${kb}Liabs`], e.year, baseYear);
+      });
       return e;
     });
-  }, [financialData, chartLevel, selectedParent]);
+
+    // Trend Calculations
+    list = calculateTrendLine(list, 'totalNetWorth');
+    list = calculateTrendLine(list, 'totalAssets');
+    list = calculateTrendLine(list, 'totalLiabs');
+    selectedParents.forEach(sel => {
+      const kb = sel.replace(/\s+/g, '');
+      list = calculateTrendLine(list, `${kb}NetWorth`);
+      list = calculateTrendLine(list, `${kb}Assets`);
+      list = calculateTrendLine(list, `${kb}Liabs`);
+    });
+    
+    return list;
+  }, [financialData, selectedParents, toggles, chartLevel]);
 
   // TIER 3 FILTER: Determines which specific rows show up in the audit table
   const filteredTableRows = useMemo(() => {
@@ -1273,13 +1299,34 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             <div className="bg-indigo-900 p-8 rounded-[3rem] shadow-2xl text-white cursor-pointer hover:scale-[1.01] transition-all mb-12" onClick={() => setSelectedCategory('solvency')}>
               <div className="flex justify-between items-start mb-6">
                 <div>
-                  <h3 className="text-xl font-black uppercase leading-none">County Solvency</h3>
+                  <h3 className="text-xl font-black uppercase leading-none">County Net Worth</h3>
                   <p className="text-indigo-300 text-[10px] font-bold uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
                 </div>
                 <div className="bg-white/10 px-4 py-2 rounded-full border border-white/10">
                    <span className="text-[10px] font-black uppercase">Click for Details</span>
                 </div>
               </div>
+              {/* Chart Controls */}
+              <div className="bg-white/5 p-4 rounded-2xl mb-4 space-y-3 border border-white/10">
+                <div className="flex flex-wrap items-center gap-4">
+                  <span className="text-[10px] font-black uppercase text-indigo-300 w-24">Data Views:</span>
+                  {[
+                    { id: 'netWorth', label: 'Net Worth', color: 'bg-blue-500' },
+                    { id: 'assets', label: 'Total Assets', color: 'bg-green-500' },
+                    { id: 'liabs', label: 'Total Debt', color: 'bg-red-500' }
+                  ].map(t => (
+                    <button key={t.id} onClick={(e) => { e.stopPropagation(); setToggles({...toggles, [t.id]: !toggles[t.id] as any}); }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all flex items-center gap-2 ${toggles[t.id as keyof typeof toggles] ? t.color + ' text-white' : 'bg-white/10 text-white/40'}`}>
+                      <i className={`fa-solid ${toggles[t.id as keyof typeof toggles] ? 'fa-check-circle' : 'fa-circle'}`}></i> {t.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-white/5">
+                  <span className="text-[10px] font-black uppercase text-indigo-300 w-24">Trend Toggle:</span>
+                  <button onClick={(e) => { e.stopPropagation(); setToggles({...toggles, trends: !toggles.trends}); }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${toggles.trends ? 'bg-indigo-500 text-white' : 'bg-white/10 text-white/40'}`}>Dashed Trend Lines</button>
+                  <button onClick={(e) => { e.stopPropagation(); setToggles({...toggles, inflation: !toggles.inflation}); }} className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${toggles.inflation ? 'bg-amber-500 text-white' : 'bg-white/10 text-white/40'}`}>Inflation Adjusted (Real $)</button>
+                </div>
+              </div>
+
               <div className="h-[250px] w-full mt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -1320,8 +1367,13 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         return null;
                       }}
                     />
-                    <Line type="monotone" dataKey="totalNetWorth" stroke="#ffffff" strokeWidth={4} dot={{ r: 4, fill: '#ffffff' }} activeDot={{ r: 6 }} />
-                    <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#ffffff" strokeWidth={1} strokeDasharray="5 5" dot={false} activeDot={false} opacity={0.5} />
+                    {toggles.netWorth && <Line type="monotone" dataKey={toggles.inflation ? "totalNetWorthReal" : "totalNetWorth"} stroke="#3b82f6" strokeWidth={4} dot={false} name="Net Worth" />}
+                    {toggles.assets && <Line type="monotone" dataKey={toggles.inflation ? "totalAssetsReal" : "totalAssets"} stroke="#4ade80" strokeWidth={3} dot={false} name="Assets" />}
+                    {toggles.liabs && <Line type="monotone" dataKey={toggles.inflation ? "totalLiabsReal" : "totalLiabs"} stroke="#f87171" strokeWidth={3} dot={false} name="Debt" />}
+                    
+                    {toggles.trends && toggles.netWorth && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                    {toggles.trends && toggles.assets && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                    {toggles.trends && toggles.liabs && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
@@ -1497,13 +1549,45 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                         <YAxis stroke="#ffffff50" fontSize={18.66} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} />
                         <Tooltip cursor={{stroke: '#ffffff', strokeWidth: 1}} content={expandedChart === 'solvency' ? undefined : <div className="hidden" />} />
                         <Legend verticalAlign="bottom" height={100} iconType="circle" wrapperStyle={{fontSize: '18.66px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '30px'}} />
-                        <>
-                          {/* Shows County-wide totals at Level 1/2, or Entity-specific totals at Level 3 */}
-                          <Line type="monotone" dataKey={chartLevel === 3 ? "subAssets" : "totalAssets"} name={chartLevel === 3 ? `${selectedParent} Assets` : "Total Assets"} stroke="#4ade80" strokeWidth={3} dot={chartLevel === 3} />
-                          <Line type="monotone" dataKey={chartLevel === 3 ? "subLiabs" : "totalLiabs"} name={chartLevel === 3 ? `${selectedParent} Debt` : "Total Liabilities"} stroke="#f87171" strokeWidth={3} dot={chartLevel === 3} />
-                          <Line type="monotone" dataKey={chartLevel === 3 ? "subNetWorth" : "totalNetWorth"} name="Net Worth" stroke="#ffffff" strokeWidth={4} strokeDasharray="5 5" dot={chartLevel === 3} />
-                          <Line type="monotone" dataKey={chartLevel === 3 ? "subNetWorthTrend" : "totalNetWorthTrend"} name="Long-term Trend" stroke="#ffffff" strokeWidth={1} strokeDasharray="3 3" dot={false} opacity={0.6} />
-                        </>
+                        <React.Fragment>
+                          {selectedParents.length === 0 ? (
+                            // DEFAULT VIEW (If nothing selected)
+                            <React.Fragment>
+                              {toggles.netWorth && <Line type="monotone" dataKey={toggles.inflation ? "totalNetWorthReal" : "totalNetWorth"} name="Total Net Worth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
+                              {toggles.assets && <Line type="monotone" dataKey={toggles.inflation ? "totalAssetsReal" : "totalAssets"} name="Total Assets" stroke="#4ade80" strokeWidth={3} dot={false} />}
+                              {toggles.liabs && <Line type="monotone" dataKey={toggles.inflation ? "totalLiabsReal" : "totalLiabs"} name="Total Debt" stroke="#f87171" strokeWidth={3} dot={false} />}
+                            </React.Fragment>
+                          ) : (
+                            // MULTI-OVERLAY VIEW
+                            selectedParents.map((sel, idx) => {
+                              const kb = sel.replace(/\s+/g, '');
+                              const baseColors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
+                              const color = baseColors[idx % baseColors.length];
+                              return (
+                                <React.Fragment key={sel}>
+                                  {toggles.netWorth && (
+                                    <React.Fragment>
+                                      <Line type="monotone" dataKey={toggles.inflation ? `${kb}NetWorthReal` : `${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />
+                                      {toggles.trends && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                                    </React.Fragment>
+                                  )}
+                                  {toggles.assets && (
+                                    <React.Fragment>
+                                      <Line type="monotone" dataKey={toggles.inflation ? `${kb}AssetsReal` : `${kb}Assets`} name={`${sel} Assets`} stroke="#4ade80" strokeWidth={2} strokeDasharray="2 2" dot={false} />
+                                      {toggles.trends && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="10 10" dot={false} opacity={0.3} />}
+                                    </React.Fragment>
+                                  )}
+                                  {toggles.liabs && (
+                                    <React.Fragment>
+                                      <Line type="monotone" dataKey={toggles.inflation ? `${kb}LiabsReal` : `${kb}Liabs`} name={`${sel} Debt`} stroke="#f87171" strokeWidth={2} strokeDasharray="2 2" dot={false} />
+                                      {toggles.trends && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="10 10" dot={false} opacity={0.3} />}
+                                    </React.Fragment>
+                                  )}
+                                </React.Fragment>
+                              );
+                            })
+                          )}
+                        </React.Fragment>
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -1531,12 +1615,26 @@ const handleDeleteAdminEmail = async (messageId: string) => {
                 )}
 
                 {chartLevel === 2 && (
-                  <>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Governmental'); }} className="px-6 py-3 bg-blue-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Governmental Activities</button>
-                    <button onClick={() => { setChartLevel(3); setSelectedParent('Business-type'); }} className="px-6 py-3 bg-cyan-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Business-type Activities</button>
-                    <button onClick={() => { setChartLevel(2); setSelectedParent('School Department'); }} className="px-6 py-3 bg-pink-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">School Dept</button>
-                    <button onClick={() => { setChartLevel(2); setSelectedParent('Emergency Communications District'); }} className="px-6 py-3 bg-amber-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">Emerg Comm Dist</button>
-                  </>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                    {[
+                      { id: 'Governmental', label: 'Governmental', color: 'bg-blue-600' },
+                      { id: 'Business-type', label: 'Business-type', color: 'bg-cyan-600' },
+                      { id: 'School Department', label: 'School Dept', color: 'bg-pink-600' },
+                      { id: 'Emergency Communications District', label: 'Emerg Comm Dist', color: 'bg-amber-600' }
+                    ].map(btn => (
+                      <button 
+                        key={btn.id}
+                        onClick={() => {
+                          const active = selectedParents.includes(btn.id);
+                          if (active) setSelectedParents(selectedParents.filter(p => p !== btn.id));
+                          else setSelectedParents([...selectedParents, btn.id]);
+                        }} 
+                        className={`px-4 py-4 rounded-xl text-xs font-black uppercase shadow-lg transition-all border-4 ${selectedParents.includes(btn.id) ? 'border-white ring-4 ring-indigo-500 ' + btn.color + ' text-white' : 'bg-white text-gray-400 border-gray-100'}`}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
                 
                 {chartLevel === 3 && (

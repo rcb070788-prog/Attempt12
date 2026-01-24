@@ -1,6 +1,30 @@
 
 import { DashboardConfig } from './types';
 
+export const CPI_ANNUAL_AVG: Record<number, number> = {
+  2005: 195.3,
+  2006: 201.6,
+  2007: 207.3,
+  2008: 215.303,
+  2009: 214.537,
+  2010: 218.056,
+  2011: 224.939,
+  2012: 229.594,
+  2013: 232.957,
+  2014: 236.736,
+  2015: 237.017,
+  2016: 240.007,
+  2017: 245.120,
+  2018: 251.107,
+  2019: 255.657,
+  2020: 258.811,
+  2021: 270.970,
+  2022: 292.655,
+  2023: 304.702,
+  2024: 313.689,
+  2025: 321.943
+};
+
 export const CATEGORIES = [
   { id: 'expenses', label: 'Expenses', icon: 'fa-money-bill-trend-up', color: 'bg-red-500' },
   { id: 'revenues', label: 'Revenues', icon: 'fa-hand-holding-dollar', color: 'bg-green-500' },

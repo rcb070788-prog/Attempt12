@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.ts';
-import { DashboardConfig } from './types.ts';
+import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants';
+import { DashboardConfig } from './types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Modular Imports
-import { renderTextWithLinks, formatDate } from './utils/formatUtils.ts';
-import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils.ts';
-import { UserAvatar } from './components/UserAvatar.tsx';
-import { Toast } from './components/Toast.tsx';
+import { renderTextWithLinks, formatDate } from './utils/formatUtils';
+import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils';
+import { UserAvatar } from './components/UserAvatar';
+import { Toast } from './components/Toast';
 
 // --- CONFIGURATION ---
 const supabaseUrl = process.env.SUPABASE_URL || '';

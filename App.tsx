@@ -5,10 +5,10 @@ import { DashboardConfig } from './types.ts';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 // Modular Imports
-import { renderTextWithLinks, formatDate } from './utils/formatUtils';
-import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils';
-import { UserAvatar } from './components/UserAvatar';
-import { Toast } from './components/Toast';
+import { renderTextWithLinks, formatDate } from './utils/formatUtils.ts';
+import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils.ts';
+import { UserAvatar } from './components/UserAvatar.tsx';
+import { Toast } from './components/Toast.tsx';
 
 // --- CONFIGURATION ---
 const supabaseUrl = process.env.SUPABASE_URL || '';

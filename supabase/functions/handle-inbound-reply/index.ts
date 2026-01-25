@@ -76,7 +76,10 @@ serve(async (req) => {
                 });
                 
                 if (attRes.ok) {
-                  const attData = await attRes.arrayBuffer();
+                  // FIX: Convert raw buffer to Uint8Array to prevent file corruption
+                  const attBuffer = await attRes.arrayBuffer();
+                  const attData = new Uint8Array(attBuffer);
+                  
                   const msgMatch = subject.match(/\[MSG-([^\]\s]+)\]/i);
                   const attParentId = msgMatch ? msgMatch[1] : 'orphaned';
 

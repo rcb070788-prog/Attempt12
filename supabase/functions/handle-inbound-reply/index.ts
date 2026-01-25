@@ -67,15 +67,19 @@ serve(async (req) => {
           if (emailData.attachments && Array.isArray(emailData.attachments)) {
             for (const att of emailData.attachments) {
               try {
-                // FETCH: Force binary mode using the Accept header to prevent grey boxes
-                const attRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}/attachments/${att.id}`, {
-                  headers: { 
-                    'Authorization': `Bearer ${RESEND_API_KEY}`,
-                    'Accept': 'application/octet-stream'
-                  }
+                // 1. Fetch metadata to get the actual download link
+                const metaRes = await fetch(`https://api.resend.com/emails/receiving/${emailId}/attachments/${att.id}`, {
+                  headers: { 'Authorization': `Bearer ${RESEND_API_KEY}` }
                 });
                 
-                if (attRes.ok) {
+                if (metaRes.ok) {
+                  const metaData = await metaRes.json();
+                  const downloadUrl = metaData.download_url || (metaData.data && metaData.data.download_url);
+                  
+                  if (!downloadUrl) throw new Error("No download URL in metadata");
+
+                  // 2. Fetch the actual binary file from the CDN
+                  const attRes = await fetch(downloadUrl);
                   const attBlob = await attRes.blob();
                   const msgMatch = subject.match(/\[MSG-([^\]\s]+)\]/i);
                   const attParentId = msgMatch ? msgMatch[1] : 'orphaned';

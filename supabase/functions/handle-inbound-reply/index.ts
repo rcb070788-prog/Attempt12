@@ -76,11 +76,32 @@ serve(async (req) => {
                 });
                 
                 if (attRes.ok) {
-                  // FIX: Convert raw buffer to Uint8Array to prevent file corruption
-                  const attBuffer = await attRes.arrayBuffer();
-                  const attData = new Uint8Array(attBuffer);
+                  // 1. Capture as a Blob (Binary Large Object) to ensure data integrity
+                  const attBlob = await attRes.blob();
                   
+                  // LOG: This will tell us if we are getting a real file or just a tiny error message
+                  console.log(`ATTACHMENT_FETCHED: ${att.filename} | Size: ${attBlob.size} bytes | Type: ${attBlob.type}`);
+
                   const msgMatch = subject.match(/\[MSG-([^\]\s]+)\]/i);
+                  const attParentId = msgMatch ? msgMatch[1] : 'orphaned';
+
+                  const safeName = att.filename.replace(/[^a-zA-Z0-9.]/g, '_');
+                  const filePath = `board/${attParentId}_${Date.now()}_${safeName}`;
+                  
+                  let detectedType = att.content_type || attBlob.type || 'application/octet-stream';
+                  const lower = att.filename.toLowerCase();
+                  if (lower.endsWith('.pdf')) detectedType = 'application/pdf';
+                  else if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) detectedType = 'image/jpeg';
+                  else if (lower.endsWith('.png')) detectedType = 'image/png';
+
+                  // 2. Upload the Blob directly
+                  const { error: uploadErr } = await supabase.storage
+                    .from('board_attachments')
+                    .upload(filePath, attBlob, {
+                      contentType: detectedType,
+                      cacheControl: '3600',
+                      upsert: true
+                    });
                   const attParentId = msgMatch ? msgMatch[1] : 'orphaned';
 
                   const safeName = att.filename.replace(/[^a-zA-Z0-9.]/g, '_');

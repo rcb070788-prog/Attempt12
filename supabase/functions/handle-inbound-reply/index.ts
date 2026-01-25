@@ -81,7 +81,7 @@ serve(async (req) => {
                   const attParentId = msgMatch ? msgMatch[1] : 'orphaned';
 
                   const safeName = att.filename.replace(/[^a-zA-Z0-9.]/g, '_');
-                  const filePath = `${attParentId}/${Date.now()}_${safeName}`;
+                  const filePath = `board/${attParentId}_${Date.now()}_${safeName}`;
                   
                   // DETECT: Ensure browser viewers open PDFs/Images correctly
                   let detectedType = att.content_type || 'application/octet-stream';

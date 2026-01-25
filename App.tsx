@@ -96,8 +96,7 @@ export default function App() {
   }, [user]);
 
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (!supabase) return;
 
     // Listen for the 'Close Report' signal from the embedded dashboard iframe
     const handleDashboardMessage = (event: MessageEvent) => {
@@ -109,13 +108,7 @@ export default function App() {
 
     fetchAllData();
 
-    // Refresh admin data whenever switching to admin page
-    if (currentPage === 'admin' && profile?.is_admin) {
-      fetchUsers();
-      fetchManualRequests();
-    }
-
-    // REAL-TIME SUBSCRIPTION: Listen for changes to polls, comments, and suggestions
+    // REAL-TIME SUBSCRIPTION
     const votesSubscription = supabase
       .channel('schema-db-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_votes' }, () => fetchPolls())
@@ -128,8 +121,7 @@ export default function App() {
       .subscribe();
 
     return () => {
-      subscription.unsubscribe();
-      supabase.removeChannel(votesSubscription);
+      if (votesSubscription) supabase.removeChannel(votesSubscription);
       window.removeEventListener('message', handleDashboardMessage);
     };
   }, []);
@@ -149,7 +141,7 @@ export default function App() {
       fetchAdminEmailDeletionVotes();
     }
   }, [currentPage, profile]);
-
+  
   // --- BROWSER HISTORY SYNC ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {

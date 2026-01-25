@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { supabase } from './supabaseClient';
+import { supabase, supabaseAnonKey } from './supabaseClient';
 import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.ts';
 import { DashboardConfig } from './types.ts';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -214,12 +214,12 @@ const { user, profile, setProfile, setUser } = useAuth();
     if (!supabase) return;
     try {
       const { data, error } = await supabase
-        .from('suggestions')
-        .select(`
-          *, 
-          profiles(full_name, district, avatar_url),
-          suggestion_comments(*, profiles(full_name, district, avatar_url), suggestion_reactions(*))
-        `)
+  .from('suggestions')
+  .select(`
+    *, 
+    profiles(full_name, district, avatar_url),
+    suggestion_comments(id, content, created_at, profiles(full_name, district, avatar_url), suggestion_reactions(*))
+  `)
         .order('created_at', { ascending: false });
       
       if (error) {

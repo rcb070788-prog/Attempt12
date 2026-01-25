@@ -14,8 +14,7 @@ import { useFinanceData } from './hooks/useFinanceData';
 
 export default function App() {
   // --- CORE STATE ---
-  const { user, profile, setProfile, setUser } = useAuth();
-  const { chartData, yearDetailData, fetchFinancialData, fetchYearDetails } = useFinanceData(selectedParents, toggles, chartLevel);
+  
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
@@ -86,8 +85,11 @@ export default function App() {
     localStorage.setItem('admin_cleared_items', JSON.stringify(newCleared));
     showToast(clearedItems.includes(id) ? "Item restored to view" : "Item cleared from view");
   };
+const { user, profile, setProfile, setUser } = useAuth();
+  const { chartData, yearDetailData, fetchFinancialData, fetchYearDetails } = useFinanceData(selectedParents, toggles, chartLevel);
 
   // --- INITIALIZATION ---
+
   useEffect(() => {
     if (!user) {
       setCurrentPage('home');
@@ -141,7 +143,7 @@ export default function App() {
       fetchAdminEmailDeletionVotes();
     }
   }, [currentPage, profile]);
-  
+
   // --- BROWSER HISTORY SYNC ---
   useEffect(() => {
     const handlePopState = (event: PopStateEvent) => {
@@ -294,7 +296,7 @@ export default function App() {
     fetchDeletionVotes();
     fetchAdminMessages();
     fetchAdminEmailDeletionVotes();
-    fetchFinancialData();
+    fetchFinancialData(); // This now points to the hook version
   };
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 

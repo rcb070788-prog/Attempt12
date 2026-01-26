@@ -2217,6 +2217,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             setPendingAction={setPendingAction}
             pendingAction={pendingAction}
             fetchManualRequests={fetchManualRequests}
+            adminEmailDeletionVotes={adminEmailDeletionVotes}
             formatDate={formatDate}
             supabase={supabase}
             UserAvatar={UserAvatar}

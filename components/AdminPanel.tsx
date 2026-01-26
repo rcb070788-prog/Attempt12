@@ -33,6 +33,7 @@ interface AdminPanelProps {
   setPendingAction: React.Dispatch<React.SetStateAction<any>>;
   pendingAction: any;
   fetchManualRequests: () => void;
+  adminEmailDeletionVotes: any[];
   formatDate: (date: any) => string;
   supabase: any;
   UserAvatar: any;
@@ -46,7 +47,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   selectedAdminEmail, setSelectedAdminEmail, handleDeleteAdminEmail,
   stagedAdminReplyFiles, setStagedAdminReplyFiles, handleAdminInboxFileUpload,
   fetchAdminMessages, manualRequests, setPendingAction, pendingAction,
-  fetchManualRequests, formatDate, supabase, UserAvatar
+  fetchManualRequests, formatDate, supabase, UserAvatar, adminEmailDeletionVotes
 }) => {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 animate-slide-up">

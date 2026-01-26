@@ -3,7 +3,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { formatCurrency } from '../utils/financeUtils';
 
 // We are defining our "Remote Controls" (Props) here
-interface SolvencyChartProps {
+interface NetWorthChartProps {
   chartData: any[];
   toggles: {
     assets: boolean;
@@ -20,7 +20,7 @@ interface SolvencyChartProps {
   setSelectedCategory: (cat: string) => void;
 }
 
-export const SolvencyChart: React.FC<SolvencyChartProps> = ({ 
+export const NetWorthChart: React.FC<NetWorthChartProps> = ({ 
   chartData, 
   toggles, 
   setToggles, 
@@ -33,7 +33,7 @@ export const SolvencyChart: React.FC<SolvencyChartProps> = ({
     >
       <div className="flex justify-between items-start mb-10">
         <div>
-          <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Solvency</h3>
+          <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Net Worth</h3>
           <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
         </div>
         <div className="bg-indigo-50 px-5 py-2 rounded-full border border-indigo-100">

@@ -14,7 +14,7 @@
 // 10. LoginPage.tsx      -> The secure entrance portal.
 // 11. Navbar.tsx        -> The top navigation bar with the logo and menu button.
 // 12. Sidebar.tsx       -> The slide-out menu with user profile and page links.
-
+// 13. NetWorthChart.tsx -> The high-level "County Net Worth" trend chart and its toggle controls.
 
 
 //--- LOGIC & MATH (src/hooks/) ---
@@ -54,7 +54,7 @@ import SignupPage from './components/SignupPage';
 import LoginPage from './components/LoginPage';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import { SolvencyChart } from './components/SolvencyChart';
+import { NetWorthChart } from './components/NetWorthChart.tsx';
 
 
 export default function App() {
@@ -632,8 +632,8 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           <div className="max-w-4xl mx-auto space-y-12 py-10">
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
 
-            {/* TIER 1 SPARKLINE: Total Government Solvency */}
-            <SolvencyChart 
+            {/* TIER 1 SPARKLINE: Total Government Net Worth */}
+            <NetWorthChart 
               chartData={chartData}
               toggles={toggles}
               setToggles={setToggles}
@@ -664,7 +664,7 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             </div>
 
             <div className="text-center pt-4">
-              <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.3em]">Comprehensive Assets & Liabilities are now integrated into the Solvency Trends above</p>
+              <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.3em]">Comprehensive Assets & Liabilities are now integrated into the Net Worth Trends above</p>
             </div>
           </div>
         )}

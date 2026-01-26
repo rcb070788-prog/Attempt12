@@ -25,7 +25,7 @@
 //1. useAuth.ts        -> Handles login/logout and user permissions.
 //2. useFinanceData.ts  -> THE BRAIN. All Tier 1-4 logic and COVID-gap math.
 //3. useFeatures.ts -> The "Social Hub." Manages data and real-time updates for Polls, Suggestions, and the Message Board.
-
+//4. useActions.ts     -> The "Action Toolbox." Handles user interactions like file uploads, reactions, and admin tasks.
 
 //--- DATA & SETTINGS (Root src/) ---
 //1. App.tsx           -> The "Air Traffic Controller." Connects everything.
@@ -45,6 +45,9 @@
 // - Fixed "Solvency Chart" logic in CategoryDashboard.tsx (Lines now solid; Toggles now respond in drill-down mode).
 // - (Phase 14) Created useFeatures.ts to handle all non-financial data fetching.
 // - (Phase 14) Cleaned up App.tsx by removing over 100 lines of hardcoded database fetching logic.
+// - (Phase 15) Created useActions.ts to house all "doing" logic (uploads, reactions, deletions).
+// - (Phase 15) Cleaned up App.tsx by removing nearly 200 lines of handler functions.
+
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, supabaseAnonKey } from './supabaseClient';
@@ -61,6 +64,7 @@ import { useAuth } from './hooks/useAuth';
 import { useFinanceData } from './hooks/useFinanceData';
 import { useFeatures } from './hooks/useFeatures';
 import { useActions } from './hooks/useActions';
+import { useNavigation } from './hooks/useNavigation';
 import AdminPanel from './components/AdminPanel';
 import ModalStack from './components/ModalStack';
 import CategoryDashboard from './components/CategoryDashboard';
@@ -78,22 +82,24 @@ import './index.css';
 
 
 export default function App() {
-  // --- CORE STATE ---
-  const [currentPage, setCurrentPage] = useState('home');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
-  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
-  
-  // --- UI STATE (Selection & Staging) ---
+  // 1. CORE AUTH (Must come first so others know who the user is)
+  const { user, profile, setProfile, setUser } = useAuth();
+
+  // 2. SHARED STATE (Remote controls for UI pieces)
   const [selectedPoll, setSelectedPoll] = useState<any>(null);
   const [selectedAdminEmail, setSelectedAdminEmail] = useState<any>(null);
   const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
+  const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
-  // --- CORE AUTH ---
-  const { user, profile, setProfile, setUser } = useAuth();
-  
-  // --- FEATURE DATA (Hooks) ---
+  // 3. NAVIGATION (Now it has access to 'user' and 'selectedPoll')
+  const {
+    currentPage, setCurrentPage,
+    selectedCategory, setSelectedCategory,
+    activeDashboard, setActiveDashboard
+  } = useNavigation(user, selectedPoll, setSelectedPoll);
+
+  // 4. FEATURE DATA (The "Social Hub")
   const features = useFeatures(user, profile);
   const { 
     polls, setPolls, fetchPolls, 
@@ -107,7 +113,7 @@ export default function App() {
     fetchAllData
   } = features;
 
-  // --- LOGIC TOOLBOX (Hook) ---
+  // 5. ACTION TOOLBOX (The "Buttons Logic")
   const {
     isUploading, setIsUploading,
     stagedPollFiles, setStagedPollFiles,
@@ -179,25 +185,8 @@ export default function App() {
   // --- INITIALIZATION ---
 
   useEffect(() => {
-    if (!user) {
-      setCurrentPage('home');
-      setSelectedPoll(null);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    // Listen for the 'Close Report' signal from the embedded dashboard iframe
-    const handleDashboardMessage = (event: MessageEvent) => {
-      if (event.data && event.data.type === 'CLOSE_DASHBOARD') {
-        setActiveDashboard(null);
-      }
-    };
-    window.addEventListener('message', handleDashboardMessage);
-
     // Load initial financial data
     fetchFinancialData();
-
-    return () => window.removeEventListener('message', handleDashboardMessage);
   }, []);
 
   useEffect(() => {
@@ -216,63 +205,6 @@ export default function App() {
     }
   }, [currentPage, profile]);
 
-  // --- BROWSER HISTORY SYNC ---
-  useEffect(() => {
-    const handlePopState = (event: PopStateEvent) => {
-      // If a dashboard is active, the first 'Back' press should just close the dashboard
-      if (activeDashboard) {
-        setActiveDashboard(null);
-        // We push home state again so they don't exit the app on the next back press
-        window.history.pushState({ page: 'home', category: null, poll: null, dashboard: null }, '');
-        return;
-      }
-
-      // If user hits back, use the history state to update the app view
-      const state = event.state || { page: 'home', category: null, poll: null, dashboard: null };
-      setCurrentPage(state.page || 'home');
-      setSelectedCategory(state.category || null);
-      setSelectedPoll(state.poll || null);
-      setActiveDashboard(state.dashboard || null);
-    };
-
-    window.addEventListener('popstate', handlePopState);
-    
-    // Set initial history point so 'Back' has somewhere to go
-    if (!window.history.state) {
-      window.history.replaceState({ page: 'home', category: null, poll: null, dashboard: null }, '');
-    }
-    
-    return () => window.removeEventListener('popstate', handlePopState);
-  }, []);
-// Handle exiting fullscreen when the dashboard is closed
-  useEffect(() => {
-    if (!activeDashboard && document.fullscreenElement) {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(err => console.warn(err));
-      }
-    }
-  }, [activeDashboard]);
-
-  useEffect(() => {
-    const hState = window.history.state;
-    // Check if the current app state is actually different from what the browser thinks it is
-    const isDifferent = !hState || 
-      hState.page !== currentPage || 
-      hState.category !== selectedCategory || 
-      (hState.poll && hState.poll.id !== selectedPoll?.id) ||
-      (!hState.poll && selectedPoll) ||
-      (hState.dashboard && hState.dashboard.id !== activeDashboard?.id) ||
-      (!hState.dashboard && activeDashboard);
-
-    if (isDifferent) {
-      window.history.pushState({ 
-        page: currentPage, 
-        category: selectedCategory, 
-        poll: selectedPoll, 
-        dashboard: activeDashboard 
-      }, '');
-    }
-  }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
 
   if (activeDashboard) {
     return (

@@ -13,6 +13,7 @@ import { useAuth } from './hooks/useAuth';
 import { useFinanceData } from './hooks/useFinanceData';
 import AdminPanel from './components/AdminPanel';
 import ModalStack from './components/ModalStack';
+import CategoryDashboard from './components/CategoryDashboard';
 
 export default function App() {
   // --- CORE STATE ---
@@ -659,18 +660,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
     });
   }, [boardMessages, searchQuery]);
 
-  // TIER 3 FILTER: Determines which specific rows show up in the audit table
-  const filteredTableRows = useMemo(() => {
-    if (!selectedFinancialYear || !selectedCategory) return [];
-    
-    return yearDetailData.filter(row => {
-      const rowCat = (row.category || '').trim().toLowerCase();
-      if (selectedCategory === 'solvency') return true;
-      if (selectedCategory === 'revenues') return rowCat.includes('revenue');
-      if (selectedCategory === 'expenses') return rowCat.includes('expenditure') || rowCat.includes('expense');
-      return rowCat.includes(selectedCategory.slice(0, -1));
-    });
-  }, [yearDetailData, selectedFinancialYear, selectedCategory]);
 
   // --- RENDER HELPERS (RESTORING THREADED COMMENTS) ---
   const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0) => {
@@ -980,380 +969,30 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             </div>
           </div>
         )}
-{/* --- NEW SECTION: REPORT SELECTION LIST --- */}
-        {currentPage === 'home' && selectedCategory && (
-          <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
-            <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
-              <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
-            </button>
-            
-            <div className="flex flex-col">
-              <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">
-                {CATEGORIES.find(c => c.id === selectedCategory)?.label}
-              </h2>
-              <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Select a report to view official records</p>
-            </div>
-
-            <div className="grid grid-cols-1 gap-4 mt-8">
-              
-              {/* ASSETS VIEW (EXHIBIT A) */}
-              {selectedCategory === 'assets' && (
-                <div className={`${expandedChart === 'assets' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-6 md:p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6'}`}>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="w-full">
-                      <div className="flex justify-between items-center w-full mb-2">
-                         <h3 className="text-xl md:text-[18.66px] font-black uppercase text-gray-900 tracking-tighter">Asset Trend Analysis</h3>
-                         <button onClick={() => setExpandedChart(expandedChart === 'assets' ? null : 'assets')} className="bg-gray-100 hover:bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl transition-all">
-                           <i className={`fa-solid ${expandedChart === 'assets' ? 'fa-compress' : 'fa-expand'}`}></i>
-                         </button>
-                      </div>
-                      
-                      {/* FIXED TOP TOOLTIP */}
-                      <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
-                        {hoveredData ? (
-                          <>
-                            {hoveredData.isCovidGap ? (
-                              <div className="flex items-center gap-3">
-                                <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
-                                <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{hoveredData.year}</p></div>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-600 uppercase">Total Assets</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p></div>
-                                {chartLevel < 3 && (
-                                  <>
-                                    <div className="text-center"><p className="text-[10px] font-black text-[#4f46e5] uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">{formatCurrency(Number(hoveredData.primaryAssets))}</p></div>
-                                    <div className="text-center"><p className="text-[10px] font-black text-[#ec4899] uppercase">Component Units</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">{formatCurrency(Number(hoveredData.schoolAssets))}</p></div>
-                                  </>
-                                )}
-                              </>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className={`${expandedChart === 'assets' ? 'h-[70vh]' : 'h-[300px]'} w-full`}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart 
-                        data={chartData} 
-                        onMouseMove={(e: any) => (e && e.activePayload) ? setHoveredData(e.activePayload[0].payload) : null}
-                        onMouseLeave={() => setHoveredData(null)}
-                        onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                        <XAxis dataKey="year" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} stroke="#94a3b8" />
-                        <YAxis fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#374151" axisLine={false} tickLine={false} />
-                        <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
-                        <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
-                        {selectedParents.length === 0 ? (
-                          <Line type="monotone" dataKey="totalAssets" name="Moore County Total" stroke="#4ade80" strokeWidth={5} dot={false} />
-                        ) : (
-                          selectedParents.map((sel, idx) => {
-                            const kb = sel.replace(/\s+/g, '');
-                            const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
-                            return (
-                              <Line 
-                                key={sel}
-                                type="monotone" 
-                                dataKey={`${kb}Assets`} 
-                                name={`${sel}`} 
-                                stroke={colors[idx % colors.length]} 
-                                strokeWidth={4} 
-                                dot={expandedChart === 'assets'} 
-                              />
-                            );
-                          })
-                        )}
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </div>
-              )}
-
-              {/* LIABILITIES VIEW (EXHIBIT A) */}
-              {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-                <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100'}`}>
-                   <div className="flex justify-between items-start mb-4">
-                    <div className="w-full">
-                      <div className="flex justify-between items-center w-full mb-2">
-                        <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">Debt & Solvency Trend</h3>
-                        <button onClick={() => setExpandedChart(expandedChart === 'solvency' ? null : 'solvency')} className="bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-xl transition-all">
-                           <i className={`fa-solid ${expandedChart === 'solvency' ? 'fa-compress' : 'fa-expand'}`}></i>
-                         </button>
-                      </div>
-
-                      {/* FIXED TOP TOOLTIP (LIGHT VERSION) */}
-                      <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
-                        {hoveredData ? (
-                          <>
-                            {hoveredData.isCovidGap ? (
-                              <div className="flex items-center gap-3">
-                                <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
-                                <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
-                              </div>
-                            ) : (
-                              <>
-                                <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p></div>
-                                <div className="text-center">
-                                  <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-green-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-red-700">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}</p>
-                                </div>
-                                <div className="text-center">
-                                  <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
-                                  <p className="text-lg md:text-[18.66px] font-black text-blue-600">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}</p>
-                                </div>
-                              </>
-                            )}
-                          </>
-                        ) : (
-                          <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart 
-                        data={chartData} 
-                        onMouseMove={(e: any) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
-                        onMouseLeave={() => setHoveredData(null)}
-                        onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
-                      >
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
-                        <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
-                        <Tooltip content={<div className="hidden" />} />
-                        
-                        <React.Fragment>
-                          {selectedParents.length === 0 ? (
-                            <React.Fragment>
-                              {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                              {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                              {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                              
-                              {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
-                              {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                              {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-
-                              {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                              {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                              {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                            </React.Fragment>
-                          ) : (
-                            selectedParents.map((sel, idx) => {
-                              const kb = sel.replace(/\s+/g, '');
-                              const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
-                              const color = colors[idx % colors.length];
-                              return (
-                                <React.Fragment key={sel}>
-                                  {toggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
-                                  {toggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                                  {toggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
-                                  {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} strokeDasharray="3 3" dot={false} />}
-                                  {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} strokeDasharray="3 3" dot={false} />}
-                                </React.Fragment>
-                              );
-                            })
-                          )}
-                        </React.Fragment>
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-
-                  <div className="grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center px-4 mb-12" onClick={(e) => e.stopPropagation()}>
-                    <div />
-                    {['assets', 'liabs', 'netWorth'].map(key => (
-                      <div key={key} className="text-center">
-                        <button onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`text-[12px] font-black uppercase transition-all flex flex-col items-center gap-1 ${toggles[key as keyof typeof toggles] ? 'text-gray-900' : 'text-gray-300'}`}>
-                          <div className={`w-8 h-1 rounded-full mb-1 ${key === 'assets' ? 'bg-green-500' : key === 'liabs' ? 'bg-red-500' : 'bg-blue-500'} ${toggles[key as keyof typeof toggles] ? 'opacity-100' : 'opacity-20'}`} />
-                          {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-                        </button>
-                      </div>
-                    ))}
-                    
-                    <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-                    {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
-                      const base = key.replace('Trend', '');
-                      return (
-                        <div key={key} className="flex justify-center">
-                          <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
-                        </div>
-                      );
-                    })}
-
-                    <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-                    {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
-                      <div key={key} className="flex justify-center">
-                        <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* TIER 4: GRANULAR AUDIT TABLE (Shown when a year is clicked) */}
-              {selectedFinancialYear && (
-                <div className="bg-white rounded-[2.5rem] border border-gray-100 shadow-xl overflow-hidden mb-8 animate-slide-up">
-                  <div className="bg-indigo-600 p-6 flex justify-between items-center">
-                    <div>
-                      <h3 className="text-white font-black uppercase text-xl leading-none">{selectedFinancialYear} Audit Details</h3>
-                      <p className="text-indigo-200 text-[10px] font-black uppercase mt-1">Official Line-Item Records (Level 4)</p>
-                    </div>
-                    <button onClick={() => setSelectedFinancialYear(null)} className="text-white/50 hover:text-white transition-colors">
-                      <i className="fa-solid fa-circle-xmark text-2xl"></i>
-                    </button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                      <thead className="bg-gray-50 border-b border-gray-100 text-[10px] font-black uppercase text-gray-400">
-                        <tr>
-                          <th className="p-6">Line Item / Entity</th>
-                          <th className="p-6">Category</th>
-                          <th className="p-6 text-right">Amount</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-50">
-                        {yearDetailData
-                          .filter(row => {
-                            // Only show Tier 4 items for the audit table
-                            if (Number(row.hierarchy_level) !== 4) return false;
-                            // If we have selected parents (Pillars), only show children of those parents
-                            if (selectedParents.length > 0) {
-                              return selectedParents.some(p => row.parent_entity?.includes(p));
-                            }
-                            return true;
-                          })
-                          .sort((a, b) => Number(b.amount) - Number(a.amount))
-                          .map((row, idx) => (
-                            <tr key={idx} className="hover:bg-indigo-50/30 transition-colors">
-                              <td className="p-6">
-                                <p className="font-black uppercase text-gray-900 text-sm leading-none">{row.label}</p>
-                                <p className="text-[10px] font-bold text-indigo-400 uppercase mt-1">{row.parent_entity}</p>
-                              </td>
-                              <td className="p-6">
-                                <span className="px-3 py-1 bg-gray-100 rounded text-[10px] font-black uppercase text-gray-400 border border-gray-200">
-                                  {row.category}
-                                </span>
-                              </td>
-                              <td className="p-6 text-right font-black text-gray-900 text-sm">
-                                {formatCurrency(Number(row.amount))}
-                              </td>
-                            </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* NAVIGATION CONTROLS for YoY DRILL-DOWN */}
-              <div className="flex flex-wrap gap-3 mb-6 animate-slide-up">
-                {chartLevel > 1 && (
-                  <button 
-                    onClick={() => { setChartLevel(1); setSelectedParent(null); setSelectedLineItem(null); }}
-                    className="px-6 py-3 bg-gray-900 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all"
-                  >
-                    <i className="fa-solid fa-house-chimney mr-2"></i> Reset to Total
-                  </button>
-                )}
-                
-                {chartLevel === 1 && (
-                  <button 
-                    onClick={() => setChartLevel(2)}
-                    className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all"
-                  >
-                    Compare Primary vs Component Units
-                  </button>
-                )}
-
-                {chartLevel === 2 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                    {[
-                      { id: 'Governmental', label: 'Governmental', color: 'bg-blue-600' },
-                      { id: 'Business-type', label: 'Business-type', color: 'bg-cyan-600' },
-                      { id: 'School Department', label: 'School Dept', color: 'bg-pink-600' },
-                      { id: 'Emergency Communications District', label: 'Emerg Comm Dist', color: 'bg-amber-600' }
-                    ].map(btn => (
-                      <button 
-                        key={btn.id}
-                        onClick={() => {
-                          const active = selectedParents.includes(btn.id);
-                          if (active) setSelectedParents(selectedParents.filter(p => p !== btn.id));
-                          else setSelectedParents([...selectedParents, btn.id]);
-                        }} 
-                        className={`px-4 py-4 rounded-xl text-xs font-black uppercase shadow-lg transition-all border-4 ${selectedParents.includes(btn.id) ? 'border-white ring-4 ring-indigo-500 ' + btn.color + ' text-white' : 'bg-white text-gray-400 border-gray-100'}`}
-                      >
-                        {btn.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-                
-                {chartLevel === 3 && (
-                  <div className="w-full bg-white p-6 rounded-2xl border-2 border-indigo-600 flex justify-between items-center">
-                    <div>
-                      <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Currently Viewing Entity Solvency:</p>
-                      <h4 className="text-[18.66px] font-black text-gray-900 uppercase">{selectedParent}</h4>
-                    </div>
-                    <button onClick={() => { setChartLevel(2); setSelectedParent(null); }} className="px-6 py-2 bg-gray-100 rounded-xl text-[18.66px] font-black uppercase text-gray-400 hover:bg-gray-200 transition-all">Back to Comparison</button>
-                  </div>
-                )}
-              </div>
-
-              {/* FOLDER-BASED DASHBOARDS (EXISTING) */}
-
-              {/* GRANULAR TABLE RENDERED ABOVE */}
-
-              {/* FOLDER-BASED DASHBOARDS (EXISTING) */}
-              {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (
-                <div 
-                  key={dash.id} 
-                  onClick={() => {
-                    setActiveDashboard(dash as any);
-                    // Attempt to trigger fullscreen to hide mobile URL bar
-                    const doc = document.documentElement as any;
-                    if (doc.requestFullscreen) {
-                      doc.requestFullscreen().catch(() => {});
-                    } else if (doc.webkitRequestFullscreen) {
-                      doc.webkitRequestFullscreen();
-                    } else if (doc.msRequestFullscreen) {
-                      doc.msRequestFullscreen();
-                    }
-                  }}
-                  className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-indigo-600 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-indigo-600 tracking-tighter">{dash.title}</h3>
-                      {dash.status && <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-black uppercase rounded text-gray-500">{dash.status}</span>}
-                    </div>
-                    <p className="text-gray-400 text-[18.66px] font-medium leading-tight">{dash.description}</p>
-                  </div>
-                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-                    <i className="fa-solid fa-chevron-right"></i>
-                  </div>
-                </div>
-              ))}
-              
-              {/* Message if no reports exist in this category */}
-              {DASHBOARDS.filter(dash => dash.category === selectedCategory).length === 0 && (
-                <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
-                  <i className="fa-solid fa-folder-open text-gray-200 text-4xl mb-4"></i>
-                  <p className="text-gray-400 font-black uppercase text-xs">No reports have been uploaded for this category yet.</p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+{/* --- MODULAR CATEGORY DASHBOARD --- */}
+        <CategoryDashboard 
+          currentPage={currentPage}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          setActiveDashboard={setActiveDashboard}
+          chartData={chartData}
+          yearDetailData={yearDetailData}
+          fetchYearDetails={fetchYearDetails}
+          selectedFinancialYear={selectedFinancialYear}
+          setSelectedFinancialYear={setSelectedFinancialYear}
+          expandedChart={expandedChart}
+          setExpandedChart={setExpandedChart}
+          chartLevel={chartLevel}
+          setChartLevel={setChartLevel}
+          selectedParents={selectedParents}
+          setSelectedParents={setSelectedParents}
+          selectedParent={selectedParent}
+          setSelectedParent={setSelectedParent}
+          hoveredData={hoveredData}
+          setHoveredData={setHoveredData}
+          toggles={toggles}
+          setToggles={setToggles}
+        />
         {currentPage === 'polls' && !selectedPoll && (
           <div className="max-w-4xl mx-auto space-y-8 animate-slide-up">
             <div className="flex flex-col md:flex-row justify-between items-end gap-6">

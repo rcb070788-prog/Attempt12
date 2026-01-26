@@ -16,87 +16,88 @@ interface MainViewProps {
   currentPage: string;
   user: any;
   profile: any;
-  setCurrentPage: (page: string) => void;
+  setCurrentPage: any;
   
   // Financial Data
   selectedCategory: string | null;
-  setSelectedCategory: (cat: string | null) => void;
-  setActiveDashboard: (dash: any) => void;
+  setSelectedCategory: any;
+  setActiveDashboard: any;
   chartData: any[];
   yearDetailData: any[];
-  fetchYearDetails: (year: number) => void;
+  fetchYearDetails: any;
   selectedFinancialYear: number | null;
-  setSelectedFinancialYear: (year: number | null) => void;
+  setSelectedFinancialYear: any;
   expandedChart: string | null;
-  setExpandedChart: (id: string | null) => void;
+  setExpandedChart: any;
   chartLevel: number;
-  setChartLevel: (lvl: number) => void;
+  setChartLevel: any;
   selectedParents: string[];
-  setSelectedParents: (parents: string[]) => void;
+  setSelectedParents: any;
   selectedParent: string | null;
-  setSelectedParent: (p: string | null) => void;
+  setSelectedParent: any;
   hoveredData: any;
-  setHoveredData: (d: any) => void;
+  setHoveredData: any;
   toggles: any;
-  setToggles: (t: any) => void;
+  setToggles: any;
 
   // Social/Features Data
   polls: any[];
-  fetchPolls: () => void;
+  fetchPolls: any;
   selectedPoll: any;
-  setSelectedPoll: (p: any) => void;
+  setSelectedPoll: any;
   boardMessages: any[];
-  fetchBoardMessages: () => void;
+  fetchBoardMessages: any;
   suggestions: any[];
-  fetchSuggestions: () => void;
+  fetchSuggestions: any;
   
   // UI States
-  showToast: (m: string, type?: 'success' | 'error') => void;
-  setShowPollLoginModal: (v: boolean) => void;
+  showToast: any;
+  setShowPollLoginModal: any;
   searchQuery: string;
-  setSearchQuery: (s: string) => void;
+  setSearchQuery: any;
   selectedOfficials: string[];
-  setSelectedOfficials: (o: string[]) => void;
+  setSelectedOfficials: any;
   isOfficialDropdownOpen: boolean;
-  setIsOfficialDropdownOpen: (v: boolean) => void;
+  setIsOfficialDropdownOpen: any;
   isVerifying: boolean;
-  setIsVerifying: (v: boolean) => void;
-  setNotFoundModal: (v: boolean) => void;
+  setIsVerifying: any;
+  setNotFoundModal: any;
 
   // Actions/Uploads
   isUploading: boolean;
-  setIsUploading: (v: boolean) => void;
-  stagedBoardFiles: File[];
-  setStagedBoardFiles: (f: File[]) => void;
-  handleBoardFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setIsUploading: any;
+  stagedBoardFiles: any[];
+  setStagedBoardFiles: any;
+  handleBoardFileUpload: any;
   
   // Admin Specific
   isAdminSections: any;
-  setIsAdminSections: (s: any) => void;
-  stagedPollFiles: File[];
-  setStagedPollFiles: (f: File[]) => void;
-  handlePollFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  setIsAdminSections: any;
+  stagedPollFiles: any[];
+  setStagedPollFiles: any;
+  handlePollFileUpload: any;
   allUsers: any[];
   clearedItems: string[];
-  toggleClearItem: (id: string) => void;
-  handleClosePoll: (id: string) => void;
-  handleDeletePoll: (id: string) => void;
+  setClearedItems: any;
+  toggleClearItem: any;
+  handleClosePoll: any;
+  handleDeletePoll: any;
   deletionVotes: any[];
-  handleUpdateSuggestionStatus: (id: string, s: string) => void;
+  handleUpdateSuggestionStatus: any;
   adminMessages: any[];
   selectedAdminEmail: any;
-  setSelectedAdminEmail: (e: any) => void;
-  handleDeleteAdminEmail: (id: string) => void;
-  stagedAdminReplyFiles: File[];
-  setStagedAdminReplyFiles: (f: File[]) => void;
-  handleAdminInboxFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  fetchAdminMessages: () => void;
+  setSelectedAdminEmail: any;
+  handleDeleteAdminEmail: any;
+  stagedAdminReplyFiles: any[];
+  setStagedAdminReplyFiles: any;
+  handleAdminInboxFileUpload: any;
+  fetchAdminMessages: any;
   manualRequests: any[];
-  setPendingAction: (a: any) => void;
+  setPendingAction: any;
   pendingAction: any;
-  fetchManualRequests: () => void;
+  fetchManualRequests: any;
   adminEmailDeletionVotes: any[];
-  formatDate: (d: string) => string;
+  formatDate: any;
 }
 
 export const MainView: React.FC<MainViewProps> = (props) => {
@@ -114,7 +115,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
     isVerifying, setIsVerifying, setNotFoundModal,
     isUploading, setIsUploading, stagedBoardFiles, setStagedBoardFiles, handleBoardFileUpload,
     isAdminSections, setIsAdminSections, stagedPollFiles, setStagedPollFiles, handlePollFileUpload,
-    allUsers, clearedItems, toggleClearItem, handleClosePoll, handleDeletePoll, deletionVotes,
+    allUsers, clearedItems, setClearedItems, toggleClearItem, handleClosePoll, handleDeletePoll, deletionVotes,
     handleUpdateSuggestionStatus, adminMessages, selectedAdminEmail, setSelectedAdminEmail,
     handleDeleteAdminEmail, stagedAdminReplyFiles, setStagedAdminReplyFiles, handleAdminInboxFileUpload,
     fetchAdminMessages, manualRequests, setPendingAction, pendingAction, fetchManualRequests,
@@ -225,7 +226,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           fetchPolls={fetchPolls}
           allUsers={allUsers}
           clearedItems={clearedItems}
-          setClearedItems={clearedItems as any} 
+          setClearedItems={setClearedItems} 
           toggleClearItem={toggleClearItem}
           polls={polls}
           handleClosePoll={handleClosePoll}

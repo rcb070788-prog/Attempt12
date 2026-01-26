@@ -304,6 +304,7 @@ export default function App() {
         handlePollFileUpload={handlePollFileUpload}
         allUsers={allUsers}
         clearedItems={clearedItems}
+        setClearedItems={setClearedItems}
         toggleClearItem={toggleClearItem}
         handleClosePoll={handleClosePoll}
         handleDeletePoll={handleDeletePoll}

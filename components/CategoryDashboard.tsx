@@ -209,11 +209,20 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                         const color = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'][idx % 5];
                         return (
                           <React.Fragment key={sel}>
+                            {/* Net Worth Logic */}
                             {toggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
                             {toggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {toggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
-                            {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} strokeDasharray="3 3" dot={false} />}
-                            {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} strokeDasharray="3 3" dot={false} />}
+                            
+                            {/* Assets Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
+                            {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
+                            {toggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {toggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+
+                            {/* Liabilities Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
+                            {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
+                            {toggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {toggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
                           </React.Fragment>
                         );
                       })
@@ -225,10 +234,13 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
             <div className="grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center px-4 mb-12">
               <div />
-              {['assets', 'liabs', 'netWorth'].map(key => (
+              {(['assets', 'liabs', 'netWorth'] as const).map(key => (
                 <div key={key} className="text-center">
-                  <button onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`text-[12px] font-black uppercase transition-all flex flex-col items-center gap-1 ${toggles[key as keyof typeof toggles] ? 'text-gray-900' : 'text-gray-300'}`}>
-                    <div className={`w-8 h-1 rounded-full mb-1 ${key === 'assets' ? 'bg-green-500' : key === 'liabs' ? 'bg-red-500' : 'bg-blue-500'} ${toggles[key as keyof typeof toggles] ? 'opacity-100' : 'opacity-20'}`} />
+                  <button 
+                    onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
+                    className={`text-[12px] font-black uppercase transition-all flex flex-col items-center gap-1 ${toggles[key] ? 'text-gray-900' : 'text-gray-300'}`}
+                  >
+                    <div className={`w-8 h-1 rounded-full mb-1 ${key === 'assets' ? 'bg-green-500' : key === 'liabs' ? 'bg-red-500' : 'bg-blue-500'} ${toggles[key] ? 'opacity-100' : 'opacity-20'}`} />
                     {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
                   </button>
                 </div>

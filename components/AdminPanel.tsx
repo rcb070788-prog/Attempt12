@@ -690,7 +690,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
               )}
             </section>
-          </div>
     </div>
   );
 };

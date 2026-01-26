@@ -10,6 +10,9 @@
 //6. BoardPage.tsx       -> The "Message Board" message board component.
 // 7. SuggestionsPage.tsx -> Community suggestion box, new proposals, and threaded discussions.
 // 8. PollsPage.tsx -> Community polls, voting logic, results, and discussions.
+// 9. SignupPage.tsx     -> The "Voter Verification" hub and registration logic.
+// 10. LoginPage.tsx      -> The secure entrance portal.
+
 
 
 
@@ -48,6 +51,9 @@ import SuggestionsPage from './components/SuggestionsPage';
 import PollsPage from './components/PollsPage';
 import SignupPage from './components/SignupPage';
 import LoginPage from './components/LoginPage';
+import { Navbar } from './components/Navbar';
+import { Sidebar } from './components/Sidebar';
+
 
 export default function App() {
   // --- CORE STATE ---
@@ -596,80 +602,28 @@ const handleDeleteAdminEmail = async (messageId: string) => {
   setCurrentPage={setCurrentPage}
 />
 
-      <nav className="bg-white shadow-sm px-4 py-3 z-50 shrink-0 border-b border-gray-100 flex justify-between items-center">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center cursor-pointer" onClick={() => { setCurrentPage('home'); setSelectedCategory(null); }}>
-            <i className="fa-solid fa-landmark text-indigo-600 text-xl mr-2"></i>
-            <span className="text-lg font-bold uppercase tracking-tighter text-gray-900">Finance Hub</span>
-          </div>
-        </div>
-        <button onClick={() => setIsMenuOpen(true)} className="bg-gray-100 p-2.5 rounded-xl text-gray-600"><i className="fa-solid fa-bars-staggered"></i></button>
-      </nav>
+      <Navbar 
+        setCurrentPage={setCurrentPage}
+        setSelectedCategory={setSelectedCategory}
+        setIsMenuOpen={setIsMenuOpen}
+      />
 
-      {isMenuOpen && (
-        <div className="fixed inset-0 z-[100] flex justify-end">
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
-          <div className="relative w-80 bg-white h-full shadow-2xl p-8 flex flex-col">
-            <button onClick={() => setIsMenuOpen(false)} className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors"><i className="fa-solid fa-xmark text-2xl"></i></button>
-            {user && (
-               <div className="relative mb-8 flex flex-col items-center text-center">
-                  <div className="relative">
-                    <UserAvatar url={profile?.avatar_url} size="lg" />
-                    <label className="absolute bottom-0 right-0 bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center cursor-pointer border-2 border-white shadow-lg">
-                      <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-camera'} text-[10px]`}></i>
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploading} />
-                    </label>
-                  </div>
-                  <div className="mt-4">
-                    <p className="text-sm font-black text-gray-900 uppercase">{profile?.full_name}</p>
-                    <p className="text-[18.66px] font-black uppercase text-gray-400">District {profile?.district} Voter</p>
-                    {profile?.virtual_email && (
-                      <div className="mt-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 flex items-center gap-2">
-                        <i className="fa-solid fa-envelope text-indigo-600 text-xs"></i>
-                        <p className="text-[18.66px] font-black uppercase text-indigo-600 truncate max-w-[200px]">
-                          {profile.virtual_email}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-               </div>
-            )}
-            <div className="space-y-4">
-              <button onClick={() => { setCurrentPage('home'); setSelectedCategory(null); setIsMenuOpen(false); }} className="text-xl font-black uppercase block">Home</button>
-              <button onClick={() => { setCurrentPage('polls'); setSelectedPoll(null); setIsMenuOpen(false); fetchPolls(); }} className="text-xl font-black uppercase block">Polls</button>
-              <button onClick={() => { setCurrentPage('board'); setIsMenuOpen(false); fetchBoardMessages(); }} className="text-xl font-black uppercase block">Message Officials</button>
-              <button onClick={() => { setCurrentPage('suggestions'); setIsMenuOpen(false); fetchSuggestions(); }} className="text-xl font-black uppercase block">Suggestions</button>
-              {profile?.is_admin && <button onClick={() => { setCurrentPage('admin'); setIsMenuOpen(false); fetchUsers(); }} className="text-xl font-black uppercase text-red-600 block">Admin Center</button>}
-              
-              <div className="pt-8 mt-8 border-t border-gray-100 space-y-4">
-                {user ? (
-                  <button 
-                    onClick={() => { supabase?.auth.signOut(); setIsMenuOpen(false); }} 
-                    className="text-xl font-black uppercase block text-red-500 hover:text-red-700 transition-colors"
-                  >
-                    Log Out
-                  </button>
-                ) : (
-                  <>
-                    <button 
-                      onClick={() => { setCurrentPage('login'); setIsMenuOpen(false); }} 
-                      className="text-xl font-black uppercase block text-indigo-600"
-                    >
-                      Login
-                    </button>
-                    <button 
-                      onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} 
-                      className="text-xl font-black uppercase block text-gray-400"
-                    >
-                      Register
-                    </button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <Sidebar 
+        isMenuOpen={isMenuOpen}
+        setIsMenuOpen={setIsMenuOpen}
+        user={user}
+        profile={profile}
+        isUploading={isUploading}
+        handlePhotoUpload={handlePhotoUpload}
+        setCurrentPage={setCurrentPage}
+        setSelectedCategory={setSelectedCategory}
+        setSelectedPoll={setSelectedPoll}
+        fetchPolls={fetchPolls}
+        fetchBoardMessages={fetchBoardMessages}
+        fetchSuggestions={fetchSuggestions}
+        fetchUsers={fetchUsers}
+        supabase={supabase}
+      />
 
       <main className="flex-grow overflow-y-auto container mx-auto px-4 py-8 custom-scrollbar">
         {currentPage === 'home' && !selectedCategory && (

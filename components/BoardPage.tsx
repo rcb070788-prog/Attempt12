@@ -183,7 +183,7 @@ export default function BoardPage({
           {user ? (
             <div className="sticky top-8 bg-indigo-600 p-8 rounded-[3rem] shadow-2xl space-y-6 border-4 border-indigo-500">
               <div>
-                <h3 className="text-3xl font-black text-white uppercase leading-none">Let's Talk</h3>
+                <h3 className="text-3xl font-black text-white uppercase leading-none">Message Board</h3>
                 <p className="text-indigo-200 text-[10px] font-bold uppercase mt-2 tracking-widest">Direct communication with officials</p>
               </div>
 

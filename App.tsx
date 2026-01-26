@@ -24,6 +24,8 @@
 
 //1. useAuth.ts        -> Handles login/logout and user permissions.
 //2. useFinanceData.ts  -> THE BRAIN. All Tier 1-4 logic and COVID-gap math.
+//3. useFeatures.ts -> The "Social Hub." Manages data and real-time updates for Polls, Suggestions, and the Message Board.
+
 
 //--- DATA & SETTINGS (Root src/) ---
 //1. App.tsx           -> The "Air Traffic Controller." Connects everything.
@@ -41,6 +43,8 @@
 // - Moved Global CSS from App.tsx to index.css.
 // - Moved Home Page "Sub-text" into CategoryLinks.tsx for better organization.
 // - Fixed "Solvency Chart" logic in CategoryDashboard.tsx (Lines now solid; Toggles now respond in drill-down mode).
+// - (Phase 14) Created useFeatures.ts to handle all non-financial data fetching.
+// - (Phase 14) Cleaned up App.tsx by removing over 100 lines of hardcoded database fetching logic.
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, supabaseAnonKey } from './supabaseClient';
@@ -56,6 +60,7 @@ import { Toast } from './components/Toast';
 import { useAuth } from './hooks/useAuth';
 import { useFinanceData } from './hooks/useFinanceData';
 import { useFeatures } from './hooks/useFeatures';
+import { useActions } from './hooks/useActions';
 import AdminPanel from './components/AdminPanel';
 import ModalStack from './components/ModalStack';
 import CategoryDashboard from './components/CategoryDashboard';
@@ -74,16 +79,22 @@ import './index.css';
 
 export default function App() {
   // --- CORE STATE ---
-  
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
   
+  // --- UI STATE (Selection & Staging) ---
+  const [selectedPoll, setSelectedPoll] = useState<any>(null);
+  const [selectedAdminEmail, setSelectedAdminEmail] = useState<any>(null);
+  const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
+
   // --- CORE AUTH ---
   const { user, profile, setProfile, setUser } = useAuth();
   
   // --- FEATURE DATA (Hooks) ---
+  const features = useFeatures(user, profile);
   const { 
     polls, setPolls, fetchPolls, 
     suggestions, setSuggestions, fetchSuggestions, 
@@ -94,13 +105,30 @@ export default function App() {
     adminEmailDeletionVotes, fetchAdminEmailDeletionVotes,
     deletionVotes, fetchDeletionVotes,
     fetchAllData
-  } = useFeatures(user, profile);
+  } = features;
 
-  // --- UI STATE (Selection & Staging) ---
-  const [selectedPoll, setSelectedPoll] = useState<any>(null);
-  const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
-  const [selectedAdminEmail, setSelectedAdminEmail] = useState<any>(null);
-  const [stagedAdminReplyFiles, setStagedAdminReplyFiles] = useState<{url: string, name: string}[]>([]);
+  // --- LOGIC TOOLBOX (Hook) ---
+  const {
+    isUploading, setIsUploading,
+    stagedPollFiles, setStagedPollFiles,
+    stagedAdminReplyFiles, setStagedAdminReplyFiles,
+    stagedBoardFiles, setStagedBoardFiles,
+    handlePhotoUpload,
+    handleBoardFileUpload,
+    handlePollFileUpload,
+    handleAdminInboxFileUpload,
+    handleReaction,
+    handleClosePoll,
+    handleUpdateSuggestionStatus,
+    handleDeletePoll,
+    handleDeleteAdminEmail
+  } = useActions(user, profile, setProfile, showToast, features, {
+    setSelectedPoll,
+    setSelectedAdminEmail,
+    setCurrentPage,
+    selectedPoll,
+    selectedAdminEmail
+  });
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   // Navigation State for YoY Drill-down
@@ -128,9 +156,7 @@ export default function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedOfficials, setSelectedOfficials] = useState<string[]>([]);
   const [isOfficialDropdownOpen, setIsOfficialDropdownOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
-  const [stagedBoardFiles, setStagedBoardFiles] = useState<{url: string, name: string}[]>([]);
+  // Note: Upload and Staging state moved to useActions.ts
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
   const [isAdminSections, setIsAdminSections] = useState({ poll: false, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false, adminInbox: true });
   const [notFoundModal, setNotFoundModal] = useState(false);
@@ -247,241 +273,6 @@ export default function App() {
       }, '');
     }
   }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
-
-  // Note: All Data Fetching logic moved to useFeatures.ts
-  const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
-
-  // --- HANDLERS ---
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !user || !supabase) return;
-    try {
-      setIsUploading(true);
-      // We use a fixed filename 'avatar_image' so upsert always replaces the same file
-      const filePath = `${user.id}/avatar_image`;
-      
-      const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { 
-        upsert: true,
-        contentType: file.type 
-      });
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      const urlWithCacheBuster = `${publicUrl}?t=${Date.now()}`;
-      
-      // Use UPSERT instead of UPDATE to ensure the record is created if it doesn't exist
-      // Removed updated_at to prevent schema cache errors
-      const { error: dbError } = await supabase
-        .from('profiles')
-        .upsert({ 
-          id: user.id, 
-          avatar_url: urlWithCacheBuster
-        }, { onConflict: 'id' });
-
-      if (dbError) throw dbError;
-      
-      setProfile((prev: any) => ({ ...prev, avatar_url: urlWithCacheBuster }));
-      showToast("Photo Updated Successfully");
-    } catch (err: any) { showToast(err.message, "error"); } finally { setIsUploading(false); }
-  };
-const handleBoardFileUpload = async (files: FileList) => {
-    if (!files || !user || !supabase) return [];
-    const uploadedUrls = [];
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-      const filePath = `board/${Date.now()}_${safeName}`;
-      const { error: uploadError } = await supabase.storage.from('board_attachments').upload(filePath, file);
-      if (!uploadError) {
-        const { data: { publicUrl } } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
-        uploadedUrls.push(`${publicUrl}?filename=${encodeURIComponent(file.name)}`);
-      }
-    }
-    return uploadedUrls;
-  };
-
-  const handlePollFileUpload = async (files: FileList) => {
-    if (!files || !user || !supabase) return;
-    setIsUploading(true);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      // Clean the filename and add a timestamp to prevent duplicates
-      const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
-      const filePath = `polls/${Date.now()}_${cleanFileName}`;
-      
-      const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, file);
-      
-      if (uploadError) {
-        showToast(uploadError.message, 'error');
-        continue;
-      }
-
-      const { data: { publicUrl } } = supabase.storage.from('poll_attachments').getPublicUrl(filePath);
-      setStagedPollFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
-    }
-    setIsUploading(false);
-  };
-  const handleAdminInboxFileUpload = async (files: FileList) => {
-    if (!files || !user || !supabase) return;
-    setIsUploading(true);
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-      const filePath = `outbound/${Date.now()}_${safeName}`;
-      
-      const { error: uploadError } = await supabase.storage.from('admin_inbox_attachments').upload(filePath, file);
-      
-      if (uploadError) {
-        showToast(uploadError.message, 'error');
-        continue;
-      }
-
-      const { data } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
-      const publicUrl = `${data.publicUrl}?filename=${encodeURIComponent(file.name)}`;
-      setStagedAdminReplyFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
-    }
-    setIsUploading(false);
-  };
-
-  const handleReaction = async (commentId: string, type: 'like' | 'dislike', table: 'comment_reactions' | 'suggestion_reactions' = 'comment_reactions') => {
-    if (!user || !supabase) return setCurrentPage('login');
-    const { error } = await supabase.from(table).upsert({ comment_id: commentId, user_id: user.id, reaction_type: type }, { onConflict: 'comment_id,user_id' });
-    if (error) {
-      showToast("Reaction failed", "error");
-    } else {
-      if (table === 'comment_reactions') fetchPolls();
-      else fetchSuggestions();
-    }
-  };
-
-  const handleClosePoll = async (pollId: string) => {
-    if (!supabase) return;
-    const { error } = await supabase.from('polls').update({ expires_at: new Date().toISOString() }).eq('id', pollId);
-    if (error) showToast(error.message, "error"); else { showToast("Poll Closed Early"); fetchPolls(); }
-  };
-
-  const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
-    if (!supabase || !profile?.is_admin) return;
-    try {
-      // 1. Optimistically update local state immediately
-      setSuggestions(prev => prev.map(s => s.id === suggestionId ? { ...s, status: status } : s));
-
-      const { error } = await supabase
-        .from('suggestions')
-        .update({ status: status })
-        .eq('id', suggestionId);
-
-      if (error) {
-        // 2. Revert on error
-        await fetchSuggestions(); 
-        throw error;
-      }
-
-      showToast(`Proposal marked as ${status.toUpperCase()}`);
-      // Real-time subscription will handle syncing other clients
-    } catch (err: any) {
-      showToast(err.message, "error");
-    }
-  };
-
-  const handleDeletePoll = async (pollId: string) => {
-    if (!supabase || !user || !profile?.is_admin) return;
-    
-    try {
-      // 1. Record/Update the admin's vote for deletion
-      const { error: voteErr } = await supabase
-        .from('admin_deletion_votes')
-        .upsert({ target_id: pollId, target_type: 'poll', admin_id: user.id }, { onConflict: 'target_id,admin_id' });
-
-      if (voteErr) throw voteErr;
-
-      // 2. Fetch fresh votes to check consensus
-      const { data: currentVotesData } = await supabase.from('admin_deletion_votes').select('*').eq('target_id', pollId);
-      const totalAdmins = allUsers.filter(u => u.is_admin).length;
-      const currentVoteCount = currentVotesData?.length || 0;
-
-      if (currentVoteCount >= totalAdmins) {
-        if (window.confirm(`Consensus reached (${currentVoteCount}/${totalAdmins} admins). Finalize permanent deletion?`)) {
-          const { error: delErr } = await supabase.from('polls').delete().eq('id', pollId);
-          if (delErr) throw delErr;
-          
-          showToast("Consensus met: Poll deleted");
-          fetchPolls();
-          fetchDeletionVotes();
-          if (selectedPoll?.id === pollId) setSelectedPoll(null);
-        } else {
-          fetchDeletionVotes();
-        }
-      } else {
-        showToast(`Delete vote recorded (${currentVoteCount}/${totalAdmins} admins)`);
-        fetchDeletionVotes();
-      }
-    } catch (err: any) {
-      showToast(err.message, "error");
-    }
-  };
-const handleDeleteAdminEmail = async (messageId: string) => {
-    if (!supabase || !user || !profile?.is_admin) return;
-    try {
-      const adminList = allUsers.filter(u => u.is_admin);
-      const totalAdminsRequired = adminList.length || 1;
-      
-      const { data: currentVotes } = await supabase.from('admin_email_deletion_votes').select('*').eq('message_id', messageId);
-      const currentVoteCount = currentVotes?.length || 0;
-      const hasAlreadyVoted = currentVotes?.some(v => v.admin_id === user.id);
-
-      if (hasAlreadyVoted) {
-        showToast("You have already voted to clear this email.", "error");
-        return;
-      }
-
-      // Check if this user is the very last admin needed for deletion
-      const isLastAdmin = (currentVoteCount + 1) >= totalAdminsRequired;
-
-      if (isLastAdmin) {
-        const confirmPurge = window.confirm(
-          `⚠️ FINAL CONSENSUS ACTION ⚠️\n\nYou are the LAST ADMIN (${currentVoteCount + 1}/${totalAdminsRequired}) to attempt to delete this email.\n\nBy selecting OK, this email and all its contents will be PERMANENTLY DELETED from the database for everyone. Proceed?`
-        );
-        if (!confirmPurge) return;
-      }
-
-      // Record the vote
-      const { error: voteErr } = await supabase
-        .from('admin_email_deletion_votes')
-        .upsert({ message_id: messageId, admin_id: user.id });
-
-      if (voteErr) throw voteErr;
-
-      if (isLastAdmin) {
-        // 1. Clean up Storage files first
-        if (selectedAdminEmail.attachment_urls?.length > 0) {
-          const filePaths = selectedAdminEmail.attachment_urls.map((url: string) => {
-            const parts = url.split('/admin_inbox_attachments/');
-            return parts.length > 1 ? parts[1].split('?')[0] : null;
-          }).filter(Boolean);
-          
-          if (filePaths.length > 0) {
-            await supabase.storage.from('admin_inbox_attachments').remove(filePaths);
-          }
-        }
-
-        // 2. Delete the database record
-        const { error: delErr } = await supabase.from('admin_messages').delete().eq('id', messageId);
-        if (delErr) throw delErr;
-        showToast("Consensus met: Email and attachments permanently deleted.");
-        setSelectedAdminEmail(null);
-      } else {
-        showToast(`Email cleared from your view. (${currentVoteCount + 1}/${totalAdminsRequired} votes)`);
-        setSelectedAdminEmail(null);
-      }
-      
-      fetchAdminMessages();
-      fetchAdminEmailDeletionVotes();
-    } catch (err: any) {
-      showToast(err.message, "error");
-    }
-  };
-
 
   if (activeDashboard) {
     return (

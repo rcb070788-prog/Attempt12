@@ -34,6 +34,14 @@
 //1. financeUtils.ts   -> Math helpers (Currency formatting, Trend lines).
 //2. formatUtils.ts    -> Text helpers (Date formatting, link detection).---
 
+//--- STYLES (src/) ---
+//1. index.css          -> Global "Paint & Polish." Handles scrollbars, animations, and toggle colors.
+
+//--- RECENT REFACTORS (Phase 13) ---
+// - Moved Global CSS from App.tsx to index.css.
+// - Moved Home Page "Sub-text" into CategoryLinks.tsx for better organization.
+// - Fixed "Solvency Chart" logic in CategoryDashboard.tsx (Lines now solid; Toggles now respond in drill-down mode).
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase, supabaseAnonKey } from './supabaseClient';
 import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.ts';
@@ -47,6 +55,7 @@ import { UserAvatar } from './components/UserAvatar';
 import { Toast } from './components/Toast';
 import { useAuth } from './hooks/useAuth';
 import { useFinanceData } from './hooks/useFinanceData';
+import { useFeatures } from './hooks/useFeatures';
 import AdminPanel from './components/AdminPanel';
 import ModalStack from './components/ModalStack';
 import CategoryDashboard from './components/CategoryDashboard';
@@ -71,19 +80,27 @@ export default function App() {
   const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   
-  // --- FEATURE DATA ---
-  const [polls, setPolls] = useState<any[]>([]);
+  // --- CORE AUTH ---
+  const { user, profile, setProfile, setUser } = useAuth();
+  
+  // --- FEATURE DATA (Hooks) ---
+  const { 
+    polls, setPolls, fetchPolls, 
+    suggestions, setSuggestions, fetchSuggestions, 
+    boardMessages, fetchBoardMessages,
+    allUsers, fetchUsers,
+    manualRequests, fetchManualRequests,
+    adminMessages, fetchAdminMessages,
+    adminEmailDeletionVotes, fetchAdminEmailDeletionVotes,
+    deletionVotes, fetchDeletionVotes,
+    fetchAllData
+  } = useFeatures(user, profile);
+
+  // --- UI STATE (Selection & Staging) ---
   const [selectedPoll, setSelectedPoll] = useState<any>(null);
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [boardMessages, setBoardMessages] = useState<any[]>([]);
-  const [allUsers, setAllUsers] = useState<any[]>([]);
-  const [manualRequests, setManualRequests] = useState<any[]>([]);
   const [pendingAction, setPendingAction] = useState<{req: any, type: 'Confirm' | 'Deny'} | null>(null);
-  const [adminMessages, setAdminMessages] = useState<any[]>([]);
-  const [adminEmailDeletionVotes, setAdminEmailDeletionVotes] = useState<any[]>([]);
   const [selectedAdminEmail, setSelectedAdminEmail] = useState<any>(null);
   const [stagedAdminReplyFiles, setStagedAdminReplyFiles] = useState<{url: string, name: string}[]>([]);
-  const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   // Navigation State for YoY Drill-down
@@ -130,7 +147,7 @@ export default function App() {
     localStorage.setItem('admin_cleared_items', JSON.stringify(newCleared));
     showToast(clearedItems.includes(id) ? "Item restored to view" : "Item cleared from view");
   };
-const { user, profile, setProfile, setUser } = useAuth();
+
   const { chartData, yearDetailData, fetchFinancialData, fetchYearDetails } = useFinanceData(selectedParents, toggles, chartLevel);
 
   // --- INITIALIZATION ---
@@ -143,8 +160,6 @@ const { user, profile, setProfile, setUser } = useAuth();
   }, [user]);
 
   useEffect(() => {
-    if (!supabase) return;
-
     // Listen for the 'Close Report' signal from the embedded dashboard iframe
     const handleDashboardMessage = (event: MessageEvent) => {
       if (event.data && event.data.type === 'CLOSE_DASHBOARD') {
@@ -153,24 +168,10 @@ const { user, profile, setProfile, setUser } = useAuth();
     };
     window.addEventListener('message', handleDashboardMessage);
 
-    fetchAllData();
+    // Load initial financial data
+    fetchFinancialData();
 
-    // REAL-TIME SUBSCRIPTION
-    const votesSubscription = supabase
-      .channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_votes' }, () => fetchPolls())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_comments' }, () => fetchPolls())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestions' }, () => fetchSuggestions())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestion_comments' }, () => fetchSuggestions())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'board_messages' }, () => fetchBoardMessages())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_messages' }, () => fetchAdminMessages())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_email_deletion_votes' }, () => fetchAdminEmailDeletionVotes())
-      .subscribe();
-
-    return () => {
-      if (votesSubscription) supabase.removeChannel(votesSubscription);
-      window.removeEventListener('message', handleDashboardMessage);
-    };
+    return () => window.removeEventListener('message', handleDashboardMessage);
   }, []);
 
   useEffect(() => {
@@ -247,102 +248,7 @@ const { user, profile, setProfile, setUser } = useAuth();
     }
   }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
 
-  // --- DATA FETCHING ---
-
-  const fetchPolls = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('polls').select(`*, poll_options(*), poll_votes(*, profiles(full_name, district, avatar_url)), poll_comments(*, profiles(full_name, district, avatar_url), comment_reactions(*))`).order('created_at', { ascending: false });
-    if (data) setPolls(data);
-  };
-
-  const fetchSuggestions = async () => {
-    if (!supabase) return;
-    try {
-      const { data, error } = await supabase
-  .from('suggestions')
-  .select(`
-    *, 
-    profiles(full_name, district, avatar_url),
-    suggestion_comments(id, content, created_at, profiles(full_name, district, avatar_url), suggestion_reactions(*))
-  `)
-        .order('created_at', { ascending: false });
-      
-      if (error) {
-        console.error("Suggestion Fetch Error:", error.message);
-        // Fallback: try fetching without comments if the join is the problem
-        const { data: fallbackData } = await supabase.from('suggestions').select('*, profiles(full_name, district, avatar_url)').order('created_at', { ascending: false });
-        setSuggestions(fallbackData || []);
-      } else {
-        setSuggestions(data || []);
-      }
-    } catch (err) {
-      console.error("Critical Fetch Error:", err);
-    }
-  };
-
-  const fetchBoardMessages = async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase
-      .from('board_messages')
-      .select(`
-        *,
-        profiles (
-          full_name,
-          district,
-          avatar_url
-        )
-      `)
-      .order('created_at', { ascending: false });
-    
-    if (error) {
-      console.error("Fetch Error:", error.message);
-    } else {
-      setBoardMessages(data || []);
-    }
-  };
-
-  const fetchUsers = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('*').order('full_name', { ascending: true });
-    setAllUsers(data || []);
-  };
-
-  const fetchManualRequests = async () => {
-    if (!supabase) return;
-    const { data, error } = await supabase.from('manual_access_requests').select('*').order('created_at', { ascending: false });
-    if (error) console.error("Manual Request Fetch Error:", error.message);
-    setManualRequests(data || []);
-  };
-  const fetchAdminMessages = async () => {
-    if (!supabase || !profile?.is_admin) return;
-    console.log("Fetching Admin Inbox...");
-    const { data } = await supabase.from('admin_messages').select('*').order('created_at', { ascending: false });
-    setAdminMessages(data || []);
-  };
-
-  const fetchAdminEmailDeletionVotes = async () => {
-    if (!supabase || !profile?.is_admin) return;
-    const { data } = await supabase.from('admin_email_deletion_votes').select('*');
-    setAdminEmailDeletionVotes(data || []);
-  };
-
-  const fetchDeletionVotes = async () => {
-    if (!supabase) return;
-    const { data } = await supabase.from('admin_deletion_votes').select('*');
-    setDeletionVotes(data || []);
-  };
-
-  const fetchAllData = () => { 
-    fetchPolls(); 
-    fetchSuggestions(); 
-    fetchBoardMessages(); 
-    fetchUsers(); 
-    fetchManualRequests(); 
-    fetchDeletionVotes();
-    fetchAdminMessages();
-    fetchAdminEmailDeletionVotes();
-    fetchFinancialData(); // This now points to the hook version
-  };
+  // Note: All Data Fetching logic moved to useFeatures.ts
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
 
   // --- HANDLERS ---

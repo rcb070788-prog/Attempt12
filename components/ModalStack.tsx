@@ -14,11 +14,6 @@ interface ModalStackProps {
   showPollLoginModal: boolean;
   setShowPollLoginModal: (val: boolean) => void;
   setCurrentPage: (page: string) => void;
-  registryModal: { optionText: string, voters: any[] } | null;
-  setRegistryModal: (val: any) => void;
-  pendingVote: { pollId: string, optionId: string, optionText: string, isAnonymous: boolean } | null;
-  setPendingVote: (val: any) => void;
-  confirmVote: () => void;
 }
 
 const ModalStack: React.FC<ModalStackProps> = ({
@@ -27,10 +22,7 @@ const ModalStack: React.FC<ModalStackProps> = ({
   supabase, showToast, setIsVerifying,
   profile, fetchManualRequests,
   showPollLoginModal, setShowPollLoginModal,
-  setCurrentPage,
-  registryModal, setRegistryModal,
-  pendingVote, setPendingVote,
-  confirmVote
+  setCurrentPage
 }) => {
   return (
     <>
@@ -139,82 +131,7 @@ const ModalStack: React.FC<ModalStackProps> = ({
         </div>
       )}
 
-      {/* --- VOTER REGISTRY MODAL --- */}
-      {registryModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[250] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden">
-            <div className="p-8 border-b border-gray-100 flex justify-between items-center">
-              <div>
-                <h3 className="text-xl font-black uppercase tracking-tight">Voter Registry</h3>
-                <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">{registryModal.optionText}</p>
-              </div>
-              <button onClick={() => setRegistryModal(null)} className="text-gray-300 hover:text-red-500 transition-colors">
-                <i className="fa-solid fa-circle-xmark text-2xl"></i>
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto space-y-3 custom-scrollbar">
-              {registryModal.voters.map((v: any, i: number) => {
-                const isShielded = v.is_anonymous === true || v.is_anonymous === 'true';
-                const voterProfile = Array.isArray(v.profiles) ? v.profiles[0] : v.profiles;
-                const displayName = isShielded ? "Verified Voter" : (voterProfile?.full_name || "Verified Voter");
-                const avatarUrl = isShielded ? undefined : voterProfile?.avatar_url;
-                const district = voterProfile?.district || "???";
-
-                return (
-                  <div key={i} className="flex items-center gap-4 p-5 bg-gray-50 rounded-[2rem] border border-transparent hover:border-indigo-100 transition-all group">
-                    <UserAvatar url={avatarUrl} isAnonymous={isShielded} size="md" />
-                    <div className="flex flex-col">
-                      <span className="text-sm font-black text-gray-900 uppercase tracking-tight">{displayName}</span>
-                      <span className="text-[9px] font-black text-indigo-600 uppercase tracking-widest opacity-70">District {district}</span>
-                    </div>
-                    {isShielded && (
-                      <div className="ml-auto flex items-center gap-2 bg-white px-3 py-1.5 rounded-full shadow-sm border border-gray-100">
-                        <i className="fa-solid fa-user-shield text-indigo-600 text-[10px]"></i>
-                        <span className="text-[8px] font-black uppercase text-gray-400">Private</span>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* --- PENDING VOTE MODAL --- */}
-      {pendingVote && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-          <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl p-8 space-y-6 animate-slide-up">
-            <div className="text-center space-y-2">
-              <h3 className="text-xl font-black uppercase">{(pendingVote as any).isChanging ? "Change Your Vote?" : "Confirm Your Vote"}</h3>
-            </div>
-            <p className="text-center text-gray-500 text-sm leading-tight px-4">
-              You are selecting: <br/>
-              <span className="text-indigo-600 font-black uppercase text-xs break-words whitespace-normal block mt-1">"{pendingVote.optionText}"</span>
-            </p>
-            <div className="space-y-4">
-              <div className="bg-gray-50 p-6 rounded-2xl flex items-center justify-between">
-                 <div className="flex flex-col">
-                   <span className="text-[10px] font-black uppercase leading-none">Vote Anonymously?</span>
-                   <span className="text-[8px] font-bold text-gray-400 uppercase mt-1">Hide name from registry</span>
-                 </div>
-                 <button onClick={() => setPendingVote({...pendingVote, isAnonymous: !pendingVote.isAnonymous})} className={`w-12 h-6 rounded-full relative transition-colors ${pendingVote.isAnonymous ? 'bg-indigo-600' : 'bg-gray-300'}`}>
-                   <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${pendingVote.isAnonymous ? 'left-7' : 'left-1'}`}></div>
-                 </button>
-              </div>
-            </div>
-            <div className="space-y-3 pt-2">
-              <button onClick={confirmVote} className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-xl shadow-indigo-200">
-                Submit Vote
-              </button>
-              <button onClick={() => setPendingVote(null)} className="w-full py-2 text-gray-400 font-black uppercase text-[10px]">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </>
+      </>
   );
 };
 

@@ -1,13 +1,16 @@
 // ---MOORE COUNTY FINANCIAL APP - PROJECT MAP (Updated Phase 5)
 
 //--- VISUAL COMPONENTS (src/components/) ---
+
 //1. AdminPanel.tsx      -> The restricted dashboard for officials.
 //2. ModalStack.tsx      -> Handles all pop-up windows (Polls, Messages).
 //3. CategoryDashboard.tsx -> The charts and audit tables for categories.
 //4. UserAvatar.tsx      -> The small profile pictures.
 //5. Toast.tsx           -> The "Success/Error" pop-up messages.
 //6. BoardPage.tsx       -> The "Message Board" message board component.
+// 7. SuggestionsPage.tsx -> Community suggestion box, new proposals, and threaded discussions.
 //--- LOGIC & MATH (src/hooks/) ---
+
 //1. useAuth.ts        -> Handles login/logout and user permissions.
 //2. useFinanceData.ts  -> THE BRAIN. All Tier 1-4 logic and COVID-gap math.
 
@@ -38,6 +41,7 @@ import ModalStack from './components/ModalStack';
 import CategoryDashboard from './components/CategoryDashboard';
 import BoardPage from './components/BoardPage';
 import SuggestionsPage from './components/SuggestionsPage';
+import PollsPage from './components/PollsPage';
 
 export default function App() {
   // --- CORE STATE ---
@@ -85,15 +89,11 @@ export default function App() {
   const [isVerifying, setIsVerifying] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [replyTo, setReplyTo] = useState<string | null>(null);
   const [selectedOfficials, setSelectedOfficials] = useState<string[]>([]);
   const [isOfficialDropdownOpen, setIsOfficialDropdownOpen] = useState(false);
-  const [pendingVote, setPendingVote] = useState<{pollId: string, optionId: string, optionText: string, isAnonymous: boolean} | null>(null);
-  const [registryModal, setRegistryModal] = useState<{optionText: string, voters: any[]} | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [stagedBoardFiles, setStagedBoardFiles] = useState<{url: string, name: string}[]>([]);
-  const [pollFilter, setPollFilter] = useState<'active' | 'completed'>('active');
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
   const [isAdminSections, setIsAdminSections] = useState({ poll: false, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false, adminInbox: true });
   const [notFoundModal, setNotFoundModal] = useState(false);
@@ -497,31 +497,6 @@ const handleSignup = async (e: React.FormEvent<HTMLFormElement>) => {
     }
   };
 
-  const confirmVote = async () => {
-    if (!pendingVote || !supabase || !user) return;
-    
-    // Ensure we are sending a strict primitive boolean to the database
-    const cleanVotePayload = {
-      poll_id: pendingVote.pollId,
-      option_id: pendingVote.optionId,
-      user_id: user.id,
-      is_anonymous: pendingVote.isAnonymous === true
-    };
-
-    const { error } = await supabase
-      .from('poll_votes')
-      .upsert(cleanVotePayload, { onConflict: 'poll_id,user_id' });
-
-    if (error) {
-      showToast(error.message, 'error');
-    } else {
-      showToast("Vote recorded successfully");
-      // Wait for fetchPolls to complete to ensure UI state is fresh
-      await fetchPolls();
-    }
-    setPendingVote(null);
-  };
-
   const handleClosePoll = async (pollId: string) => {
     if (!supabase) return;
     const { error } = await supabase.from('polls').update({ expires_at: new Date().toISOString() }).eq('id', pollId);
@@ -651,44 +626,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
   };
 
 
-  const renderComments = (pollComments: any[], pollId: string, parentId: string | null = null, depth = 0) => {
-    return (pollComments || []).filter(c => c.parent_id === parentId && !c.is_hidden).map(comment => {
-      const reactions = comment.comment_reactions || [];
-      const likes = reactions.filter((r: any) => r.reaction_type === 'like').length;
-      const dislikes = reactions.filter((r: any) => r.reaction_type === 'dislike').length;
-      const userReaction = reactions.find((r: any) => r.user_id === user?.id)?.reaction_type;
-      return (
-        <div key={comment.id} className={`${depth > 0 ? 'ml-6 mt-2 border-l-2 border-gray-100 pl-4' : 'bg-gray-50 p-4 rounded-2xl mb-4'}`}>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-               <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
-               <span className="text-[9px] font-black uppercase text-indigo-600">
-                {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'} • {formatDate(comment.created_at)}
-               </span>
-            </div>
-            <div className="text-gray-800 text-sm leading-relaxed break-words whitespace-pre-wrap">{renderTextWithLinks(comment.content)}</div>
-            <div className="flex gap-4 mt-3 text-[9px] font-black uppercase tracking-widest">
-              <button onClick={() => handleReaction(comment.id, 'like')} className={userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}>
-                <i className={`fa-${userReaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i> {likes}
-              </button>
-              <button onClick={() => handleReaction(comment.id, 'dislike')} className={userReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'}>
-                <i className={`fa-${userReaction === 'dislike' ? 'solid' : 'regular'} fa-thumbs-down`}></i> {dislikes}
-              </button>
-              <button onClick={() => setReplyTo(replyTo === comment.id ? null : comment.id)} className="text-gray-400">Reply</button>
-            </div>
-            {replyTo === comment.id && (
-              <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await supabase?.from('poll_comments').insert({ poll_id: pollId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }); setReplyTo(null); fetchPolls(); }} className="mt-3 flex gap-2">
-                <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-xs outline-none border" />
-                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[9px] font-black uppercase">Send</button>
-              </form>
-            )}
-          </div>
-          {renderComments(pollComments, pollId, comment.id, depth + 1)}
-        </div>
-      );
-    });
-  };
-
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden h-[100dvh]">
@@ -720,11 +657,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
   showPollLoginModal={showPollLoginModal}
   setShowPollLoginModal={setShowPollLoginModal}
   setCurrentPage={setCurrentPage}
-  registryModal={registryModal}
-  setRegistryModal={setRegistryModal}
-  pendingVote={pendingVote}
-  setPendingVote={setPendingVote}
-  confirmVote={confirmVote}
 />
 
       <nav className="bg-white shadow-sm px-4 py-3 z-50 shrink-0 border-b border-gray-100 flex justify-between items-center">
@@ -938,177 +870,21 @@ const handleDeleteAdminEmail = async (messageId: string) => {
           toggles={toggles}
           setToggles={setToggles}
         />
-        {currentPage === 'polls' && !selectedPoll && (
-          <div className="max-w-4xl mx-auto space-y-8 animate-slide-up">
-            <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-              <div>
-                <h2 className="text-4xl font-black uppercase tracking-tighter">Community Polls</h2>
-                <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Voice your opinion on county decisions</p>
-              </div>
-              <div className="flex bg-white p-1.5 rounded-2xl shadow-sm border border-gray-100">
-                <button 
-                  onClick={() => setPollFilter('active')}
-                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${pollFilter === 'active' ? 'bg-indigo-600 text-white shadow-lg' : 'text-gray-400'}`}
-                >
-                  Active
-                </button>
-                <button 
-                  onClick={() => setPollFilter('completed')}
-                  className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase transition-all ${pollFilter === 'completed' ? 'bg-gray-900 text-white shadow-lg' : 'text-gray-400'}`}
-                >
-                  Completed
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6">
-              {polls
-                .filter(poll => {
-                  const isExpired = new Date(poll.expires_at) < new Date();
-                  return pollFilter === 'active' ? !isExpired : isExpired;
-                })
-                .map(poll => {
-                  const voted = poll.poll_votes?.some((v: any) => v.user_id === user?.id);
-                  const isExpired = new Date(poll.expires_at) < new Date();
-                  return (
-                    <div key={poll.id} onClick={() => setSelectedPoll(poll)} className="bg-white p-8 rounded-[2.5rem] shadow-sm border hover:shadow-lg transition-all cursor-pointer flex flex-col sm:flex-row justify-between items-center gap-6 group">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-2xl font-black uppercase break-words group-hover:text-indigo-600 transition-colors">{poll.title}</h3>
-                        <div className="flex items-center gap-2 mt-1">
-                          <p className="text-gray-400 text-[10px] font-black uppercase">{poll.poll_votes?.length || 0} Votes</p>
-                          <span className="text-gray-200 text-[10px]">•</span>
-                          <p className={`${isExpired ? 'text-gray-400' : 'text-red-500'} text-[10px] font-black uppercase`}>
-                            <i className="fa-regular fa-clock mr-1"></i>
-                            {isExpired ? `Closed ${formatDate(poll.expires_at)}` : `Ends ${formatDate(poll.expires_at)}`}
-                          </p>
-                        </div>
-                      </div>
-                      <button className={`px-8 py-4 rounded-xl font-black uppercase text-[10px] whitespace-nowrap ${voted || isExpired ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white shadow-indigo-200 shadow-lg'}`}>
-                        {isExpired ? 'Final Results' : voted ? 'View Results' : 'Vote & Discuss'}
-                      </button>
-                    </div>
-                  );
-                })}
-              
-              {polls.filter(poll => {
-                const isExpired = new Date(poll.expires_at) < new Date();
-                return pollFilter === 'active' ? !isExpired : isExpired;
-              }).length === 0 && (
-                <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
-                   <p className="text-gray-300 font-black uppercase text-xs italic">No {pollFilter} polls found.</p>
-                </div>
-              )}
-            </div>
-          </div>
+{currentPage === 'polls' && (
+          <PollsPage 
+            user={user}
+            profile={profile}
+            polls={polls}
+            fetchPolls={fetchPolls}
+            selectedPoll={selectedPoll}
+            setSelectedPoll={setSelectedPoll}
+            supabase={supabase}
+            showToast={showToast}
+            setCurrentPage={setCurrentPage}
+            setShowPollLoginModal={setShowPollLoginModal}
+          />
         )}
 
-        {currentPage === 'polls' && selectedPoll && (
-          <div className="max-w-4xl mx-auto space-y-8 pb-20">
-            <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors"><i className="fa-solid fa-arrow-left mr-2"></i> All Polls</button>
-            <div className="bg-white p-10 md:p-16 rounded-[3rem] shadow-xl space-y-10 border border-gray-100">
-              <div className="space-y-4">
-                <h2 className="text-3xl md:text-5xl font-black uppercase leading-tight tracking-tighter text-gray-900 break-words">{selectedPoll.title}</h2>
-                {selectedPoll.description && (
-                  <div className="space-y-4">
-                    <p className="text-gray-500 text-sm md:text-base leading-relaxed font-medium bg-gray-50 p-8 rounded-[2.5rem] break-words whitespace-pre-wrap">
-                      {selectedPoll.description}
-                    </p>
-                    {selectedPoll.attachments?.length > 0 && (
-                      <div className="flex flex-wrap gap-3">
-                        {selectedPoll.attachments.map((url: string, i: number) => (
-                          <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-100 rounded-2xl hover:border-indigo-600 transition-all group">
-                            <i className="fa-solid fa-file-invoice text-indigo-600"></i>
-                            <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">View Reference {i + 1}</span>
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="space-y-8">
-                {selectedPoll.poll_options?.map((opt: any) => {
-                  const votes = selectedPoll.poll_votes?.filter((v: any) => v.option_id === opt.id) || [];
-                  const totalVotes = selectedPoll.poll_votes?.length || 0;
-                  const percent = totalVotes ? Math.round((votes.length / totalVotes) * 100) : 0;
-                  const existingVote = selectedPoll.poll_votes?.find((v: any) => v.user_id === user?.id);
-                  const isCurrentSelection = existingVote?.option_id === opt.id;
-                  const isExpired = new Date(selectedPoll.expires_at) < new Date();
-                  
-                  // THIS LINE BELOW FIXES THE ERROR:
-                  const hasVotedAny = selectedPoll.poll_votes?.some((v: any) => v.user_id === user?.id);
-
-                  return (
-                    <div key={opt.id} className="space-y-3">
-                      <button 
-                        disabled={isExpired || isCurrentSelection}
-                        onClick={() => {
-                          if (!user) {
-                            setShowPollLoginModal(true);
-                            return;
-                          }
-                          // Find the user's current vote for THIS poll (regardless of which option)
-                          const userExistingVote = selectedPoll.poll_votes?.find((v: any) => v.user_id === user?.id);
-                          
-                          setPendingVote({ 
-                            pollId: selectedPoll.id, 
-                            optionId: opt.id, 
-                            optionText: opt.text, 
-                            // Inherit previous privacy preference using strict boolean/string check
-                            isAnonymous: userExistingVote 
-                              ? (userExistingVote.is_anonymous === true || userExistingVote.is_anonymous === 'true') 
-                              : false,
-                            isChanging: !!userExistingVote 
-                          } as any);
-                        }} 
-                        className={`w-full text-left p-6 rounded-[2rem] border-2 relative overflow-hidden flex justify-between items-start gap-4 transition-all ${isCurrentSelection ? 'border-indigo-600 ring-4 ring-indigo-600/10' : 'border-gray-100 hover:border-indigo-200'}`}
-                      >
-                        {(existingVote || isExpired) && <div className="absolute inset-y-0 left-0 bg-indigo-50 transition-all duration-1000" style={{ width: `${percent}%` }}></div>}
-                        <span className="relative z-10 text-xs font-black uppercase flex-1 break-words whitespace-normal leading-tight">{opt.text}</span>
-                        {(existingVote || isExpired) && (
-                          <div className="relative z-10 text-right shrink-0">
-                            <span className="text-sm font-black text-indigo-600">{percent}%</span>
-                            <span className="block text-[8px] font-bold text-gray-400 uppercase">({votes.length} Votes)</span>
-                          </div>
-                        )}
-                      </button>
-                      
-                      {/* Now that hasVotedAny is defined, this section will work */}
-                      {(hasVotedAny || isExpired) && votes.length > 0 && (
-                        <div className="flex items-center gap-2 px-2 cursor-pointer" onClick={() => setRegistryModal({ optionText: opt.text, voters: votes })}>
-                          <div className="flex -space-x-2">
-                            {votes.slice(0, 5).map((v: any, i: number) => (
-                              <UserAvatar 
-                                key={i} 
-                                url={(v.is_anonymous === true || v.is_anonymous === 'true') ? undefined : v.profiles?.avatar_url} 
-                                isAnonymous={v.is_anonymous === true || v.is_anonymous === 'true'} 
-                                size="sm" 
-                              />
-                            ))}
-                          </div>
-                          {votes.length > 5 && <span className="text-[9px] font-black text-gray-400">+ {votes.length - 5} More</span>}
-                          <span className="text-[8px] font-black text-indigo-400 uppercase ml-auto">View Registry</span>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="pt-10 border-t">
-                <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-6 tracking-widest">Community Discussion</h4>
-                {user ? (
-                   <form onSubmit={async (e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); await supabase?.from('poll_comments').insert({ poll_id: selectedPoll.id, user_id: user.id, content: fd.get('content') }); (e.target as HTMLFormElement).reset(); fetchPolls(); }} className="mb-8 flex gap-2">
-                     <input name="content" required placeholder="Add a comment..." className="flex-grow p-4 bg-gray-50 rounded-2xl text-xs outline-none" />
-                     <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase">Post</button>
-                   </form>
-                ) : (
-                  <button onClick={() => setCurrentPage('login')} className="w-full py-4 border-2 border-dashed rounded-2xl text-[10px] font-black uppercase text-gray-400 mb-8">Login to Comment</button>
-                )}
-                {renderComments(selectedPoll.poll_comments || [], selectedPoll.id)}
-              </div>
-            </div>
-          </div>
-        )}
 {currentPage === 'board' && (
           <BoardPage 
             user={user}

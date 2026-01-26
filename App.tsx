@@ -15,6 +15,9 @@
 // 11. Navbar.tsx        -> The top navigation bar with the logo and menu button.
 // 12. Sidebar.tsx       -> The slide-out menu with user profile and page links.
 // 13. NetWorthChart.tsx -> The high-level "County Net Worth" trend chart and its toggle controls.
+// 14. CategoryLinks.tsx  -> Home page buttons for "Revenues" and "Expenses."
+// 15. Footer.tsx         -> The copyright and branding bar at the bottom of the app.
+
 
 
 //--- LOGIC & MATH (src/hooks/) ---
@@ -57,6 +60,7 @@ import { Sidebar } from './components/Sidebar';
 import { NetWorthChart } from './components/NetWorthChart.tsx';
 import { CategoryLinks } from './components/CategoryLinks';
 import { Footer } from './components/Footer';
+import './index.css';
 
 
 export default function App() {
@@ -643,10 +647,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
             />
 
             <CategoryLinks setSelectedCategory={setSelectedCategory} />
-
-            <div className="text-center pt-4">
-              <p className="text-[10px] font-black uppercase text-gray-300 tracking-[0.3em]">Comprehensive Assets & Liabilities are now integrated into the Net Worth Trends above</p>
-            </div>
           </div>
         )}
 {/* --- MODULAR CATEGORY DASHBOARD --- */}
@@ -790,19 +790,6 @@ const handleDeleteAdminEmail = async (messageId: string) => {
 
       <Footer />
 
-      <style>{`
-        .custom-scrollbar::-webkit-scrollbar { width: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
-        @keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
-        .slider-oval { width: 44px; height: 20px; border-radius: 20px; position: relative; transition: all 0.3s ease; cursor: pointer; border: 2px solid #e2e8f0; background: #f8fafc; }
-        .slider-circle { width: 12px; height: 12px; border-radius: 50%; background: white; position: absolute; top: 2px; left: 3px; transition: all 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .slider-active .slider-circle { left: 25px; }
-        .slider-assets-on { background: #4ade80 !important; border-color: #22c55e !important; }
-        .slider-liabs-on { background: #f87171 !important; border-color: #ef4444 !important; }
-        .slider-netWorth-on { background: #3b82f6 !important; border-color: #2563eb !important; }
-        .slider-inf-on { background: #fb923c !important; border-color: #f97316 !important; }
-      `}</style>
     </div>
   );
 }

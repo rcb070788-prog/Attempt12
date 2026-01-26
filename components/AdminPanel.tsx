@@ -60,7 +60,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
             {/* --- POLL CREATOR SECTION --- */}
             <section className="bg-white rounded-[2.5rem] shadow-xl border-4 border-indigo-600 overflow-hidden transition-all">
               <button 
-                onClick={() => setIsAdminSections(prev => ({...prev, poll: !prev.poll}))}
+                onClick={() => setIsAdminSections((prev: any) => ({...prev, poll: !prev.poll}))}
                 className="w-full p-8 flex justify-between items-center hover:bg-indigo-50 transition-colors"
               >
                 <div className="text-left">

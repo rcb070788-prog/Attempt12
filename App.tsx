@@ -26,6 +26,7 @@
 //2. useFinanceData.ts  -> THE BRAIN. All Tier 1-4 logic and COVID-gap math.
 //3. useFeatures.ts -> The "Social Hub." Manages data and real-time updates for Polls, Suggestions, and the Message Board.
 //4. useActions.ts     -> The "Action Toolbox." Handles user interactions like file uploads, reactions, and admin tasks.
+//5. useNavigation.ts -> The "Traffic Controller." Remembers where you've been (History) and handles the "Back" button logic.
 
 //--- DATA & SETTINGS (Root src/) ---
 //1. App.tsx           -> The "Air Traffic Controller." Connects everything.
@@ -47,36 +48,22 @@
 // - (Phase 14) Cleaned up App.tsx by removing over 100 lines of hardcoded database fetching logic.
 // - (Phase 15) Created useActions.ts to house all "doing" logic (uploads, reactions, deletions).
 // - (Phase 15) Cleaned up App.tsx by removing nearly 200 lines of handler functions.
+// - (Phase 16) Created useNavigation.ts to handle all browser history and "Back" button logic, removing several heavy useEffect blocks from App.tsx.
 
-
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { supabase, supabaseAnonKey } from './supabaseClient';
-import { CATEGORIES, DASHBOARDS, OFFICIALS, CPI_ANNUAL_AVG } from './constants.ts';
-import { DashboardConfig } from './types.ts';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-
 // New Modular Imports
-import { renderTextWithLinks, formatDate } from './utils/formatUtils';
-import { formatCurrency, getRealValue, calculateTrendLine } from './utils/financeUtils';
-import { UserAvatar } from './components/UserAvatar';
+import { formatDate } from './utils/formatUtils';
 import { Toast } from './components/Toast';
 import { useAuth } from './hooks/useAuth';
 import { useFinanceData } from './hooks/useFinanceData';
 import { useFeatures } from './hooks/useFeatures';
 import { useActions } from './hooks/useActions';
 import { useNavigation } from './hooks/useNavigation';
-import AdminPanel from './components/AdminPanel';
 import ModalStack from './components/ModalStack';
-import CategoryDashboard from './components/CategoryDashboard';
-import BoardPage from './components/BoardPage';
-import SuggestionsPage from './components/SuggestionsPage';
-import PollsPage from './components/PollsPage';
-import SignupPage from './components/SignupPage';
-import LoginPage from './components/LoginPage';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
-import { NetWorthChart } from './components/NetWorthChart.tsx';
-import { CategoryLinks } from './components/CategoryLinks';
+import { MainView } from './components/MainView';
 import { Footer } from './components/Footer';
 import './index.css';
 
@@ -142,7 +129,6 @@ export default function App() {
   const [chartLevel, setChartLevel] = useState(1);
   const [selectedParents, setSelectedParents] = useState<string[]>([]);
   const [selectedParent, setSelectedParent] = useState<string | null>(null);
-  const [selectedLineItem, setSelectedLineItem] = useState<string | null>(null);
   const [toggles, setToggles] = useState({ 
     assets: false, 
     liabs: false, 
@@ -262,160 +248,82 @@ export default function App() {
         supabase={supabase}
       />
 
-      <main className="flex-grow overflow-y-auto container mx-auto px-4 py-8 custom-scrollbar">
-        {currentPage === 'home' && !selectedCategory && (
-          <div className="max-w-4xl mx-auto space-y-12 py-10">
-            <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
-
-            {/* TIER 1 SPARKLINE: Total Government Net Worth */}
-            <NetWorthChart 
-              chartData={chartData}
-              toggles={toggles}
-              setToggles={setToggles}
-              setSelectedCategory={setSelectedCategory}
-            />
-
-            <CategoryLinks setSelectedCategory={setSelectedCategory} />
-          </div>
-        )}
-{/* --- MODULAR CATEGORY DASHBOARD --- */}
-        <CategoryDashboard 
-          currentPage={currentPage}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          setActiveDashboard={setActiveDashboard}
-          chartData={chartData}
-          yearDetailData={yearDetailData}
-          fetchYearDetails={fetchYearDetails}
-          selectedFinancialYear={selectedFinancialYear}
-          setSelectedFinancialYear={setSelectedFinancialYear}
-          expandedChart={expandedChart}
-          setExpandedChart={setExpandedChart}
-          chartLevel={chartLevel}
-          setChartLevel={setChartLevel}
-          selectedParents={selectedParents}
-          setSelectedParents={setSelectedParents}
-          selectedParent={selectedParent}
-          setSelectedParent={setSelectedParent}
-          hoveredData={hoveredData}
-          setHoveredData={setHoveredData}
-          toggles={toggles}
-          setToggles={setToggles}
-        />
-{currentPage === 'polls' && (
-          <PollsPage 
-            user={user}
-            profile={profile}
-            polls={polls}
-            fetchPolls={fetchPolls}
-            selectedPoll={selectedPoll}
-            setSelectedPoll={setSelectedPoll}
-            supabase={supabase}
-            showToast={showToast}
-            setCurrentPage={setCurrentPage}
-            setShowPollLoginModal={setShowPollLoginModal}
-          />
-        )}
-
-{currentPage === 'board' && (
-          <BoardPage 
-            user={user}
-            profile={profile}
-            boardMessages={boardMessages}
-            fetchBoardMessages={fetchBoardMessages}
-            searchQuery={searchQuery}
-            setSearchQuery={setSearchQuery}
-            selectedOfficials={selectedOfficials}
-            setSelectedOfficials={setSelectedOfficials}
-            isOfficialDropdownOpen={isOfficialDropdownOpen}
-            setIsOfficialDropdownOpen={setIsOfficialDropdownOpen}
-            stagedBoardFiles={stagedBoardFiles}
-            setStagedBoardFiles={setStagedBoardFiles}
-            isUploading={isUploading}
-            setIsUploading={setIsUploading}
-            handleBoardFileUpload={handleBoardFileUpload}
-            showToast={showToast}
-            setCurrentPage={setCurrentPage}
-            supabase={supabase}
-            supabaseAnonKey={supabaseAnonKey}
-          />
-        )}
-{/* SUGGESTIONS PAGE (Modularized) */}
-        {currentPage === 'suggestions' && (
-          <SuggestionsPage 
-            user={user}
-            profile={profile}
-            suggestions={suggestions}
-            fetchSuggestions={fetchSuggestions}
-            showToast={showToast}
-            supabase={supabase}
-            setCurrentPage={setCurrentPage}
-            setSearchQuery={setSearchQuery}
-          />
-        )}
-        
-        {/* === ADMIN PANEL === */}
-        {currentPage === 'admin' && profile?.is_admin && (
-          <AdminPanel 
-            profile={profile}
-            isAdminSections={isAdminSections}
-            setIsAdminSections={setIsAdminSections}
-            stagedPollFiles={stagedPollFiles}
-            setStagedPollFiles={setStagedPollFiles}
-            isUploading={isUploading}
-            handlePollFileUpload={handlePollFileUpload}
-            showToast={showToast}
-            fetchPolls={fetchPolls}
-            allUsers={allUsers}
-            clearedItems={clearedItems}
-            setClearedItems={setClearedItems}
-            toggleClearItem={toggleClearItem}
-            polls={polls}
-            handleClosePoll={handleClosePoll}
-            handleDeletePoll={handleDeletePoll}
-            deletionVotes={deletionVotes}
-            user={user}
-            suggestions={suggestions}
-            handleUpdateSuggestionStatus={handleUpdateSuggestionStatus}
-            adminMessages={adminMessages}
-            selectedAdminEmail={selectedAdminEmail}
-            setSelectedAdminEmail={setSelectedAdminEmail}
-            handleDeleteAdminEmail={handleDeleteAdminEmail}
-            stagedAdminReplyFiles={stagedAdminReplyFiles}
-            setStagedAdminReplyFiles={setStagedAdminReplyFiles}
-            handleAdminInboxFileUpload={handleAdminInboxFileUpload}
-            fetchAdminMessages={fetchAdminMessages}
-            manualRequests={manualRequests}
-            setPendingAction={setPendingAction}
-            pendingAction={pendingAction}
-            fetchManualRequests={fetchManualRequests}
-            adminEmailDeletionVotes={adminEmailDeletionVotes}
-            formatDate={formatDate}
-            supabase={supabase}
-            UserAvatar={UserAvatar}
-          />
-        )}
-
-        {/* AUTH PAGES */}
-        {currentPage === 'signup' && (
-          <SignupPage 
-            supabase={supabase}
-            isVerifying={isVerifying}
-            setIsVerifying={setIsVerifying}
-            setNotFoundModal={setNotFoundModal}
-            setCurrentPage={setCurrentPage}
-            showToast={showToast}
-          />
-        )}
-
-        {currentPage === 'login' && (
-          <LoginPage 
-            supabase={supabase}
-            setCurrentPage={setCurrentPage}
-            showToast={showToast}
-          />
-        )}
-      </main>
+      <MainView 
+        currentPage={currentPage}
+        user={user}
+        profile={profile}
+        setCurrentPage={setCurrentPage}
+        selectedCategory={selectedCategory}
+        setSelectedCategory={setSelectedCategory}
+        setActiveDashboard={setActiveDashboard}
+        chartData={chartData}
+        yearDetailData={yearDetailData}
+        fetchYearDetails={fetchYearDetails}
+        selectedFinancialYear={selectedFinancialYear}
+        setSelectedFinancialYear={setSelectedFinancialYear}
+        expandedChart={expandedChart}
+        setExpandedChart={setExpandedChart}
+        chartLevel={chartLevel}
+        setChartLevel={setChartLevel}
+        selectedParents={selectedParents}
+        setSelectedParents={setSelectedParents}
+        selectedParent={selectedParent}
+        setSelectedParent={setSelectedParent}
+        hoveredData={hoveredData}
+        setHoveredData={setHoveredData}
+        toggles={toggles}
+        setToggles={setToggles}
+        polls={polls}
+        fetchPolls={fetchPolls}
+        selectedPoll={selectedPoll}
+        setSelectedPoll={setSelectedPoll}
+        boardMessages={boardMessages}
+        fetchBoardMessages={fetchBoardMessages}
+        suggestions={suggestions}
+        fetchSuggestions={fetchSuggestions}
+        showToast={showToast}
+        setShowPollLoginModal={setShowPollLoginModal}
+        searchQuery={searchQuery}
+        setSearchQuery={setSearchQuery}
+        selectedOfficials={selectedOfficials}
+        setSelectedOfficials={setSelectedOfficials}
+        isOfficialDropdownOpen={isOfficialDropdownOpen}
+        setIsOfficialDropdownOpen={setIsOfficialDropdownOpen}
+        isVerifying={isVerifying}
+        setIsVerifying={setIsVerifying}
+        setNotFoundModal={setNotFoundModal}
+        isUploading={isUploading}
+        setIsUploading={setIsUploading}
+        stagedBoardFiles={stagedBoardFiles}
+        setStagedBoardFiles={setStagedBoardFiles}
+        handleBoardFileUpload={handleBoardFileUpload}
+        isAdminSections={isAdminSections}
+        setIsAdminSections={setIsAdminSections}
+        stagedPollFiles={stagedPollFiles}
+        setStagedPollFiles={setStagedPollFiles}
+        handlePollFileUpload={handlePollFileUpload}
+        allUsers={allUsers}
+        clearedItems={clearedItems}
+        toggleClearItem={toggleClearItem}
+        handleClosePoll={handleClosePoll}
+        handleDeletePoll={handleDeletePoll}
+        deletionVotes={deletionVotes}
+        handleUpdateSuggestionStatus={handleUpdateSuggestionStatus}
+        adminMessages={adminMessages}
+        selectedAdminEmail={selectedAdminEmail}
+        setSelectedAdminEmail={setSelectedAdminEmail}
+        handleDeleteAdminEmail={handleDeleteAdminEmail}
+        stagedAdminReplyFiles={stagedAdminReplyFiles}
+        setStagedAdminReplyFiles={setStagedAdminReplyFiles}
+        handleAdminInboxFileUpload={handleAdminInboxFileUpload}
+        fetchAdminMessages={fetchAdminMessages}
+        manualRequests={manualRequests}
+        setPendingAction={setPendingAction}
+        pendingAction={pendingAction}
+        fetchManualRequests={fetchManualRequests}
+        adminEmailDeletionVotes={adminEmailDeletionVotes}
+        formatDate={formatDate}
+      />
 
       <Footer />
 

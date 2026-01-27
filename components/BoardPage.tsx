@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { formatDate, renderTextWithLinks } from '../utils/formatUtils';
 import { OFFICIALS } from '../constants';
@@ -23,6 +23,7 @@ interface BoardPageProps {
   setCurrentPage: (page: string) => void;
   supabase: any;
   supabaseAnonKey: string;
+  onFocusThread?: (id: string) => void; // The "Zoom In" button
 }
 
 export default function BoardPage({
@@ -44,25 +45,35 @@ export default function BoardPage({
   showToast,
   setCurrentPage,
   supabase,
-  supabaseAnonKey
+  supabaseAnonKey,
+  onFocusThread
 }: BoardPageProps) {
 
-  // Logic to filter messages based on the search bar
+  const [viewMode, setViewMode] = useState<'live' | 'archive'>('live');
+  const [dateRange, setDateRange] = useState({ start: '', end: '' });
+
   const filteredMessages = useMemo(() => {
     const messages = boardMessages || [];
-    if (searchQuery === 'ARCHIVED_RECORDS') return messages.filter(m => m.is_archived);
-    const visible = messages.filter(m => !m.is_archived);
-    if (!searchQuery) return visible;
+    
+    // 1. Filter by Live vs Archived based on the toggle
+    let result = messages.filter(m => viewMode === 'archive' ? m.is_archived : !m.is_archived);
+
+    // 2. Filter by Date Range (only if we are looking at the archive)
+    if (viewMode === 'archive') {
+      if (dateRange.start) result = result.filter(m => new Date(m.created_at) >= new Date(dateRange.start));
+      if (dateRange.end) result = result.filter(m => new Date(m.created_at) <= new Date(dateRange.end));
+    }
+
+    // 3. Filter by Search Query
+    if (!searchQuery) return result;
     const q = searchQuery.toLowerCase();
-    return visible.filter(m => {
-      const authorName = m.profiles?.full_name || 'Verified Voter';
-      const content = m.content || '';
-      const recipients = m.recipient_names || '';
-      return authorName.toLowerCase().includes(q) || 
-             content.toLowerCase().includes(q) || 
-             recipients.toLowerCase().includes(q);
+    return result.filter(m => {
+      const author = m.profiles?.full_name?.toLowerCase() || '';
+      const recipient = m.recipient_names?.toLowerCase() || '';
+      const subject = m.subject?.toLowerCase() || '';
+      return author.includes(q) || recipient.includes(q) || subject.includes(q);
     });
-  }, [boardMessages, searchQuery]);
+  }, [boardMessages, searchQuery, viewMode, dateRange]);
 
   return (
     <div className="max-w-7xl mx-auto pb-20 animate-slide-up">
@@ -72,13 +83,27 @@ export default function BoardPage({
         <div className="lg:w-2/3 space-y-6">
           <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-              <div>
-                <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">
-                  {searchQuery === 'ARCHIVED_RECORDS' ? 'Archived Records' : 'Public Record'}
-                </h2>
-                <p className="text-indigo-600 font-bold text-[10px] uppercase mt-1">
-                  {searchQuery === 'ARCHIVED_RECORDS' ? 'Viewing historical community correspondence' : 'Official Community Correspondence'}
-                </p>
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-4xl font-black uppercase tracking-tighter leading-none">
+                    {viewMode === 'archive' ? 'Archive' : 'Records'}
+                  </h2>
+                  <button 
+                    onClick={() => setViewMode(viewMode === 'live' ? 'archive' : 'live')}
+                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase transition-all shadow-sm border ${
+                      viewMode === 'archive' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-500 border-gray-200 hover:border-indigo-600'
+                    }`}
+                  >
+                    <i className={`fa-solid ${viewMode === 'archive' ? 'fa-box-open' : 'fa-box-archive'} mr-2`}></i>
+                    {viewMode === 'archive' ? 'Back to Feed' : 'View Archive'}
+                  </button>
+                </div>
+                {viewMode === 'archive' && (
+                  <div className="flex gap-2 animate-fade-in">
+                    <input type="date" value={dateRange.start} onChange={e => setDateRange({...dateRange, start: e.target.value})} className="bg-gray-50 text-[9px] font-black uppercase p-2 rounded-lg border-none outline-none focus:ring-2 ring-indigo-500/20" title="Start Date" />
+                    <input type="date" value={dateRange.end} onChange={e => setDateRange({...dateRange, end: e.target.value})} className="bg-gray-50 text-[9px] font-black uppercase p-2 rounded-lg border-none outline-none focus:ring-2 ring-indigo-500/20" title="End Date" />
+                  </div>
+                )}
               </div>
               <div className="relative w-full md:w-72">
                 <i className="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 text-xs"></i>
@@ -93,7 +118,37 @@ export default function BoardPage({
           </div>
 
           <div className="grid grid-cols-1 gap-4 h-[60vh] lg:h-[75vh] overflow-y-auto pr-2 custom-scrollbar">
-            {filteredMessages.filter(m => !m.parent_id).map((msg) => (
+            {viewMode === 'archive' ? (
+              <div className="bg-white rounded-[2.5rem] border border-gray-100 overflow-hidden shadow-sm animate-fade-in">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-100">
+                      <th className="p-6 text-[10px] font-black uppercase text-gray-400">Date</th>
+                      <th className="p-6 text-[10px] font-black uppercase text-gray-400">Sender</th>
+                      <th className="p-6 text-[10px] font-black uppercase text-gray-400">Official</th>
+                      <th className="p-6 text-[10px] font-black uppercase text-gray-400">Subject</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMessages.filter(m => !m.parent_id).map(msg => (
+                      <tr 
+                        key={msg.id} 
+                        onClick={() => onFocusThread?.(msg.id)}
+                        className="border-b border-gray-50 hover:bg-indigo-50/30 cursor-pointer transition-colors group"
+                      >
+                        <td className="p-6 text-[11px] font-bold text-gray-400">{new Date(msg.created_at).toLocaleDateString()}</td>
+                        <td className="p-6 text-[11px] font-black uppercase">{msg.profiles?.full_name}</td>
+                        <td className="p-6 text-[11px] font-bold text-indigo-600 truncate max-w-[150px] uppercase">{msg.recipient_names}</td>
+                        <td className="p-6">
+                          <span className="text-[11px] font-black uppercase text-gray-900 group-hover:text-indigo-600 transition-colors">{msg.subject}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              filteredMessages.filter(m => !m.parent_id).map((msg) => (
               <div key={msg.id} className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-4">
@@ -174,7 +229,7 @@ export default function BoardPage({
                   </div>
                 ))}
               </div>
-            ))}
+            )))}
           </div>
         </div>
 
@@ -213,15 +268,15 @@ export default function BoardPage({
                     .map(off => off.email);
 
                   if (recipientEmails.length > 0) {
-                    const emailSlug = profile.full_name.toLowerCase().replace(/[^a-z0-9]/g, '.');
+                    const emailSlug = (profile?.full_name || 'user').toLowerCase().replace(/[^a-z0-9]/g, '.');
                     const generatedSender = `${emailSlug}@concernedcitizensofmc.com`;
 
                     try {
                       const { error: invokeErr } = await supabase!.functions.invoke('send-official-contact', {
                         headers: { 'Authorization': `Bearer ${supabaseAnonKey}` },
                         body: {
-                          senderName: profile.full_name,
-                          fromEmail: profile.virtual_email || generatedSender,
+                          senderName: profile?.full_name || 'Verified Citizen',
+                          fromEmail: profile?.virtual_email || generatedSender,
                           recipients: recipientEmails,
                           subject: `${fd.get('subject')} [MSG-${newMessage.id}]`,
                           content: fd.get('content'),

@@ -54,7 +54,11 @@
 // - Simplified App.tsx: It now only holds the Hooks and the Layout (Navbar/Sidebar/Footer).
 // - Cleaned Imports: Removed over 30 unused imports and spare state variables from App.tsx.
 // - Fixed Types: Resolved 15+ TypeScript errors by standardizing how "Remote Controls" (props) are passed through the MainView.
-
+//--- RECENT REFACTORS (Phase 18) ---
+// - MainView.tsx: Added "Focus Mode" state to allow users to view archived threads in a clean, isolated window.
+// - SuggestionsPage.tsx: Created a local "Filing Cabinet" toggle to separate live proposals from archived ones without leaving the page.
+// - useActions.ts: Updated status logic to ensure the "Robot Janitor" knows exactly when a suggestion was closed.
+// - Supabase SQL: Implemented a Trigger and Function to automatically timestamp closed items and move them to the archive after 30 days.
 
 import React, { useState, useEffect } from 'react';
 import { supabase, supabaseAnonKey } from './supabaseClient';

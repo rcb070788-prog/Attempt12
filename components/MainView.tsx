@@ -199,41 +199,74 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           setCurrentPage={setCurrentPage}
           supabase={supabase}
           supabaseAnonKey={supabaseAnonKey}
+          onFocusThread={(id: string) => setFocusedThreadId(id)}
         />
       )}
 
-      {currentPage === 'suggestions' && (
-        focusedThreadId ? (
-          <div className="fixed inset-0 z-[200] bg-white overflow-y-auto p-8">
-            <button 
-              onClick={() => setFocusedThreadId(null)}
-              className="mb-8 px-6 py-3 bg-gray-900 text-white rounded-xl font-black uppercase text-xs"
-            >
-              <i className="fa-solid fa-arrow-left mr-2"></i> Close Archive View
-            </button>
-            {/* Display only the single suggestion and its comments here */}
-            {suggestions.filter(s => s.id === focusedThreadId).map(s => (
-               <div key={s.id}>
-                 <h2 className="text-4xl font-black uppercase">{s.title}</h2>
-                 <p className="mt-4 text-gray-600">{s.description}</p>
-                 {/* ... you can map comments for this ID here ... */}
-               </div>
-            ))}
+      {/* 1. THE SHARED FOCUS VIEW (The Reading Desk) */}
+      {(currentPage === 'suggestions' || currentPage === 'board') && focusedThreadId && (
+          <div className="fixed inset-0 z-[200] bg-white overflow-y-auto p-4 md:p-12 animate-fade-in custom-scrollbar">
+            <div className="max-w-4xl mx-auto">
+              <button 
+                onClick={() => setFocusedThreadId(null)}
+                className="mb-12 px-8 py-4 bg-gray-900 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-indigo-600 transition-all shadow-xl flex items-center gap-3"
+              >
+                <i className="fa-solid fa-arrow-left"></i> Exit Archive View
+              </button>
+              
+              {/* VIEW 1: SUGGESTION CONTENT */}
+              {currentPage === 'suggestions' && suggestions.filter(s => s.id === focusedThreadId).map(s => (
+                 <div key={s.id} className="space-y-6">
+                   <h2 className="text-5xl font-black uppercase tracking-tighter leading-none">{s.title}</h2>
+                   <p className="text-xl text-gray-600 leading-relaxed">{s.description}</p>
+                 </div>
+              ))}
+
+              {/* VIEW 2: BOARD MESSAGE CONTENT */}
+              {currentPage === 'board' && boardMessages.filter(m => m.id === focusedThreadId).map(m => (
+                <div key={m.id} className="space-y-12">
+                  <div className="border-b-4 border-gray-100 pb-8">
+                    <p className="text-indigo-600 font-black uppercase text-xs mb-2">Original Public Inquiry</p>
+                    <h2 className="text-4xl font-black uppercase tracking-tighter mb-4">{m.subject}</h2>
+                    <div className="flex items-center gap-3 mb-6">
+                      <UserAvatar url={m.profiles?.avatar_url} size="sm" />
+                      <p className="text-sm font-black uppercase">{m.profiles?.full_name} <span className="text-gray-400 font-bold ml-2">to {m.recipient_names}</span></p>
+                    </div>
+                    <div className="text-xl text-gray-800 leading-relaxed whitespace-pre-wrap bg-gray-50 p-8 rounded-[2rem]">{m.content}</div>
+                  </div>
+
+                  <div className="space-y-8">
+                    <p className="text-gray-400 font-black uppercase text-xs">Official Correspondence Thread</p>
+                    {boardMessages.filter(reply => reply.parent_id === m.id).sort((a,b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map(reply => (
+                      <div key={reply.id} className={`p-8 rounded-[2.5rem] border-2 ${reply.is_official ? 'bg-indigo-50/30 border-indigo-100' : 'bg-white border-gray-100 ml-12'}`}>
+                        <div className="flex items-center gap-3 mb-4">
+                          <p className={`text-[10px] font-black uppercase ${reply.is_official ? 'text-indigo-600' : 'text-gray-400'}`}>
+                            {reply.is_official ? 'Official Response' : 'Constituent Follow-up'} • {formatDate(reply.created_at)}
+                          </p>
+                        </div>
+                        <div className="text-lg text-gray-700 leading-relaxed">{reply.content}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        ) : (
-          <SuggestionsPage 
-            user={user}
-            profile={profile}
-            suggestions={suggestions}
-            fetchSuggestions={fetchSuggestions}
-            showToast={showToast}
-            supabase={supabase}
-            setCurrentPage={setCurrentPage}
-            setSearchQuery={setSearchQuery}
-            // Pass the new ability to focus a thread
-            onFocusThread={(id: string) => setFocusedThreadId(id)}
-          />
-        )
+      )}
+
+      {/* 2. THE NORMAL SUGGESTIONS PAGE (Only show if on suggestions page AND not zoomed in) */}
+      {currentPage === 'suggestions' && !focusedThreadId && (
+        <SuggestionsPage 
+          user={user}
+          profile={profile}
+          suggestions={suggestions}
+          fetchSuggestions={fetchSuggestions}
+          showToast={showToast}
+          supabase={supabase}
+          setCurrentPage={setCurrentPage}
+          setSearchQuery={setSearchQuery}
+          onFocusThread={(id: string) => setFocusedThreadId(id)}
+        />
       )}
       
       {currentPage === 'admin' && profile?.is_admin && (

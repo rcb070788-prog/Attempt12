@@ -154,12 +154,19 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             </div>
             <div className="flex justify-between items-start mb-4">
               <div className="w-full">
-                <div className="flex items-center w-full mb-2 gap-3">
+              <div className="flex items-center justify-between w-full mb-2 gap-3">
                   <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">
                     Debt & Solvency Trend
                   </h3>
+                  <div className="hidden md:flex flex-1 justify-center">
+                    {!hoveredData && (
+                      <div className="px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
+                        Hover or Tap chart for values
+                      </div>
+                    )}
+                  </div>
                   {!hoveredData && (
-                    <div className="px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
+                    <div className="md:hidden px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
                       Hover or Tap chart for values
                     </div>
                   )}
@@ -171,45 +178,43 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   </button>
                 </div>
 
-                <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
-                  {hoveredData ? (
-                    <>
-                      {hoveredData.isCovidGap ? (
-                        <div className="flex items-center gap-3">
-                          <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
-                          <p className="text-[14px] font-black text-indigo-600 uppercase italic">
-                            Data not collected due to COVID.
+                {hoveredData && (
+                  <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px] mb-4">
+                    {hoveredData.isCovidGap ? (
+                      <div className="flex items-center gap-3">
+                        <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
+                        <p className="text-[14px] font-black text-indigo-600 uppercase italic">
+                          Data not collected due to COVID.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-indigo-400 uppercase">Year</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-green-700">
+                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}
                           </p>
                         </div>
-                      ) : (
-                        <>
-                          <div className="text-center">
-                            <p className="text-[10px] font-black text-indigo-400 uppercase">Year</p>
-                            <p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
-                            <p className="text-lg md:text-[18.66px] font-black text-green-700">
-                              {formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
-                            <p className="text-lg md:text-[18.66px] font-black text-red-700">
-                              {formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}
-                            </p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
-                            <p className="text-lg md:text-[18.66px] font-black text-blue-600">
-                              {formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  ) : null}
-                </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-red-700">
+                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-blue-600">
+                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>

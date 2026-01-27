@@ -43,7 +43,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
 
       <div className="h-[300px] md:h-[450px] w-full landscape:h-[70vh]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
             <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />

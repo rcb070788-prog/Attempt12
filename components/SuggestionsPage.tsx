@@ -31,6 +31,7 @@ export default function SuggestionsPage({
   const [stagedSuggestionFiles, setStagedSuggestionFiles] = useState<{url: string, name: string}[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
+  const [isViewingArchive, setIsViewingArchive] = useState(false);
 
   // --- ACTIONS (FUNCTIONS) ---
 
@@ -63,6 +64,9 @@ export default function SuggestionsPage({
   };
 
   // --- NESTED COMMENT LOOP (THE BRAINS FOR THREADING) ---
+  const displayedSuggestions = suggestions.filter(s => 
+    isViewingArchive ? s.is_archived === true : (s.is_archived === false || s.is_archived === null)
+  );
   const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0) => {
     return (comments || []).filter(c => c.parent_id === parentId).map(comment => {
       const reactions = comment.suggestion_reactions || [];
@@ -116,10 +120,10 @@ export default function SuggestionsPage({
           <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-[0.2em]">IDEAS YOU PROPOSE TO BE CONSIDERED BY THE COMMUNITY</p>
         </div>
         <button 
-          onClick={() => { setCurrentPage('board'); setSearchQuery('ARCHIVED_RECORDS'); }}
-          className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-all border-b-2 border-transparent hover:border-indigo-600 pb-1"
+          onClick={() => setIsViewingArchive(!isViewingArchive)}
+          className={`text-[10px] font-black uppercase transition-all border-b-2 pb-1 ${isViewingArchive ? 'text-indigo-600 border-indigo-600' : 'text-gray-400 border-transparent hover:border-indigo-600'}`}
         >
-          Archived Records <i className="fa-solid fa-box-archive ml-1"></i>
+          {isViewingArchive ? 'Back to Live Feed' : 'View Archived Records'} <i className={`fa-solid ${isViewingArchive ? 'fa-box-open' : 'fa-box-archive'} ml-1`}></i>
         </button>
       </div>
 
@@ -206,7 +210,7 @@ export default function SuggestionsPage({
         )}
 
         <div className="max-w-4xl mx-auto space-y-6">
-          {suggestions.map(sug => (
+          {displayedSuggestions.map(sug => (
             <div key={sug.id} className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
               <div className="p-10 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
                 <div className="flex items-center gap-4 mb-6">
@@ -240,6 +244,14 @@ export default function SuggestionsPage({
                      <i className="fa-solid fa-circle-info mr-1"></i>
                      Status: {sug.status || 'Under Review'}
                    </span>
+                   {isViewingArchive && (
+                     <button 
+                       onClick={() => onFocusThread?.(sug.id)}
+                       className="px-4 py-2 bg-indigo-600 text-white rounded-full text-[10px] font-black uppercase shadow-lg hover:scale-105 transition-all"
+                     >
+                       Open Dialogue
+                     </button>
+                   )}
                 </div>
               </div>
 
@@ -264,7 +276,7 @@ export default function SuggestionsPage({
             </div>
           ))}
 
-          {suggestions.length === 0 && (
+          {displayedSuggestions.length === 0 && (
             <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-50">
               <p className="text-gray-300 font-black uppercase text-xs italic">No active proposals yet.</p>
             </div>

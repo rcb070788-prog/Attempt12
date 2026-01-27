@@ -9,12 +9,27 @@
 
 .animate-slide-up { animation: slide-up 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
 
-/* NEW: SLOW STROBE FOR MOBILE LEGENDS */
-@keyframes slow-strobe {
-  0%, 100% { opacity: 1; filter: brightness(1); }
-  50% { opacity: 0.7; filter: brightness(1.2); }
+/* COLOR-SPECIFIC STROBES */
+@keyframes strobe-assets { 0%, 100% { color: #4ade80; opacity: 1; } 50% { color: #166534; opacity: 0.5; } }
+@keyframes strobe-liabs { 0%, 100% { color: #f87171; opacity: 1; } 50% { color: #991b1b; opacity: 0.5; } }
+@keyframes strobe-networth { 0%, 100% { color: #3b82f6; opacity: 1; } 50% { color: #1e3a8a; opacity: 0.5; } }
+
+.strobe-assets { animation: strobe-assets 2s infinite ease-in-out; }
+.strobe-liabs { animation: strobe-liabs 2s infinite ease-in-out; }
+.strobe-networth { animation: strobe-networth 2s infinite ease-in-out; }
+
+/* THE PEEKING TABS */
+.peeking-tab-left { position: fixed; left: -10px; top: 50%; transform: translateY(-50%); z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.peeking-tab-left:hover { left: 0; }
+.peeking-tab-right { position: fixed; right: -10px; top: 50%; transform: translateY(-50%); z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.peeking-tab-right:hover { right: 0; }
+
+/* LANDSCAPE "PRO MODE" - NO SCROLLING */
+@media (max-width: 932px) and (orientation: landscape) {
+  body { overflow: hidden !important; position: fixed; width: 100%; }
+  .landscape-fullscreen { position: fixed; inset: 0; background: white; z-index: 9999; padding: 10px; display: flex; flex-direction: column; }
+  .hide-on-landscape { display: none !important; }
 }
-.animate-strobe { animation: slow-strobe 3s ease-in-out infinite; }
 
 /* LANDSCAPE PRO MODE - HIDES HEADER & FILLS SCREEN */
 @media (max-width: 932px) and (orientation: landscape) {

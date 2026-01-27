@@ -125,7 +125,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
   } = props;
 
   return (
-    <main className="flex-grow overflow-y-auto container mx-auto px-0 md:px-4 py-0 md:py-8 custom-scrollbar">
+    <main className={`flex-grow overflow-y-auto container mx-auto px-0 md:px-4 py-0 md:py-8 custom-scrollbar ${selectedCategory ? 'landscape:p-0' : ''}`}>
       {currentPage === 'home' && !selectedCategory && (
         <div className="max-w-4xl mx-auto space-y-12 py-10 px-4 md:px-0">
           <div className="hide-on-landscape">

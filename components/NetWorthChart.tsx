@@ -41,9 +41,9 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
         </div>
       </div>
 
-      <div className="h-[400px] w-full mb-12">
+      <div className="h-[300px] md:h-[450px] w-full landscape:h-[70vh]">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+          <LineChart data={chartData} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
             <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
             <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
@@ -81,37 +81,56 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
         </ResponsiveContainer>
       </div>
 
-      {/* Centered Desktop Grid / Hidden on Mobile Portrait */}
-      <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 border-t border-gray-50 pt-10" onClick={(e) => e.stopPropagation()}>
-        <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Select Metrics</div>
-        {(['assets', 'liabs', 'netWorth'] as const).map(key => {
-          const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
-          return (
-            <div key={key} className="text-center">
-              <button 
-                onClick={() => setToggles({...toggles, [key]: !toggles[key]})} 
-                className={`text-[13px] font-black uppercase transition-all duration-300 ${toggles[key] ? colors[key] : 'text-gray-200'}`}
-              >
-                {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-              </button>
-            </div>
-          );
-        })}
-        <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-        {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
-           const base = key.replace('Trend', '');
-           return (
+      {/* MOBILE PEEKING TOOLBOX (LEFT) */}
+      <div className="md:hidden peeking-tab-left" onClick={(e) => e.stopPropagation()}>
+        <button className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20">
+          <i className="fa-solid fa-sliders text-2xl"></i>
+        </button>
+      </div>
+
+      {/* THE CONTROL PANEL (Strobing Legend & Toggles) */}
+      <div className="mt-8 border-t border-gray-50 pt-8 space-y-8" onClick={(e) => e.stopPropagation()}>
+        
+        {/* ROW 1: THE STROBING MAIN LEGEND */}
+        <div className="grid grid-cols-3 gap-4">
+          {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+            const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+            return (
+              <div key={key} className="text-center">
+                <button 
+                  onClick={() => setToggles({...toggles, [key]: !toggles[key]})} 
+                  className={`text-[11px] md:text-[14px] font-black uppercase transition-all duration-500 tracking-tighter ${toggles[key] ? strobeClass : 'text-gray-300'}`}
+                >
+                  {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ROW 2 & 3: DESKTOP SUB-TOGGLES (Perfectly Centered) */}
+        <div className="hidden md:grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center">
+          <div className="text-[11px] font-black uppercase text-indigo-400 tracking-widest">Trend Analysis</div>
+          {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+            const base = key.replace('Trend', '');
+            return (
+              <div key={key} className="flex justify-center">
+                <div onClick={() => setToggles({...toggles, [key]: !toggles[key]})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}>
+                  <div className="slider-circle"></div>
+                </div>
+              </div>
+            );
+          })}
+
+          <div className="text-[11px] font-black uppercase text-indigo-400 tracking-widest">Inflation Adjust</div>
+          {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
             <div key={key} className="flex justify-center">
-              <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+              <div onClick={() => setToggles({...toggles, [key]: !toggles[key]})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}>
+                <div className="slider-circle"></div>
+              </div>
             </div>
-          );
-        })}
-        <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-        {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
-          <div key={key} className="flex justify-center">
-            <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );

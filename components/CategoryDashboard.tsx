@@ -144,7 +144,14 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
         {/* LIABILITIES / SOLVENCY VIEW */}
         {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
-          <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100'}`}>
+          <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
+            
+            {/* MOBILE PEEKING COMPARISON (RIGHT) */}
+            <div className="md:hidden peeking-tab-right">
+              <button className="bg-pink-600 text-white p-3 rounded-l-2xl shadow-2xl">
+                <i className="fa-solid fa-layer-group text-xl"></i>
+              </button>
+            </div>
              <div className="flex justify-between items-start mb-4">
               <div className="w-full">
                 <div className="flex justify-between items-center w-full mb-2">

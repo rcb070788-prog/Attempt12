@@ -101,6 +101,8 @@ interface MainViewProps {
 }
 
 export const MainView: React.FC<MainViewProps> = (props) => {
+  const [focusedThreadId, setFocusedThreadId] = React.useState<string | null>(null);
+
   const {
     currentPage, user, profile, setCurrentPage,
     selectedCategory, setSelectedCategory, setActiveDashboard,
@@ -201,16 +203,37 @@ export const MainView: React.FC<MainViewProps> = (props) => {
       )}
 
       {currentPage === 'suggestions' && (
-        <SuggestionsPage 
-          user={user}
-          profile={profile}
-          suggestions={suggestions}
-          fetchSuggestions={fetchSuggestions}
-          showToast={showToast}
-          supabase={supabase}
-          setCurrentPage={setCurrentPage}
-          setSearchQuery={setSearchQuery}
-        />
+        focusedThreadId ? (
+          <div className="fixed inset-0 z-[200] bg-white overflow-y-auto p-8">
+            <button 
+              onClick={() => setFocusedThreadId(null)}
+              className="mb-8 px-6 py-3 bg-gray-900 text-white rounded-xl font-black uppercase text-xs"
+            >
+              <i className="fa-solid fa-arrow-left mr-2"></i> Close Archive View
+            </button>
+            {/* Display only the single suggestion and its comments here */}
+            {suggestions.filter(s => s.id === focusedThreadId).map(s => (
+               <div key={s.id}>
+                 <h2 className="text-4xl font-black uppercase">{s.title}</h2>
+                 <p className="mt-4 text-gray-600">{s.description}</p>
+                 {/* ... you can map comments for this ID here ... */}
+               </div>
+            ))}
+          </div>
+        ) : (
+          <SuggestionsPage 
+            user={user}
+            profile={profile}
+            suggestions={suggestions}
+            fetchSuggestions={fetchSuggestions}
+            showToast={showToast}
+            supabase={supabase}
+            setCurrentPage={setCurrentPage}
+            setSearchQuery={setSearchQuery}
+            // Pass the new ability to focus a thread
+            onFocusThread={(id: string) => setFocusedThreadId(id)}
+          />
+        )
       )}
       
       {currentPage === 'admin' && profile?.is_admin && (

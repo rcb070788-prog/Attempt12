@@ -11,6 +11,7 @@ interface SuggestionsPageProps {
   supabase: any;
   setCurrentPage: (page: string) => void;
   setSearchQuery: (query: string) => void;
+  onFocusThread?: (id: string) => void; // Added to the interface
 }
 
 export default function SuggestionsPage({
@@ -21,8 +22,10 @@ export default function SuggestionsPage({
   showToast,
   supabase,
   setCurrentPage,
-  setSearchQuery
+  setSearchQuery,
+  onFocusThread
 }: SuggestionsPageProps) {
+  
   // --- INTERNAL BRAINS (STATE) ---
   const [isSuggestionModalOpen, setIsSuggestionModalOpen] = useState(false);
   const [stagedSuggestionFiles, setStagedSuggestionFiles] = useState<{url: string, name: string}[]>([]);

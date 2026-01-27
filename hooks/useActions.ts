@@ -112,8 +112,16 @@ export function useActions(
   const handleUpdateSuggestionStatus = async (suggestionId: string, status: string) => {
     if (!supabase || !profile?.is_admin) return;
     try {
+      // Optimistically update the UI
       features.setSuggestions((prev: any[]) => prev.map(s => s.id === suggestionId ? { ...s, status: status } : s));
-      const { error } = await supabase.from('suggestions').update({ status: status }).eq('id', suggestionId);
+      
+      // Update DB. The SQL Trigger we added will handle the 'closed_at' timestamp automatically.
+      const { error } = await supabase.from('suggestions').update({ 
+        status: status,
+        // If we move it back to 'Active', we force it out of archive
+        is_archived: status === 'Closed' ? false : false 
+      }).eq('id', suggestionId);
+
       if (error) { await features.fetchSuggestions(); throw error; }
       showToast(`Proposal marked as ${status.toUpperCase()}`);
     } catch (err: any) { showToast(err.message, "error"); }

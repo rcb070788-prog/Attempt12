@@ -3,6 +3,10 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[build.environment]
+  VITE_SUPABASE_URL = "https://hovdckksdjofgghaxtif.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "sb_publishable_Vu-tQ4qH76LqelXKlnHV4g_R9F__wkn"
+
 # Support for the "Drop Folder" dashboards
 [[redirects]]
   from = "/dashboards/*"

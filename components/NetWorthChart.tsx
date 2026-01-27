@@ -109,24 +109,36 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
           })}
         </div>
 
-        {/* ROW 2 & 3: DESKTOP SUB-TOGGLES (Perfectly Centered) */}
-        <div className="hidden md:grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center">
-          <div className="text-[11px] font-black uppercase text-indigo-400 tracking-widest">Trend Analysis</div>
+        {/* ROW 2 & 3: DESKTOP SUB-TOGGLES (Centered Under Main Legend) */}
+        <div className="hidden md:grid grid-cols-3 gap-y-4 items-center">
+          <div className="col-span-3 text-[11px] font-black uppercase text-indigo-400 tracking-widest text-center">
+            Trend Analysis
+          </div>
           {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
             const base = key.replace('Trend', '');
             return (
               <div key={key} className="flex justify-center">
-                <div onClick={() => setToggles({...toggles, [key]: !toggles[key]})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}>
+                <div
+                  onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })}
+                  className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}
+                >
                   <div className="slider-circle"></div>
                 </div>
               </div>
             );
           })}
+        </div>
 
-          <div className="text-[11px] font-black uppercase text-indigo-400 tracking-widest">Inflation Adjust</div>
+        <div className="hidden md:grid grid-cols-3 gap-y-4 items-center mt-4">
+          <div className="col-span-3 text-[11px] font-black uppercase text-indigo-400 tracking-widest text-center">
+            Inflation Adjust
+          </div>
           {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
             <div key={key} className="flex justify-center">
-              <div onClick={() => setToggles({...toggles, [key]: !toggles[key]})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}>
+              <div
+                onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })}
+                className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}
+              >
                 <div className="slider-circle"></div>
               </div>
             </div>

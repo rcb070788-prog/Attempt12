@@ -232,19 +232,23 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               </ResponsiveContainer>
             </div>
 
-            <div className="grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center px-4 mb-12">
-              <div />
-              {(['assets', 'liabs', 'netWorth'] as const).map(key => (
-                <div key={key} className="text-center">
-                  <button 
-                    onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
-                    className={`text-[12px] font-black uppercase transition-all flex flex-col items-center gap-1 ${toggles[key] ? 'text-gray-900' : 'text-gray-300'}`}
-                  >
-                    <div className={`w-8 h-1 rounded-full mb-1 ${key === 'assets' ? 'bg-green-500' : key === 'liabs' ? 'bg-red-500' : 'bg-blue-500'} ${toggles[key] ? 'opacity-100' : 'opacity-20'}`} />
-                    {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-                  </button>
-                </div>
-              ))}
+            <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 mb-12 border-t border-gray-50 pt-10">
+              <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
+              {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+                const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+                const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                return (
+                  <div key={key} className="text-center">
+                    <button 
+                      onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
+                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : 'text-gray-200'}`}
+                    >
+                      <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                      {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                    </button>
+                  </div>
+                );
+              })}
               
               <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
               {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {

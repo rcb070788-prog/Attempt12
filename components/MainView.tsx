@@ -125,17 +125,21 @@ export const MainView: React.FC<MainViewProps> = (props) => {
   } = props;
 
   return (
-    <main className="flex-grow overflow-y-auto container mx-auto px-4 py-8 custom-scrollbar">
+    <main className="flex-grow overflow-y-auto container mx-auto px-0 md:px-4 py-0 md:py-8 custom-scrollbar">
       {currentPage === 'home' && !selectedCategory && (
-        <div className="max-w-4xl mx-auto space-y-12 py-10">
-          <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
+        <div className="max-w-4xl mx-auto space-y-12 py-10 px-4 md:px-0">
+          <div className="hide-on-landscape">
+            <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
+          </div>
           <NetWorthChart 
             chartData={chartData}
             toggles={toggles}
             setToggles={setToggles}
             setSelectedCategory={setSelectedCategory}
           />
-          <CategoryLinks setSelectedCategory={setSelectedCategory} />
+          <div className="hide-on-landscape">
+            <CategoryLinks setSelectedCategory={setSelectedCategory} />
+          </div>
         </div>
       )}
 

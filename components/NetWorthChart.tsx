@@ -36,8 +36,8 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
           <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Net Worth</h3>
           <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
         </div>
-        <div className="bg-indigo-50 px-5 py-2 rounded-full border border-indigo-100">
-           <span className="text-[10px] font-black uppercase text-indigo-600">Click for Detailed Analysis</span>
+        <div className="hidden md:flex bg-indigo-50 px-6 py-2.5 rounded-full border border-indigo-100 items-center justify-center shadow-sm">
+           <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Click for Detailed Analysis</span>
         </div>
       </div>
 
@@ -81,15 +81,22 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
         </ResponsiveContainer>
       </div>
 
-      <div className="grid grid-cols-[180px_1fr_1fr_1fr] gap-y-6 items-center px-4" onClick={(e) => e.stopPropagation()}>
-        <div />
-        {['assets', 'liabs', 'netWorth'].map(key => (
-          <div key={key} className="text-center">
-            <button onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`text-[12px] font-black uppercase transition-all ${toggles[key as keyof typeof toggles] ? 'text-gray-900' : 'text-gray-300'}`}>
-              {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-            </button>
-          </div>
-        ))}
+      {/* Centered Desktop Grid / Hidden on Mobile Portrait */}
+      <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 border-t border-gray-50 pt-10" onClick={(e) => e.stopPropagation()}>
+        <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Select Metrics</div>
+        {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+          const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+          return (
+            <div key={key} className="text-center">
+              <button 
+                onClick={() => setToggles({...toggles, [key]: !toggles[key]})} 
+                className={`text-[13px] font-black uppercase transition-all duration-300 ${toggles[key] ? colors[key] : 'text-gray-200'}`}
+              >
+                {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+              </button>
+            </div>
+          );
+        })}
         <div className="text-[11px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
         {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
            const base = key.replace('Trend', '');

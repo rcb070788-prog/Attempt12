@@ -17,7 +17,7 @@
 // 13. NetWorthChart.tsx -> The high-level "County Net Worth" trend chart and its toggle controls.
 // 14. CategoryLinks.tsx  -> Home page buttons for "Revenues" and "Expenses."
 // 15. Footer.tsx         -> The copyright and branding bar at the bottom of the app.
-
+// 16. MainView.tsx       -> The "Channel Changer." Decides which page (Home, Polls, etc.) to show on the screen
 
 
 //--- LOGIC & MATH (src/hooks/) ---
@@ -49,6 +49,12 @@
 // - (Phase 15) Created useActions.ts to house all "doing" logic (uploads, reactions, deletions).
 // - (Phase 15) Cleaned up App.tsx by removing nearly 200 lines of handler functions.
 // - (Phase 16) Created useNavigation.ts to handle all browser history and "Back" button logic, removing several heavy useEffect blocks from App.tsx.
+//--- RECENT REFACTORS (Phase 17) ---
+// - Created MainView.tsx: Extracted the massive "If/Then" logic from App.tsx.
+// - Simplified App.tsx: It now only holds the Hooks and the Layout (Navbar/Sidebar/Footer).
+// - Cleaned Imports: Removed over 30 unused imports and spare state variables from App.tsx.
+// - Fixed Types: Resolved 15+ TypeScript errors by standardizing how "Remote Controls" (props) are passed through the MainView.
+
 
 import React, { useState, useEffect } from 'react';
 import { supabase, supabaseAnonKey } from './supabaseClient';

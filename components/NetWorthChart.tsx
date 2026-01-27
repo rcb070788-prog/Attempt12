@@ -93,13 +93,14 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
         
         {/* ROW 1: THE STROBING MAIN LEGEND */}
         <div className="grid grid-cols-3 gap-4">
-          {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+        {(['assets', 'liabs', 'netWorth'] as const).map(key => {
             const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+            const solidColor = key === 'assets' ? 'text-[#4ade80]' : key === 'liabs' ? 'text-[#f87171]' : 'text-[#3b82f6]';
             return (
               <div key={key} className="text-center">
                 <button 
                   onClick={() => setToggles({...toggles, [key]: !toggles[key]})} 
-                  className={`text-[11px] md:text-[14px] font-black uppercase transition-all duration-500 tracking-tighter ${toggles[key] ? strobeClass : 'text-gray-300'}`}
+                  className={`text-[11px] md:text-[14px] font-black uppercase transition-all duration-500 tracking-tighter ${toggles[key] ? solidColor : strobeClass}`}
                 >
                   {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
                 </button>

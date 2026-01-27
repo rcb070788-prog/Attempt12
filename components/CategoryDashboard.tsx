@@ -244,11 +244,12 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               {(['assets', 'liabs', 'netWorth'] as const).map(key => {
                 const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
                 const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
                 return (
                   <div key={key} className="text-center">
                     <button 
                       onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
-                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : 'text-gray-200'}`}
+                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
                     >
                       <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
                       {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}

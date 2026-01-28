@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CATEGORIES, DASHBOARDS } from '../constants';
 import { formatCurrency } from '../utils/financeUtils';
+import { NetWorthChart } from './NetWorthChart';
 
 // These are the "Remote Controls" coming from the main App
 interface CategoryDashboardProps {
@@ -72,6 +73,185 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
       <div className="grid grid-cols-1 gap-4 mt-8">
         
+        {/* SOLVENCY VIEW - TIER 1: County Net Worth Chart */}
+        {selectedCategory === 'solvency' && (
+          <NetWorthChart 
+            chartData={chartData}
+            toggles={toggles}
+            setToggles={setToggles}
+            setSelectedCategory={setSelectedCategory}
+          />
+        )}
+
+        {/* SOLVENCY VIEW - TIER 2: Debt & Solvency Trend */}
+        {selectedCategory === 'solvency' && (
+          <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
+            
+            {/* MOBILE PEEKING COMPARISON (RIGHT) */}
+            <div className="md:hidden peeking-tab-right">
+              <button className="bg-pink-600 text-white p-3 rounded-l-2xl shadow-2xl">
+                <i className="fa-solid fa-layer-group text-xl"></i>
+              </button>
+            </div>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-full">
+              <div className="flex items-center justify-between w-full mb-2 gap-3">
+                  <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">
+                    Debt & Solvency Trend
+                  </h3>
+                  <div className="hidden md:flex flex-1 justify-center">
+                    {!hoveredData && (
+                      <div className="px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
+                        Hover or Tap chart for values
+                      </div>
+                    )}
+                  </div>
+                  {!hoveredData && (
+                    <div className="md:hidden px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
+                      Hover or Tap chart for values
+                    </div>
+                  )}
+                  <button
+                    onClick={() => setExpandedChart(expandedChart === 'solvency' ? null : 'solvency')}
+                    className="bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-xl transition-all"
+                  >
+                    <i className={`fa-solid ${expandedChart === 'solvency' ? 'fa-compress' : 'fa-expand'}`}></i>
+                  </button>
+                </div>
+
+                {hoveredData && (
+                  <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px] mb-4">
+                    {hoveredData.isCovidGap ? (
+                      <div className="flex items-center gap-3">
+                        <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
+                        <p className="text-[14px] font-black text-indigo-600 uppercase italic">
+                          Data not collected due to COVID.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-indigo-400 uppercase">Year</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-green-700">
+                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-red-700">
+                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}
+                          </p>
+                        </div>
+                        <div className="text-center">
+                          <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
+                          <p className="text-lg md:text-[18.66px] font-black text-blue-600">
+                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={chartData} 
+                  onMouseMove={(e: any) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
+                  onMouseLeave={() => setHoveredData(null)}
+                  onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
+                  <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
+                  <Tooltip content={<div className="hidden" />} />
+                  
+                  <React.Fragment>
+                    {selectedParents.length === 0 ? (
+                      <React.Fragment>
+                        {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
+                        {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
+                        {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
+                        {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                      </React.Fragment>
+                    ) : (
+                      selectedParents.map((sel, idx) => {
+                        const kb = sel.replace(/\s+/g, '');
+                        const color = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'][idx % 5];
+                        return (
+                          <React.Fragment key={sel}>
+                            {/* Net Worth Logic */}
+                            {toggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
+                            {toggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {toggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
+                            
+                            {/* Assets Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
+                            {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
+                            {toggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {toggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+
+                            {/* Liabilities Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
+                            {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
+                            {toggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {toggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </React.Fragment>
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 mb-12 border-t border-gray-50 pt-10">
+              <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
+              {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+                const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+                const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+                return (
+                  <div key={key} className="text-center">
+                    <button 
+                      onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
+                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
+                    >
+                      <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                      {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                    </button>
+                  </div>
+                );
+              })}
+              
+              <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+              {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                const base = key.replace('Trend', '');
+                return (
+                  <div key={key} className="flex justify-center">
+                    <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                  </div>
+                );
+              })}
+
+              <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+              {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                <div key={key} className="flex justify-center">
+                  <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ASSETS VIEW */}
         {selectedCategory === 'assets' && (
           <div className={`${expandedChart === 'assets' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-6 md:p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6'}`}>
@@ -142,8 +322,8 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           </div>
         )}
 
-        {/* LIABILITIES / SOLVENCY VIEW */}
-        {(selectedCategory === 'liabilities' || selectedCategory === 'solvency') && (
+        {/* LIABILITIES VIEW */}
+        {selectedCategory === 'liabilities' && (
           <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
             
             {/* MOBILE PEEKING COMPARISON (RIGHT) */}

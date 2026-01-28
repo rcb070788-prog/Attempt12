@@ -1,5 +1,4 @@
 import React from 'react';
-import { NetWorthChart } from './NetWorthChart';
 import { CategoryLinks } from './CategoryLinks';
 import CategoryDashboard from './CategoryDashboard';
 import PollsPage from './PollsPage';
@@ -131,12 +130,6 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           <div className="hide-on-landscape">
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
           </div>
-          <NetWorthChart 
-            chartData={chartData}
-            toggles={toggles}
-            setToggles={setToggles}
-            setSelectedCategory={setSelectedCategory}
-          />
           <div className="hide-on-landscape">
             <CategoryLinks setSelectedCategory={setSelectedCategory} />
           </div>

@@ -34,10 +34,31 @@
 .strobe-networth { animation: strobe-networth 2s infinite ease-in-out; }
 
 /* THE PEEKING TABS */
-.peeking-tab-left { position: fixed; left: -10px; top: 50%; transform: translateY(-50%); z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+.peeking-tab-left { position: fixed; left: -10px; transform: translateY(-50%); z-index: 100; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), top 0.1s ease-out; }
 .peeking-tab-left:hover { left: 0; }
 .peeking-tab-right { position: fixed; right: -10px; top: 50%; transform: translateY(-50%); z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .peeking-tab-right:hover { right: 0; }
+
+/* MOBILE DRAWER */
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.mobile-drawer-panel {
+  animation: slide-in-left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  will-change: transform;
+}
+
+/* Backdrop fade animation */
+.mobile-drawer-overlay {
+  animation: fade-in 0.3s ease-out;
+}
 
 /* LANDSCAPE "PRO MODE" - NO SCROLLING */
 @media (max-width: 932px) and (orientation: landscape) {

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../utils/financeUtils';
 
@@ -26,22 +26,149 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
   setToggles, 
   setSelectedCategory 
 }) => {
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
+  const [tabTop, setTabTop] = useState(50); // percentage
+  const [drawerDragOffset, setDrawerDragOffset] = useState(0);
+  const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const drawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Scroll tracking to position tab based on chart visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!chartRef.current) return;
+      const rect = chartRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      
+      // Only show tab when chart is in viewport
+      if (rect.bottom < 0 || rect.top > viewportHeight) {
+        setTabTop(-100); // Hide off-screen
+        return;
+      }
+      
+      // Calculate visible portion of chart
+      const visibleTop = Math.max(0, rect.top);
+      const visibleBottom = Math.min(viewportHeight, rect.bottom);
+      const visibleHeight = visibleBottom - visibleTop;
+      
+      // Position tab at center of visible chart area
+      const centerY = visibleTop + (visibleHeight / 2);
+      const percentage = (centerY / viewportHeight) * 100;
+      setTabTop(Math.max(10, Math.min(90, percentage))); // Constrain between 10% and 90%
+    };
+    
+    // Use requestAnimationFrame for smooth updates
+    let rafId: number | null = null;
+    const throttledScroll = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        handleScroll();
+        rafId = null;
+      });
+    };
+    
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    window.addEventListener('resize', throttledScroll, { passive: true });
+    handleScroll(); // Initial calculation
+    
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      window.removeEventListener('resize', throttledScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, []);
+
+  // Reset drag state when drawer closes
+  useEffect(() => {
+    if (!isDrawerOpen) {
+      setDrawerDragOffset(0);
+      setIsDraggingDrawer(false);
+      drawerTouchStartRef.current = null;
+    }
+  }, [isDrawerOpen]);
+
+  // Touch handlers for peeking tab - drag to open
+  const handleTabTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleTabTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+    
+    // If dragged right more than 50px and less vertical movement, open drawer
+    if (deltaX > 50 && deltaY < 100) {
+      setIsDrawerOpen(true);
+      touchStartRef.current = null;
+    }
+  };
+
+  const handleTabTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - touchStartRef.current.y);
+    
+    // If minimal movement, treat as tap
+    if (Math.abs(deltaX) < 10 && deltaY < 10) {
+      setIsDrawerOpen(!isDrawerOpen);
+    }
+    
+    touchStartRef.current = null;
+  };
+
+  // Touch handlers for drawer - drag to close
+  const handleDrawerTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    drawerTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setIsDraggingDrawer(true);
+  };
+
+  const handleDrawerTouchMove = (e: React.TouchEvent) => {
+    if (!drawerTouchStartRef.current || !isDraggingDrawer) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - drawerTouchStartRef.current.x;
+    
+    // Only allow dragging left (negative deltaX)
+    if (deltaX < 0) {
+      e.preventDefault(); // Prevent scrolling while dragging
+      setDrawerDragOffset(deltaX);
+    }
+  };
+
+  const handleDrawerTouchEnd = () => {
+    if (!isDraggingDrawer) return;
+    
+    // If dragged left more than 100px, close drawer
+    if (drawerDragOffset < -100) {
+      setIsDrawerOpen(false);
+    }
+    
+    // Reset drag state
+    setDrawerDragOffset(0);
+    setIsDraggingDrawer(false);
+    drawerTouchStartRef.current = null;
+  };
+
   return (
     <div 
-      className="bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 cursor-pointer hover:scale-[1.01] transition-all mb-12 border border-gray-100" 
-      onClick={() => setSelectedCategory('solvency')}
+      className="bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-12 border border-gray-100"
     >
       <div className="flex justify-between items-start mb-10">
         <div>
           <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Net Worth</h3>
           <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
         </div>
-        <div className="hidden md:flex bg-indigo-50 px-6 py-2.5 rounded-full border border-indigo-100 items-center justify-center shadow-sm">
-           <span className="text-[10px] font-black uppercase text-indigo-600 tracking-widest">Click for Detailed Analysis</span>
+        <div className="hidden md:flex px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
+          Hover or Tap chart for values
         </div>
       </div>
 
-      <div className="h-[300px] md:h-[450px] w-full landscape:h-[70vh]">
+      <div ref={chartRef} className="h-[300px] md:h-[450px] w-full landscape:h-[70vh] mb-12">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -82,67 +209,245 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
       </div>
 
       {/* MOBILE PEEKING TOOLBOX (LEFT) */}
-      <div className="md:hidden peeking-tab-left" onClick={(e) => e.stopPropagation()}>
-        <button className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20">
+      <div 
+        className="md:hidden peeking-tab-left" 
+        style={{ 
+          top: `${tabTop}%`,
+          opacity: tabTop < 0 ? 0 : 1,
+          pointerEvents: tabTop < 0 ? 'none' : 'auto'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button 
+          onClick={(e) => { 
+            e.stopPropagation(); 
+            setIsDrawerOpen(!isDrawerOpen); 
+          }}
+          onTouchStart={handleTabTouchStart}
+          onTouchMove={handleTabTouchMove}
+          onTouchEnd={handleTabTouchEnd}
+          className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
+        >
           <i className="fa-solid fa-sliders text-2xl"></i>
         </button>
       </div>
 
+      {/* MOBILE DRAWER */}
+      {isDrawerOpen && (
+        <div className="md:hidden fixed inset-0 z-[200] flex">
+          {/* Backdrop */}
+          <div 
+            className="mobile-drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDrawerOpen(false);
+            }}
+          ></div>
+          {/* Drawer Panel */}
+          <div 
+            className="mobile-drawer-panel relative w-80 bg-white h-full shadow-2xl p-8 flex flex-col"
+            style={{ 
+              transform: `translateX(${drawerDragOffset}px)`,
+              transition: isDraggingDrawer ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+            }}
+            onTouchStart={handleDrawerTouchStart}
+            onTouchMove={handleDrawerTouchMove}
+            onTouchEnd={handleDrawerTouchEnd}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Close Button */}
+            <button 
+              onClick={(e) => {
+                e.stopPropagation();
+                setIsDrawerOpen(false);
+              }}
+              className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors"
+            >
+              <i className="fa-solid fa-xmark text-2xl"></i>
+            </button>
+            
+            {/* Drawer Title */}
+            <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Chart Controls</h3>
+            
+            {/* All Desktop Toggles */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="space-y-8">
+                {/* Main Toggles Row */}
+                <div>
+                  <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest mb-4">Toggle Comparison</div>
+                  <div className="grid grid-cols-1 gap-6">
+                    {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+                      const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+                      const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                      const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+                      return (
+                        <div key={key} className="text-center">
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setToggles({ ...toggles, [key]: !toggles[key] });
+                            }}
+                            className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
+                          >
+                            <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                            {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Trend Toggle Row */}
+                <div>
+                  <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Trend Toggle</div>
+                  <div className="grid grid-cols-3 gap-4 items-center">
+                    {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                      const base = key.replace('Trend', '');
+                      return (
+                        <div key={key} className="flex flex-col items-center gap-2">
+                          <div 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any});
+                            }} 
+                            className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}
+                          >
+                            <div className="slider-circle"></div>
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-gray-400">
+                            {base === 'assets' ? 'Assets' : base === 'liabs' ? 'Debt' : 'Net Worth'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Inflation Adjusted Row */}
+                <div>
+                  <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Inflation Adjusted</div>
+                  <div className="grid grid-cols-3 gap-4 items-center">
+                    {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                      <div key={key} className="flex flex-col items-center gap-2">
+                        <div 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any});
+                          }} 
+                          className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}
+                        >
+                          <div className="slider-circle"></div>
+                        </div>
+                        <span className="text-[10px] font-black uppercase text-gray-400">
+                          {key.replace('Inf', '') === 'assets' ? 'Assets' : key.replace('Inf', '') === 'liabs' ? 'Debt' : 'Net Worth'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* THE CONTROL PANEL (Strobing Legend & Toggles) */}
-      <div className="mt-8 border-t border-gray-50 pt-8 space-y-8" onClick={(e) => e.stopPropagation()}>
+      <div className="mt-8 space-y-8" onClick={(e) => e.stopPropagation()}>
         
-        {/* ROW 1: THE STROBING MAIN LEGEND */}
-        <div className="grid grid-cols-3 gap-4">
-        {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+        {/* DESKTOP LAYOUT: Matching Debt & Solvency Trend Chart */}
+        <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 mb-12 border-t border-gray-50 pt-10">
+        <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest"></div>
+          {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+            const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+            const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
             const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
-            const solidColor = key === 'assets' ? 'text-[#4ade80]' : key === 'liabs' ? 'text-[#f87171]' : 'text-[#3b82f6]';
             return (
               <div key={key} className="text-center">
                 <button 
-                  onClick={() => setToggles({...toggles, [key]: !toggles[key]})} 
-                  className={`text-[11px] md:text-[14px] font-black uppercase transition-all duration-500 tracking-tighter ${toggles[key] ? solidColor : strobeClass}`}
+                  onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
+                  className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
                 >
+                  <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
                   {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
                 </button>
               </div>
             );
           })}
-        </div>
-
-        {/* ROW 2 & 3: DESKTOP SUB-TOGGLES (Centered Under Main Legend) */}
-        <div className="hidden md:grid grid-cols-3 gap-y-4 items-center">
-          <div className="col-span-3 text-[11px] font-black uppercase text-indigo-400 tracking-widest text-center">
-            Trend Analysis
-          </div>
+          
+          <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
           {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
             const base = key.replace('Trend', '');
             return (
               <div key={key} className="flex justify-center">
+                <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+              </div>
+            );
+          })}
+
+          <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+          {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+            <div key={key} className="flex justify-center">
+              <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+            </div>
+          ))}
+        </div>
+
+        {/* MOBILE LAYOUT: Hidden - toggles now in drawer */}
+        <div className="md:hidden hidden">
+          {/* ROW 1: THE STROBING MAIN LEGEND */}
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+              const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+              const solidColor = key === 'assets' ? 'text-[#4ade80]' : key === 'liabs' ? 'text-[#f87171]' : 'text-[#3b82f6]';
+              return (
+                <div key={key} className="text-center">
+                  <button 
+                    onClick={() => setToggles({...toggles, [key]: !toggles[key]})} 
+                    className={`text-[11px] font-black uppercase transition-all duration-500 tracking-tighter ${toggles[key] ? solidColor : strobeClass}`}
+                  >
+                    {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ROW 2 & 3: MOBILE SUB-TOGGLES */}
+          <div className="grid grid-cols-4 gap-4 items-center mb-4">
+          <div className="text-[11px] font-black uppercase text-indigo-400">
+              Trend Toggle
+            </div>
+            {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+              const base = key.replace('Trend', '');
+              return (
+                <div key={key} className="flex justify-center">
+                  <div
+                    onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })}
+                    className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}
+                  >
+                    <div className="slider-circle"></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="grid grid-cols-4 gap-4 items-center">
+            <div className="text-[11px] font-black uppercase text-indigo-400 tracking-widest">
+              Inflation Adjusted
+            </div>
+            {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+              <div key={key} className="flex justify-center">
                 <div
                   onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })}
-                  className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}
+                  className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}
                 >
                   <div className="slider-circle"></div>
                 </div>
               </div>
-            );
-          })}
-        </div>
-
-        <div className="hidden md:grid grid-cols-3 gap-y-4 items-center mt-4">
-          <div className="col-span-3 text-[11px] font-black uppercase text-indigo-400 tracking-widest text-center">
-            Inflation Adjust
+            ))}
           </div>
-          {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
-            <div key={key} className="flex justify-center">
-              <div
-                onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })}
-                className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}
-              >
-                <div className="slider-circle"></div>
-              </div>
-            </div>
-          ))}
         </div>
       </div>
     </div>

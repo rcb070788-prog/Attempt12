@@ -30,6 +30,7 @@ export const CATEGORIES = [
   { id: 'revenues', label: 'Revenues', icon: 'fa-hand-holding-dollar', color: 'bg-green-500' },
   { id: 'assets', label: 'Assets', icon: 'fa-building-columns', color: 'bg-blue-500' },
   { id: 'liabilities', label: 'Liabilities', icon: 'fa-file-invoice-dollar', color: 'bg-amber-500' },
+  { id: 'solvency', label: 'County Net Worth', icon: 'fa-chart-line', color: 'bg-blue-500' },
 ];
 
 /**

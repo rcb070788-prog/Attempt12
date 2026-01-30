@@ -18,13 +18,16 @@ interface NetWorthChartProps {
   };
   setToggles: (toggles: any) => void;
   setSelectedCategory: (cat: string) => void;
+  /** When provided, shows a centered "More" button at the top to open Debt & Solvency detail view */
+  onMoreClick?: () => void;
 }
 
 export const NetWorthChart: React.FC<NetWorthChartProps> = ({ 
   chartData, 
   toggles, 
   setToggles, 
-  setSelectedCategory 
+  setSelectedCategory,
+  onMoreClick
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -158,6 +161,16 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
     <div 
       className="bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-12 border border-gray-100"
     >
+      {onMoreClick && (
+        <div className="flex justify-center mb-6">
+          <button
+            onClick={onMoreClick}
+            className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg"
+          >
+            More
+          </button>
+        </div>
+      )}
       <div className="flex justify-between items-start mb-10">
         <div>
           <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Net Worth</h3>

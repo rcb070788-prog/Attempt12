@@ -53,6 +53,12 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   toggles,
   setToggles
 }) => {
+  const [showSolvencyDetail, setShowSolvencyDetail] = useState(false);
+
+  // Reset detail view when leaving solvency category
+  React.useEffect(() => {
+    if (selectedCategory !== 'solvency') setShowSolvencyDetail(false);
+  }, [selectedCategory]);
 
   if (currentPage !== 'home' || !selectedCategory) return null;
 
@@ -73,19 +79,27 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
       <div className="grid grid-cols-1 gap-4 mt-8">
         
-        {/* SOLVENCY VIEW - TIER 1: County Net Worth Chart */}
-        {selectedCategory === 'solvency' && (
+        {/* SOLVENCY VIEW - TIER 1: County Net Worth Chart (high-level); "More" opens detail view */}
+        {selectedCategory === 'solvency' && !showSolvencyDetail && (
           <NetWorthChart 
             chartData={chartData}
             toggles={toggles}
             setToggles={setToggles}
             setSelectedCategory={setSelectedCategory}
+            onMoreClick={() => setShowSolvencyDetail(true)}
           />
         )}
 
-        {/* SOLVENCY VIEW - TIER 2: Debt & Solvency Trend */}
-        {selectedCategory === 'solvency' && (
-          <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
+        {/* SOLVENCY VIEW - TIER 2: Debt & Solvency Trend (detail screen) */}
+        {selectedCategory === 'solvency' && showSolvencyDetail && (
+          <>
+            <button
+              onClick={() => setShowSolvencyDetail(false)}
+              className="mb-6 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2"
+            >
+              <i className="fa-solid fa-arrow-left"></i> Back to County Net Worth
+            </button>
+            <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
             
             {/* MOBILE PEEKING COMPARISON (RIGHT) */}
             <div className="md:hidden peeking-tab-right">
@@ -113,7 +127,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   )}
                   <button
                     onClick={() => setExpandedChart(expandedChart === 'solvency' ? null : 'solvency')}
-                    className="bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-xl transition-all"
+                    className="bg-gray-100 hover:bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl transition-all"
                   >
                     <i className={`fa-solid ${expandedChart === 'solvency' ? 'fa-compress' : 'fa-expand'}`}></i>
                   </button>
@@ -250,6 +264,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               ))}
             </div>
           </div>
+          </>
         )}
 
         {/* ASSETS VIEW */}
@@ -536,41 +551,43 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           </div>
         )}
 
-        {/* NAVIGATION CONTROLS */}
-        <div className="flex flex-wrap gap-3 mb-6 animate-slide-up">
-          {chartLevel > 1 && (
-            <button onClick={() => { setChartLevel(1); setSelectedParent(null); }} className="px-6 py-3 bg-gray-900 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">
-              <i className="fa-solid fa-house-chimney mr-2"></i> Reset to Total
-            </button>
-          )}
-          {chartLevel === 1 && (
-            <button onClick={() => setChartLevel(2)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">
-              Compare Primary vs Component Units
-            </button>
-          )}
-          {chartLevel === 2 && (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-              {[
-                { id: 'Governmental', label: 'Governmental', color: 'bg-blue-600' },
-                { id: 'Business-type', label: 'Business-type', color: 'bg-cyan-600' },
-                { id: 'School Department', label: 'School Dept', color: 'bg-pink-600' },
-                { id: 'Emergency Communications District', label: 'Emerg Comm Dist', color: 'bg-amber-600' }
-              ].map(btn => (
-                <button 
-                  key={btn.id}
-                  onClick={() => {
-                    const active = selectedParents.includes(btn.id);
-                    if (active) setSelectedParents(selectedParents.filter(p => p !== btn.id));
-                    else setSelectedParents([...selectedParents, btn.id]);
-                  }} 
-                  className={`px-4 py-4 rounded-xl text-xs font-black uppercase shadow-lg transition-all border-4 ${selectedParents.includes(btn.id) ? 'border-white ring-4 ring-indigo-500 ' + btn.color + ' text-white' : 'bg-white text-gray-400 border-gray-100'}`}
-                >
-                  {btn.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* NAVIGATION CONTROLS - only for Debt & Solvency Trend (solvency detail view / liabilities) */}
+        {((selectedCategory === 'solvency' && showSolvencyDetail) || selectedCategory === 'liabilities') && (
+          <div className="flex flex-wrap gap-3 mb-6 animate-slide-up">
+            {chartLevel > 1 && (
+              <button onClick={() => { setChartLevel(1); setSelectedParent(null); }} className="px-6 py-3 bg-gray-900 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">
+                <i className="fa-solid fa-house-chimney mr-2"></i> Reset to Total
+              </button>
+            )}
+            {chartLevel === 1 && (
+              <button onClick={() => setChartLevel(2)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">
+                Compare Primary vs Component Units
+              </button>
+            )}
+            {chartLevel === 2 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                {[
+                  { id: 'Governmental', label: 'Governmental', color: 'bg-blue-600' },
+                  { id: 'Business-type', label: 'Business-type', color: 'bg-cyan-600' },
+                  { id: 'School Department', label: 'School Dept', color: 'bg-pink-600' },
+                  { id: 'Emergency Communications District', label: 'Emerg Comm Dist', color: 'bg-amber-600' }
+                ].map(btn => (
+                  <button 
+                    key={btn.id}
+                    onClick={() => {
+                      const active = selectedParents.includes(btn.id);
+                      if (active) setSelectedParents(selectedParents.filter(p => p !== btn.id));
+                      else setSelectedParents([...selectedParents, btn.id]);
+                    }} 
+                    className={`px-4 py-4 rounded-xl text-xs font-black uppercase shadow-lg transition-all border-4 ${selectedParents.includes(btn.id) ? 'border-white ring-4 ring-indigo-500 ' + btn.color + ' text-white' : 'bg-white text-gray-400 border-gray-100'}`}
+                  >
+                    {btn.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* DASHBOARD FOLDERS */}
         {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CATEGORIES, DASHBOARDS } from '../constants';
 import { formatCurrency } from '../utils/financeUtils';
@@ -54,6 +54,136 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   setToggles
 }) => {
   const [showSolvencyDetail, setShowSolvencyDetail] = useState(false);
+  const [solvencyTrendToggles, setSolvencyTrendToggles] = useState({
+    assets: false,
+    liabs: false,
+    netWorth: true,
+    assetsTrend: false,
+    liabsTrend: false,
+    netWorthTrend: false,
+    assetsInf: false,
+    liabsInf: false,
+    netWorthInf: false
+  });
+
+  // Mobile peeking left tab + drawer for Debt & Solvency Trend
+  const [solvencyDrawerOpen, setSolvencyDrawerOpen] = useState(false);
+  const [solvencyDrawerDragOffset, setSolvencyDrawerDragOffset] = useState(0);
+  const [solvencyDraggingDrawer, setSolvencyDraggingDrawer] = useState(false);
+  const [solvencyTabTop, setSolvencyTabTop] = useState(50);
+  const solvencyChartContainerRef = useRef<HTMLDivElement | null>(null);
+  const solvencyTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const solvencyDrawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // Scroll/resize: position Debt & Solvency peeking tab from chart container visibility
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!solvencyChartContainerRef.current) return;
+      const rect = solvencyChartContainerRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+
+      if (rect.bottom < 0 || rect.top > viewportHeight) {
+        setSolvencyTabTop(-100);
+        return;
+      }
+
+      const visibleTop = Math.max(0, rect.top);
+      const visibleBottom = Math.min(viewportHeight, rect.bottom);
+      const visibleHeight = visibleBottom - visibleTop;
+      const centerY = visibleTop + (visibleHeight / 2);
+      const percentage = (centerY / viewportHeight) * 100;
+      setSolvencyTabTop(Math.max(10, Math.min(90, percentage)));
+    };
+
+    let rafId: number | null = null;
+    const throttledScroll = () => {
+      if (rafId) return;
+      rafId = requestAnimationFrame(() => {
+        handleScroll();
+        rafId = null;
+      });
+    };
+
+    window.addEventListener('scroll', throttledScroll, { passive: true });
+    window.addEventListener('resize', throttledScroll, { passive: true });
+    handleScroll();
+
+    return () => {
+      window.removeEventListener('scroll', throttledScroll);
+      window.removeEventListener('resize', throttledScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [selectedCategory, showSolvencyDetail]);
+
+  // Reset drag state when Debt & Solvency drawer closes
+  useEffect(() => {
+    if (!solvencyDrawerOpen) {
+      setSolvencyDrawerDragOffset(0);
+      setSolvencyDraggingDrawer(false);
+      solvencyDrawerTouchStartRef.current = null;
+    }
+  }, [solvencyDrawerOpen]);
+
+  // Touch handlers for Debt & Solvency peeking tab - drag to open
+  const handleSolvencyTabTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    solvencyTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleSolvencyTabTouchMove = (e: React.TouchEvent) => {
+    if (!solvencyTouchStartRef.current) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - solvencyTouchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - solvencyTouchStartRef.current.y);
+
+    if (deltaX > 50 && deltaY < 100) {
+      setSolvencyDrawerOpen(true);
+      solvencyTouchStartRef.current = null;
+    }
+  };
+
+  const handleSolvencyTabTouchEnd = (e: React.TouchEvent) => {
+    if (!solvencyTouchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - solvencyTouchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - solvencyTouchStartRef.current.y);
+
+    if (Math.abs(deltaX) < 10 && deltaY < 10) {
+      setSolvencyDrawerOpen(!solvencyDrawerOpen);
+    }
+
+    solvencyTouchStartRef.current = null;
+  };
+
+  // Touch handlers for Debt & Solvency drawer - drag to close
+  const handleSolvencyDrawerTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    solvencyDrawerTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setSolvencyDraggingDrawer(true);
+  };
+
+  const handleSolvencyDrawerTouchMove = (e: React.TouchEvent) => {
+    if (!solvencyDrawerTouchStartRef.current || !solvencyDraggingDrawer) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - solvencyDrawerTouchStartRef.current.x;
+
+    if (deltaX < 0) {
+      e.preventDefault();
+      setSolvencyDrawerDragOffset(deltaX);
+    }
+  };
+
+  const handleSolvencyDrawerTouchEnd = () => {
+    if (!solvencyDraggingDrawer) return;
+
+    if (solvencyDrawerDragOffset < -100) {
+      setSolvencyDrawerOpen(false);
+    }
+
+    setSolvencyDrawerDragOffset(0);
+    setSolvencyDraggingDrawer(false);
+    solvencyDrawerTouchStartRef.current = null;
+  };
 
   // Reset detail view when leaving solvency category
   React.useEffect(() => {
@@ -63,6 +193,35 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   if (currentPage !== 'home' || !selectedCategory) return null;
 
   const currentCategoryLabel = CATEGORIES.find(c => c.id === selectedCategory)?.label;
+
+  /* County Net Worth: full-viewport layout, no scrolling */
+  if (selectedCategory === 'solvency' && !showSolvencyDetail) {
+    return (
+      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up">
+        <div className="shrink-0 px-4 md:px-6 py-3 flex flex-col gap-1">
+          <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
+          </button>
+          <div className="flex flex-col">
+            <h2 className="text-2xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
+              {currentCategoryLabel}
+            </h2>
+            <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Select a report to view official records</p>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4">
+          <NetWorthChart
+            chartData={chartData}
+            toggles={toggles}
+            setToggles={setToggles}
+            setSelectedCategory={setSelectedCategory}
+            onMoreClick={() => setShowSolvencyDetail(true)}
+            fullScreen
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
@@ -78,17 +237,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       </div>
 
       <div className="grid grid-cols-1 gap-4 mt-8">
-        
-        {/* SOLVENCY VIEW - TIER 1: County Net Worth Chart (high-level); "More" opens detail view */}
-        {selectedCategory === 'solvency' && !showSolvencyDetail && (
-          <NetWorthChart 
-            chartData={chartData}
-            toggles={toggles}
-            setToggles={setToggles}
-            setSelectedCategory={setSelectedCategory}
-            onMoreClick={() => setShowSolvencyDetail(true)}
-          />
-        )}
 
         {/* SOLVENCY VIEW - TIER 2: Debt & Solvency Trend (detail screen) */}
         {selectedCategory === 'solvency' && showSolvencyDetail && (
@@ -172,7 +320,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 )}
               </div>
             </div>
-            <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
+            <div ref={solvencyChartContainerRef} className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart 
                   data={chartData} 
@@ -188,15 +336,15 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   <React.Fragment>
                     {selectedParents.length === 0 ? (
                       <React.Fragment>
-                        {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                        {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                        {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
-                        {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                        {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                        {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
+                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                       </React.Fragment>
                     ) : (
                       selectedParents.map((sel, idx) => {
@@ -205,19 +353,19 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                         return (
                           <React.Fragment key={sel}>
                             {/* Net Worth Logic */}
-                            {toggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
-                            {toggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {toggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
+                            {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
+                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
                             
                             {/* Assets Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
-                            {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
-                            {toggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {toggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
 
                             {/* Liabilities Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
-                            {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
-                            {toggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {toggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
                           </React.Fragment>
                         );
                       })
@@ -236,10 +384,10 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 return (
                   <div key={key} className="text-center">
                     <button 
-                      onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
-                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
+                      onClick={() => setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key] })} 
+                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${solvencyTrendToggles[key] ? colors[key] : strobeClass}`}
                     >
-                      <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                      <div className={`w-12 h-1.5 rounded-full transition-all ${solvencyTrendToggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
                       {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
                     </button>
                   </div>
@@ -251,7 +399,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 const base = key.replace('Trend', '');
                 return (
                   <div key={key} className="flex justify-center">
-                    <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                    <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
                   </div>
                 );
               })}
@@ -259,7 +407,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
               {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
                 <div key={key} className="flex justify-center">
-                  <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                  <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
                 </div>
               ))}
             </div>
@@ -412,7 +560,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 )}
               </div>
             </div>
-            <div className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
+            <div ref={solvencyChartContainerRef} className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart 
                   data={chartData} 
@@ -428,15 +576,15 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   <React.Fragment>
                     {selectedParents.length === 0 ? (
                       <React.Fragment>
-                        {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                        {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                        {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
-                        {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                        {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                        {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
+                        {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
+                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                       </React.Fragment>
                     ) : (
                       selectedParents.map((sel, idx) => {
@@ -445,19 +593,19 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                         return (
                           <React.Fragment key={sel}>
                             {/* Net Worth Logic */}
-                            {toggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
-                            {toggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {toggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
+                            {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
+                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
                             
                             {/* Assets Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
-                            {toggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
-                            {toggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {toggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
 
                             {/* Liabilities Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
-                            {toggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
-                            {toggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {toggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
+                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
                           </React.Fragment>
                         );
                       })
@@ -476,10 +624,10 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 return (
                   <div key={key} className="text-center">
                     <button 
-                      onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
-                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
+                      onClick={() => setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key] })} 
+                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${solvencyTrendToggles[key] ? colors[key] : strobeClass}`}
                     >
-                      <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                      <div className={`w-12 h-1.5 rounded-full transition-all ${solvencyTrendToggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
                       {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
                     </button>
                   </div>
@@ -491,7 +639,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 const base = key.replace('Trend', '');
                 return (
                   <div key={key} className="flex justify-center">
-                    <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                    <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
                   </div>
                 );
               })}
@@ -499,11 +647,150 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
               {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
                 <div key={key} className="flex justify-center">
-                  <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                  <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
                 </div>
               ))}
             </div>
           </div>
+        )}
+
+        {/* MOBILE PEEKING LEFT + DRAWER for Debt & Solvency Trend (when either solvency detail or liabilities view) */}
+        {((selectedCategory === 'solvency' && showSolvencyDetail) || selectedCategory === 'liabilities') && (
+          <>
+            <div
+              className="md:hidden peeking-tab-left"
+              style={{
+                top: `${solvencyTabTop}%`,
+                opacity: solvencyTabTop < 0 ? 0 : 1,
+                pointerEvents: solvencyTabTop < 0 ? 'none' : 'auto'
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSolvencyDrawerOpen(!solvencyDrawerOpen);
+                }}
+                onTouchStart={handleSolvencyTabTouchStart}
+                onTouchMove={handleSolvencyTabTouchMove}
+                onTouchEnd={handleSolvencyTabTouchEnd}
+                className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
+              >
+                <i className="fa-solid fa-sliders text-2xl"></i>
+              </button>
+            </div>
+
+            {solvencyDrawerOpen && (
+              <div className="md:hidden fixed inset-0 z-[200] flex">
+                <div
+                  className="mobile-drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSolvencyDrawerOpen(false);
+                  }}
+                ></div>
+                <div
+                  className="mobile-drawer-panel relative w-80 bg-white h-full shadow-2xl p-8 flex flex-col"
+                  style={{
+                    transform: `translateX(${solvencyDrawerDragOffset}px)`,
+                    transition: solvencyDraggingDrawer ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                  }}
+                  onTouchStart={handleSolvencyDrawerTouchStart}
+                  onTouchMove={handleSolvencyDrawerTouchMove}
+                  onTouchEnd={handleSolvencyDrawerTouchEnd}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSolvencyDrawerOpen(false);
+                    }}
+                    className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors"
+                  >
+                    <i className="fa-solid fa-xmark text-2xl"></i>
+                  </button>
+
+                  <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Chart Controls</h3>
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar">
+                    <div className="space-y-8">
+                      <div>
+                        <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest mb-4">Toggle Comparison</div>
+                        <div className="grid grid-cols-1 gap-6">
+                          {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+                            const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+                            const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                            const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+                            return (
+                              <div key={key} className="text-center">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key] });
+                                  }}
+                                  className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${solvencyTrendToggles[key] ? colors[key] : strobeClass}`}
+                                >
+                                  <div className={`w-12 h-1.5 rounded-full transition-all ${solvencyTrendToggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                                  {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Trend Toggle</div>
+                        <div className="grid grid-cols-3 gap-4 items-center">
+                          {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                            const base = key.replace('Trend', '');
+                            return (
+                              <div key={key} className="flex flex-col items-center gap-2">
+                                <div
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any });
+                                  }}
+                                  className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? `slider-active slider-${base}-on` : ''}`}
+                                >
+                                  <div className="slider-circle"></div>
+                                </div>
+                                <span className="text-[10px] font-black uppercase text-gray-400">
+                                  {base === 'assets' ? 'Assets' : base === 'liabs' ? 'Debt' : 'Net Worth'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Inflation Adjusted</div>
+                        <div className="grid grid-cols-3 gap-4 items-center">
+                          {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                            <div key={key} className="flex flex-col items-center gap-2">
+                              <div
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any });
+                                }}
+                                className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? 'slider-active slider-inf-on' : ''}`}
+                              >
+                                <div className="slider-circle"></div>
+                              </div>
+                              <span className="text-[10px] font-black uppercase text-gray-400">
+                                {key.replace('Inf', '') === 'assets' ? 'Assets' : key.replace('Inf', '') === 'liabs' ? 'Debt' : 'Net Worth'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* TIER 4: AUDIT TABLE */}

@@ -7,6 +7,12 @@
   VITE_SUPABASE_URL = "https://hovdckksdjofgghaxtif.supabase.co"
   VITE_SUPABASE_ANON_KEY = "sb_publishable_Vu-tQ4qH76LqelXKlnHV4g_R9F__wkn"
 
+# Manifest MIME type for PWA installability
+[[headers]]
+  for = "/manifest.json"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+
 # Support for the "Drop Folder" dashboards
 [[redirects]]
   from = "/dashboards/*"

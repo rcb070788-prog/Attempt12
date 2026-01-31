@@ -20,6 +20,8 @@ interface NetWorthChartProps {
   setSelectedCategory: (cat: string) => void;
   /** When provided, shows a centered "More" button at the top to open Debt & Solvency detail view */
   onMoreClick?: () => void;
+  /** When true, fills parent (full-viewport) with flex layout; chart uses flex-1, no scrolling */
+  fullScreen?: boolean;
 }
 
 export const NetWorthChart: React.FC<NetWorthChartProps> = ({ 
@@ -27,7 +29,8 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
   toggles, 
   setToggles, 
   setSelectedCategory,
-  onMoreClick
+  onMoreClick,
+  fullScreen = false
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -159,10 +162,14 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
 
   return (
     <div 
-      className="bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-12 border border-gray-100"
+      className={
+        fullScreen
+          ? 'flex-1 flex flex-col min-h-0 overflow-hidden bg-white p-4 md:p-6 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100'
+          : 'bg-white p-10 rounded-[3rem] shadow-xl text-gray-900 mb-12 border border-gray-100'
+      }
     >
       {onMoreClick && (
-        <div className="flex justify-center mb-6">
+        <div className={`flex justify-center mb-6 ${fullScreen ? 'shrink-0' : ''}`}>
           <button
             onClick={onMoreClick}
             className="px-8 py-3 bg-indigo-600 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-lg"
@@ -171,7 +178,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
           </button>
         </div>
       )}
-      <div className="flex justify-between items-start mb-10">
+      <div className={`flex justify-between items-start mb-10 ${fullScreen ? 'shrink-0 mb-4' : ''}`}>
         <div>
           <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Net Worth</h3>
           <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
@@ -181,7 +188,14 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
         </div>
       </div>
 
-      <div ref={chartRef} className="h-[300px] md:h-[450px] w-full landscape:h-[70vh] mb-12">
+      <div 
+        ref={chartRef} 
+        className={
+          fullScreen
+            ? 'flex-1 min-h-0 min-h-[180px] w-full'
+            : 'h-[300px] md:h-[450px] w-full landscape:h-[70vh] mb-12'
+        }
+      >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={chartData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
@@ -366,10 +380,10 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
       )}
 
       {/* THE CONTROL PANEL (Strobing Legend & Toggles) */}
-      <div className="mt-8 space-y-8" onClick={(e) => e.stopPropagation()}>
+      <div className={`mt-8 space-y-8 ${fullScreen ? 'shrink-0 mt-4' : ''}`} onClick={(e) => e.stopPropagation()}>
         
         {/* DESKTOP LAYOUT: Matching Debt & Solvency Trend Chart */}
-        <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 mb-12 border-t border-gray-50 pt-10">
+        <div className={`hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 border-t border-gray-50 pt-10 ${fullScreen ? 'gap-y-4 pt-6' : 'mb-12'}`}>
         <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest"></div>
           {(['assets', 'liabs', 'netWorth'] as const).map(key => {
             const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };

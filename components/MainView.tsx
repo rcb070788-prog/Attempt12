@@ -103,6 +103,8 @@ interface MainViewProps {
 
 export const MainView: React.FC<MainViewProps> = (props) => {
   const [focusedThreadId, setFocusedThreadId] = React.useState<string | null>(null);
+  const [wordIndex, setWordIndex] = React.useState(0);
+  const [cycleComplete, setCycleComplete] = React.useState(false);
 
   const {
     currentPage, user, profile, setCurrentPage,

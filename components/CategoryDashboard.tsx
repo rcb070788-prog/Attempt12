@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CATEGORIES, DASHBOARDS } from '../constants';
-import { formatCurrency, pctChangeFromBaseline, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
+import { formatCurrency, pctChangeOverRange, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
 import { NetWorthChart } from './NetWorthChart';
 
 // These are the "Remote Controls" coming from the main App
@@ -89,6 +89,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const solvencyRangeDragStartX = useRef<number | null>(null);
   const solvencyRangeDragCurrentX = useRef<number | null>(null);
   const solvencyEdgeBeingDragged = useRef<'left' | 'right' | null>(null);
+  const solvencyIgnoreNextOverlayClick = useRef(false);
   const [solvencyDragBand, setSolvencyDragBand] = useState<{ startX: number; endX: number } | null>(null);
 
   const solvencyDisplayedData = useMemo(() => {
@@ -101,6 +102,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   }, [chartData, solvencySelectedYearRange, selectedParents]);
 
   const solvencyBaselineRow = solvencyDisplayedData.length ? solvencyDisplayedData[0] : null;
+  const solvencyLatestRow = solvencyDisplayedData.length ? solvencyDisplayedData[solvencyDisplayedData.length - 1] : null;
 
   const solvencyChartYears = useMemo(() => chartData.map((d: any) => d.year), [chartData]);
   const solvencyChartMinYear = solvencyChartYears[0] ?? 2005;
@@ -124,8 +126,29 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     return rect.left + t * rect.width;
   };
 
+  const solvencyIsRangeSelecting = !!(solvencyDragBand || solvencyPendingYearRange);
+  const { solvencyRangeStartYear, solvencyRangeEndYear } = (() => {
+    let start = solvencyChartMinYear;
+    let end = solvencyChartMaxYear;
+    if (solvencyPendingYearRange) {
+      start = solvencyPendingYearRange[0];
+      end = solvencyPendingYearRange[1];
+    } else if (solvencyDragBand) {
+      const y1 = solvencyClientXToYear(solvencyDragBand.startX);
+      const y2 = solvencyClientXToYear(solvencyDragBand.endX);
+      if (y1 != null && y2 != null) {
+        start = Math.min(y1, y2);
+        end = Math.max(y1, y2);
+      }
+    }
+    return { solvencyRangeStartYear: start, solvencyRangeEndYear: end };
+  })();
+
   const handleSolvencyChartPointerDown = (clientX: number) => {
     if (solvencyPendingYearRange) return;
+    // #region agent log
+    fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerDown',message:'pointer down',data:{clientX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     solvencyRangeDragStartX.current = clientX;
     solvencyRangeDragCurrentX.current = clientX;
     setSolvencyDragBand({ startX: clientX, endX: clientX });
@@ -161,13 +184,29 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       solvencyEdgeBeingDragged.current = null;
       return;
     }
+    const hasStartX = solvencyRangeDragStartX.current != null;
+    if (!hasStartX) {
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up no startX',data:{clientX,hasStartX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
+    }
     if (solvencyRangeDragStartX.current != null) {
       const y1 = solvencyClientXToYear(solvencyRangeDragStartX.current);
       const y2 = solvencyClientXToYear(clientX);
+      const minY = y1 != null && y2 != null ? Math.min(y1, y2) : null;
+      const maxY = y1 != null && y2 != null ? Math.max(y1, y2) : null;
+      const rangeOk = minY != null && maxY != null && maxY - minY >= 1;
+      const didSetPending = rangeOk;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up',data:{clientX,y1,y2,minY,maxY,rangeOk,didSetPending,hasRect:!!solvencyChartContainerRef.current?.getBoundingClientRect()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       if (y1 != null && y2 != null) {
-        const minY = Math.min(y1, y2);
-        const maxY = Math.max(y1, y2);
-        if (maxY - minY >= 1) setSolvencyPendingYearRange([minY, maxY]);
+        const minY_ = Math.min(y1, y2);
+        const maxY_ = Math.max(y1, y2);
+        if (maxY_ - minY_ >= 1) {
+          solvencyIgnoreNextOverlayClick.current = true;
+          setSolvencyPendingYearRange([minY_, maxY_]);
+        }
       }
       solvencyRangeDragStartX.current = null;
       solvencyRangeDragCurrentX.current = null;
@@ -182,6 +221,9 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     };
     const onUp = (e: MouseEvent | TouchEvent) => {
       const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
+      // #region agent log
+      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:onUp',message:'window up',data:{clientX,hasChangedTouches:'changedTouches' in e && (e as TouchEvent).changedTouches?.length,willCallHandler:clientX!=null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+      // #endregion
       if (clientX != null) handleSolvencyChartPointerUp(clientX);
     };
     window.addEventListener('mousemove', onMove);
@@ -194,7 +236,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onUp);
     };
-  }, [solvencyPendingYearRange]);
+  }, [solvencyPendingYearRange, solvencyChartYears.length]);
 
   useEffect(() => {
     const onPopstate = () => {
@@ -623,7 +665,17 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   <div
                     className="absolute inset-0 z-[5]"
                     style={{ pointerEvents: 'auto' }}
-                    onClick={() => { if (solvencyPendingYearRange) setSolvencyPendingYearRange(null); }}
+                    onClick={() => {
+                      const ignore = solvencyIgnoreNextOverlayClick.current;
+                      // #region agent log
+                      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:overlayClick',message:'overlay click',data:{ignore,hadPending:!!solvencyPendingYearRange},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                      // #endregion
+                      if (ignore) {
+                        solvencyIgnoreNextOverlayClick.current = false;
+                        return;
+                      }
+                      if (solvencyPendingYearRange) setSolvencyPendingYearRange(null);
+                    }}
                   >
                     <div
                       className="absolute top-0 bottom-0 bg-indigo-200/30"
@@ -674,15 +726,18 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                     stroke="#475569"
                     fontSize={12}
                     fontWeight="900"
-                    ticks={solvencyDisplayedData.length >= 2 ? (() => {
-                      const years = solvencyDisplayedData.map((d: any) => d.year);
-                      const n = years.length;
-                      if (n <= 3) return years;
-                      const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
-                      if (isMobile) return [years[0], years[Math.floor(n / 2)], years[n - 1]].filter((v: number, i: number, a: number[]) => a.indexOf(v) === i);
-                      const step = Math.max(1, Math.floor((n - 1) / 3));
-                      return years.filter((_: number, i: number) => i % step === 0 || i === n - 1);
-                    })() : [2005, 2010, 2015, 2020, 2025]}
+                    ticks={solvencyIsRangeSelecting
+                      ? (solvencyRangeStartYear === solvencyRangeEndYear ? [solvencyRangeStartYear] : [solvencyRangeStartYear, solvencyRangeEndYear])
+                      : (solvencyDisplayedData.length >= 2 ? (() => {
+                          const years = solvencyDisplayedData.map((d: any) => d.year);
+                          const n = years.length;
+                          if (n <= 3) return years;
+                          const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+                          if (isMobile) return [years[0], years[Math.floor(n / 2)], years[n - 1]].filter((v: number, i: number, a: number[]) => a.indexOf(v) === i);
+                          const step = Math.max(1, Math.floor((n - 1) / 3));
+                          return years.filter((_: number, i: number) => i % step === 0 || i === n - 1);
+                        })() : [2005, 2010, 2015, 2020, 2025])}
+                    tickFormatter={solvencyIsRangeSelecting ? (v: number) => String(v).slice(-2) : undefined}
                     axisLine={false}
                     tickLine={false}
                   />
@@ -695,20 +750,21 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                       if (active && payload && payload.length && solvencyDisplayedData.length && solvencyBaselineRow) {
                         const data = payload[0].payload;
                         const baselineRow = solvencyBaselineRow;
+                        const latestRow = solvencyLatestRow;
                         const useEntity = selectedParents.length === 1;
                         const keyBase = useEntity ? selectedParents[0].replace(/\s+/g, '') : '';
                         const netWorthVal = useEntity ? data[`${keyBase}NetWorth`] : (chartLevel === 3 ? data.subNetWorth : data.totalNetWorth);
                         const assetsVal = useEntity ? data[`${keyBase}Assets`] : (chartLevel === 3 ? data.subAssets : data.totalAssets);
                         const liabsVal = useEntity ? data[`${keyBase}Liabs`] : (chartLevel === 3 ? data.subLiabs : data.totalLiabs);
-                        const netWorthTrendLabel = solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
-                        const assetsTrendLabel = solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
-                        const liabsTrendLabel = solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
-                        const nwTrendKey = useEntity ? (solvencyTrendToggles.netWorthInf ? `${keyBase}NetWorthRealTrend` : `${keyBase}NetWorthTrend`) : (solvencyTrendToggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend');
-                        const aTrendKey = useEntity ? (solvencyTrendToggles.assetsInf ? `${keyBase}AssetsRealTrend` : `${keyBase}AssetsTrend`) : (solvencyTrendToggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend');
-                        const lTrendKey = useEntity ? (solvencyTrendToggles.liabsInf ? `${keyBase}LiabsRealTrend` : `${keyBase}LiabsTrend`) : (solvencyTrendToggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend');
-                        const netWorthPct = pctChangeFromBaseline(Number(data[nwTrendKey]), Number(baselineRow[nwTrendKey]));
-                        const assetsPct = pctChangeFromBaseline(Number(data[aTrendKey]), Number(baselineRow[aTrendKey]));
-                        const liabsPct = pctChangeFromBaseline(Number(data[lTrendKey]), Number(baselineRow[lTrendKey]));
+                        const netWorthPctLabel = solvencyTrendToggles.netWorthInf ? '% Change (Inflation-adjusted)' : '% Change';
+                        const assetsPctLabel = solvencyTrendToggles.assetsInf ? '% Change (Inflation-adjusted)' : '% Change';
+                        const liabsPctLabel = solvencyTrendToggles.liabsInf ? '% Change (Inflation-adjusted)' : '% Change';
+                        const nwValueKey = useEntity ? (solvencyTrendToggles.netWorthInf ? `${keyBase}NetWorthReal` : `${keyBase}NetWorth`) : (solvencyTrendToggles.netWorthInf ? 'totalNetWorthReal' : (chartLevel === 3 ? 'subNetWorth' : 'totalNetWorth'));
+                        const aValueKey = useEntity ? (solvencyTrendToggles.assetsInf ? `${keyBase}AssetsReal` : `${keyBase}Assets`) : (solvencyTrendToggles.assetsInf ? 'totalAssetsReal' : (chartLevel === 3 ? 'subAssets' : 'totalAssets'));
+                        const lValueKey = useEntity ? (solvencyTrendToggles.liabsInf ? `${keyBase}LiabsReal` : `${keyBase}Liabs`) : (solvencyTrendToggles.liabsInf ? 'totalLiabsReal' : (chartLevel === 3 ? 'subLiabs' : 'totalLiabs'));
+                        const netWorthPct = solvencyDisplayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[nwValueKey]), Number(latestRow[nwValueKey])) : null;
+                        const assetsPct = solvencyDisplayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[aValueKey]), Number(latestRow[aValueKey])) : null;
+                        const liabsPct = solvencyDisplayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[lValueKey]), Number(latestRow[lValueKey])) : null;
                         const nwFmt = formatPctChange(netWorthPct);
                         const aFmt = formatPctChange(assetsPct);
                         const lFmt = formatPctChange(liabsPct);
@@ -725,7 +781,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                                     <div className="flex justify-between items-center gap-6 pl-3">
                                       <div className="flex items-center gap-2">
                                         <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#3b82f6' }} />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">{netWorthTrendLabel}</span>
+                                        <span className="text-[10px] font-black uppercase text-gray-400">{netWorthPctLabel}</span>
                                       </div>
                                       <span className={`text-sm font-black ${nwFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{nwFmt.text}</span>
                                     </div>
@@ -735,7 +791,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                                     <div className="flex justify-between items-center gap-6 pl-3">
                                       <div className="flex items-center gap-2">
                                         <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#4ade80' }} />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">{assetsTrendLabel}</span>
+                                        <span className="text-[10px] font-black uppercase text-gray-400">{assetsPctLabel}</span>
                                       </div>
                                       <span className={`text-sm font-black ${aFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{aFmt.text}</span>
                                     </div>
@@ -745,7 +801,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                                     <div className="flex justify-between items-center gap-6 pl-3">
                                       <div className="flex items-center gap-2">
                                         <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#f87171' }} />
-                                        <span className="text-[10px] font-black uppercase text-gray-400">{liabsTrendLabel}</span>
+                                        <span className="text-[10px] font-black uppercase text-gray-400">{liabsPctLabel}</span>
                                       </div>
                                       <span className={`text-sm font-black ${lFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{lFmt.text}</span>
                                     </div>

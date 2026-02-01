@@ -1,6 +1,8 @@
 import React from 'react';
 import { CategoryLinks } from './CategoryLinks';
 import CategoryDashboard from './CategoryDashboard';
+
+const HEADER_WORDS = ['Transparency', 'Clarity', 'Openness', 'Access', 'Insight', 'Visibility', 'Understanding', 'Information', 'Accountability', 'Facts', 'Details', 'Numbers'];
 import PollsPage from './PollsPage';
 import BoardPage from './BoardPage';
 import SuggestionsPage from './SuggestionsPage';
@@ -123,12 +125,35 @@ export const MainView: React.FC<MainViewProps> = (props) => {
     adminEmailDeletionVotes, formatDate
   } = props;
 
+  React.useEffect(() => {
+    if (currentPage !== 'home' || selectedCategory || cycleComplete) return;
+    const holdMs = 2500;
+    const id = setInterval(() => {
+      setWordIndex((i) => {
+        if (i >= 11) {
+          setCycleComplete(true);
+          clearInterval(id);
+          return 0;
+        }
+        return i + 1;
+      });
+    }, holdMs);
+    return () => clearInterval(id);
+  }, [currentPage, selectedCategory, cycleComplete]);
+
   return (
     <main className={`flex-grow overflow-y-auto container mx-auto px-0 md:px-4 py-0 md:py-8 custom-scrollbar ${selectedCategory ? 'landscape:p-0' : ''}`}>
       {currentPage === 'home' && !selectedCategory && (
         <div className="max-w-4xl mx-auto space-y-12 py-10 px-4 md:px-0">
           <div className="hide-on-landscape">
-            <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">Moore Transparency</h1>
+            <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">
+              Moore{' '}
+              <span className="inline-block overflow-hidden align-middle min-w-[12ch]" style={{ height: '1.2em' }} aria-live="polite">
+                <span key={HEADER_WORDS[wordIndex]} className="animate-word-in block">
+                  {HEADER_WORDS[wordIndex]}
+                </span>
+              </span>
+            </h1>
           </div>
           <div className="hide-on-landscape">
             <CategoryLinks setSelectedCategory={setSelectedCategory} />

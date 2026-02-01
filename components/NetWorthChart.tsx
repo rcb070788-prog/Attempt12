@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { formatCurrency, pctChangeFromBaseline, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
+import { formatCurrency, pctChangeOverRange, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
 
 // We are defining our "Remote Controls" (Props) here
 interface NetWorthChartProps {
@@ -45,6 +45,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
   const rangeDragStartX = useRef<number | null>(null);
   const rangeDragCurrentX = useRef<number | null>(null);
   const edgeBeingDragged = useRef<'left' | 'right' | null>(null);
+  const ignoreNextOverlayClick = useRef(false);
   const [dragBand, setDragBand] = useState<{ startX: number; endX: number } | null>(null);
 
   const displayedData = useMemo(() => {
@@ -57,6 +58,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
   }, [chartData, selectedYearRange]);
 
   const baselineRow = displayedData.length ? displayedData[0] : null;
+  const latestRow = displayedData.length ? displayedData[displayedData.length - 1] : null;
 
   const chartYears = useMemo(() => chartData.map((d: any) => d.year), [chartData]);
   const chartMinYear = chartYears[0] ?? 2005;
@@ -79,6 +81,24 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
     const t = i / (chartYears.length - 1);
     return rect.left + t * rect.width;
   };
+
+  const isRangeSelecting = !!(dragBand || pendingYearRange);
+  const { rangeStartYear, rangeEndYear } = (() => {
+    let start = chartMinYear;
+    let end = chartMaxYear;
+    if (pendingYearRange) {
+      start = pendingYearRange[0];
+      end = pendingYearRange[1];
+    } else if (dragBand) {
+      const y1 = clientXToYear(dragBand.startX);
+      const y2 = clientXToYear(dragBand.endX);
+      if (y1 != null && y2 != null) {
+        start = Math.min(y1, y2);
+        end = Math.max(y1, y2);
+      }
+    }
+    return { rangeStartYear: start, rangeEndYear: end };
+  })();
 
   const handleChartPointerDown = (clientX: number) => {
     if (pendingYearRange) return;
@@ -114,6 +134,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
 
   const handleChartPointerUp = (clientX: number) => {
     if (edgeBeingDragged.current) {
+      ignoreNextOverlayClick.current = true;
       edgeBeingDragged.current = null;
       return;
     }
@@ -123,7 +144,10 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
       if (y1 != null && y2 != null) {
         const minY = Math.min(y1, y2);
         const maxY = Math.max(y1, y2);
-        if (maxY - minY >= 1) setPendingYearRange([minY, maxY]);
+        if (maxY - minY >= 1) {
+          ignoreNextOverlayClick.current = true;
+          setPendingYearRange([minY, maxY]);
+        }
       }
       rangeDragStartX.current = null;
       rangeDragCurrentX.current = null;
@@ -365,7 +389,13 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
             <div
               className="absolute inset-0 z-[5]"
               style={{ pointerEvents: 'auto' }}
-              onClick={() => { if (pendingYearRange) setPendingYearRange(null); }}
+              onClick={() => {
+                if (ignoreNextOverlayClick.current) {
+                  ignoreNextOverlayClick.current = false;
+                  return;
+                }
+                if (pendingYearRange) setPendingYearRange(null);
+              }}
             >
               <div
                 className="absolute top-0 bottom-0 bg-indigo-200/30"
@@ -413,15 +443,18 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
               stroke="#475569"
               fontSize={12}
               fontWeight="900"
-              ticks={displayedData.length >= 2 ? (() => {
-                const years = displayedData.map((d: any) => d.year);
-                const n = years.length;
-                if (n <= 3) return years;
-                const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
-                if (isMobile) return [years[0], years[Math.floor(n / 2)], years[n - 1]].filter((v, i, a) => a.indexOf(v) === i);
-                const step = Math.max(1, Math.floor((n - 1) / 3));
-                return years.filter((_, i) => i % step === 0 || i === n - 1);
-              })() : [2005, 2010, 2015, 2020, 2025]}
+              ticks={isRangeSelecting
+                ? (rangeStartYear === rangeEndYear ? [rangeStartYear] : [rangeStartYear, rangeEndYear])
+                : (displayedData.length >= 2 ? (() => {
+                    const years = displayedData.map((d: any) => d.year);
+                    const n = years.length;
+                    if (n <= 3) return years;
+                    const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+                    if (isMobile) return [years[0], years[Math.floor(n / 2)], years[n - 1]].filter((v, i, a) => a.indexOf(v) === i);
+                    const step = Math.max(1, Math.floor((n - 1) / 3));
+                    return years.filter((_, i) => i % step === 0 || i === n - 1);
+                  })() : [2005, 2010, 2015, 2020, 2025])}
+              tickFormatter={isRangeSelecting ? (v: number) => String(v).slice(-2) : undefined}
               axisLine={false}
               tickLine={false}
             />
@@ -433,15 +466,15 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
               content={({ active, payload }) => {
                 if (active && payload && payload.length && displayedData.length && baselineRow) {
                   const data = payload[0].payload;
-                  const netWorthTrendLabel = toggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
-                  const assetsTrendLabel = toggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
-                  const liabsTrendLabel = toggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
-                  const netWorthTrendKey = toggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend';
-                  const assetsTrendKey = toggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend';
-                  const liabsTrendKey = toggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend';
-                  const netWorthPct = pctChangeFromBaseline(Number(data[netWorthTrendKey]), Number(baselineRow[netWorthTrendKey]));
-                  const assetsPct = pctChangeFromBaseline(Number(data[assetsTrendKey]), Number(baselineRow[assetsTrendKey]));
-                  const liabsPct = pctChangeFromBaseline(Number(data[liabsTrendKey]), Number(baselineRow[liabsTrendKey]));
+                  const netWorthPctLabel = toggles.netWorthInf ? '% Change (Inflation-adjusted)' : '% Change';
+                  const assetsPctLabel = toggles.assetsInf ? '% Change (Inflation-adjusted)' : '% Change';
+                  const liabsPctLabel = toggles.liabsInf ? '% Change (Inflation-adjusted)' : '% Change';
+                  const netWorthValueKey = toggles.netWorthInf ? 'totalNetWorthReal' : 'totalNetWorth';
+                  const assetsValueKey = toggles.assetsInf ? 'totalAssetsReal' : 'totalAssets';
+                  const liabsValueKey = toggles.liabsInf ? 'totalLiabsReal' : 'totalLiabs';
+                  const netWorthPct = displayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[netWorthValueKey]), Number(latestRow[netWorthValueKey])) : null;
+                  const assetsPct = displayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[assetsValueKey]), Number(latestRow[assetsValueKey])) : null;
+                  const liabsPct = displayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[liabsValueKey]), Number(latestRow[liabsValueKey])) : null;
                   const nwFmt = formatPctChange(netWorthPct);
                   const aFmt = formatPctChange(assetsPct);
                   const lFmt = formatPctChange(liabsPct);
@@ -454,7 +487,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
                           <div className="flex justify-between items-center gap-6 pl-3">
                             <div className="flex items-center gap-2">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#3b82f6' }} />
-                              <span className="text-[10px] font-black uppercase text-gray-400">{netWorthTrendLabel}</span>
+                              <span className="text-[10px] font-black uppercase text-gray-400">{netWorthPctLabel}</span>
                             </div>
                             <span className={`text-sm font-black ${nwFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{nwFmt.text}</span>
                           </div>
@@ -464,7 +497,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
                           <div className="flex justify-between items-center gap-6 pl-3">
                             <div className="flex items-center gap-2">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#4ade80' }} />
-                              <span className="text-[10px] font-black uppercase text-gray-400">{assetsTrendLabel}</span>
+                              <span className="text-[10px] font-black uppercase text-gray-400">{assetsPctLabel}</span>
                             </div>
                             <span className={`text-sm font-black ${aFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{aFmt.text}</span>
                           </div>
@@ -474,7 +507,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
                           <div className="flex justify-between items-center gap-6 pl-3">
                             <div className="flex items-center gap-2">
                               <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#f87171' }} />
-                              <span className="text-[10px] font-black uppercase text-gray-400">{liabsTrendLabel}</span>
+                              <span className="text-[10px] font-black uppercase text-gray-400">{liabsPctLabel}</span>
                             </div>
                             <span className={`text-sm font-black ${lFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{lFmt.text}</span>
                           </div>

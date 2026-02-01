@@ -48,6 +48,24 @@ export const formatPctChange = (pct: number | null): { text: string; isPositive:
   return { text: `${prefix}${pct.toFixed(1)}%`, isPositive };
 };
 
+/**
+ * % change from earliest to latest in range. Handles zero-crossing so sign matches direction:
+ * line up → positive %, line down → negative %. Uses symmetric (midpoint) formula when
+ * earliest is 0 or when earliest and latest have opposite signs.
+ */
+export const pctChangeOverRange = (earliestValue: number, latestValue: number): number | null => {
+  const earliest = Number(earliestValue);
+  const latest = Number(latestValue);
+  if (!Number.isFinite(earliest) || !Number.isFinite(latest)) return null;
+  const sameSign = (earliest >= 0 && latest >= 0) || (earliest <= 0 && latest <= 0);
+  if (earliest !== 0 && sameSign) {
+    return ((latest - earliest) / earliest) * 100;
+  }
+  const midpoint = (Math.abs(earliest) + Math.abs(latest)) / 2;
+  if (midpoint === 0) return null;
+  return ((latest - earliest) / midpoint) * 100;
+};
+
 /** Single source of truth: recompute Trend and RealTrend on a slice (filtered data). */
 export const recomputeTrendsForSlice = (data: any[], selectedParents: string[]): any[] => {
   if (data.length < 2) return data;

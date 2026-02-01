@@ -4,6 +4,7 @@
   functions = "netlify/functions"
 
 [build.environment]
+  NODE_VERSION = "20"
   VITE_SUPABASE_URL = "https://hovdckksdjofgghaxtif.supabase.co"
   VITE_SUPABASE_ANON_KEY = "sb_publishable_Vu-tQ4qH76LqelXKlnHV4g_R9F__wkn"
 
@@ -17,6 +18,12 @@
 [[redirects]]
   from = "/dashboards/*"
   to = "/dashboards/:splat"
+  status = 200
+
+# Serve Vite build assets (must be before the SPA catch-all)
+[[redirects]]
+  from = "/assets/*"
+  to = "/assets/:splat"
   status = 200
 
 # General SPA redirect (keeps the React app working on refresh)

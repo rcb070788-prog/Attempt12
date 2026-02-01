@@ -2,7 +2,7 @@
 export interface DashboardConfig {
   id: string;
   title: string;
-  category: 'expenses' | 'revenues' | 'assets' | 'liabilities';
+  category: 'expenses' | 'revenues' | 'assets';
   description: string;
   folderPath: string; // The URL path to the index.html inside the dashboard folder
 }

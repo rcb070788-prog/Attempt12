@@ -36,8 +36,38 @@
 /* THE PEEKING TABS */
 .peeking-tab-left { position: fixed; left: -10px; transform: translateY(-50%); z-index: 100; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), top 0.1s ease-out; }
 .peeking-tab-left:hover { left: 0; }
+/* Reduce peeking tab button width by ~25% (only the tab, not the drawer) */
+.peeking-tab-left button {
+  padding-left: 9px;
+  padding-right: 9px;
+}
 .peeking-tab-right { position: fixed; right: -10px; top: 50%; transform: translateY(-50%); z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .peeking-tab-right:hover { right: 0; }
+
+/* Peeking tabs - landscape repositioning (mobile) */
+@media (max-width: 768px) and (orientation: landscape) {
+  .peeking-tab-left {
+    left: 16px; top: auto; bottom: 16px;
+    transform: none;
+  }
+  .peeking-tab-left:hover { left: 16px; }
+  
+  .peeking-tab-right {
+    right: 16px; left: auto; top: auto; bottom: 16px;
+    transform: none;
+  }
+  .peeking-tab-right:hover { right: 16px; }
+}
+
+/* Debt & Solvency full-screen container - safe area + minimal padding */
+.solvency-fullscreen-container {
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+@media (min-width: 768px) {
+  .solvency-fullscreen-container {
+    padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  }
+}
 
 /* MOBILE DRAWER */
 @keyframes slide-in-left {
@@ -52,6 +82,16 @@
 
 .mobile-drawer-panel {
   animation: slide-in-left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  will-change: transform;
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+.mobile-drawer-panel-right {
+  animation: slide-in-right 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
   will-change: transform;
 }
 

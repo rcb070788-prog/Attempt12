@@ -71,7 +71,7 @@ export const useFinanceData = (selectedParents: string[], toggles: any, chartLev
         }
       });
 
-      if (yr === 2020 && (selectedParents.includes('Business-type') || selectedParents.includes('Governmental') || chartLevel < 3)) {
+      if (yr === 2020 && selectedParents.length === 1 && selectedParents[0] === 'Business-type') {
         e.isCovidGap = true;
       }
     });
@@ -115,7 +115,17 @@ export const useFinanceData = (selectedParents: string[], toggles: any, chartLev
       list = calculateTrendLine(list, `${kb}Assets`);
       list = calculateTrendLine(list, `${kb}Liabs`);
     });
-    
+
+    list = calculateTrendLine(list, 'totalNetWorthReal');
+    list = calculateTrendLine(list, 'totalAssetsReal');
+    list = calculateTrendLine(list, 'totalLiabsReal');
+    selectedParents.forEach(sel => {
+      const kb = sel.replace(/\s+/g, '');
+      list = calculateTrendLine(list, `${kb}NetWorthReal`);
+      list = calculateTrendLine(list, `${kb}AssetsReal`);
+      list = calculateTrendLine(list, `${kb}LiabsReal`);
+    });
+
     return list;
   }, [financialData, selectedParents, toggles, chartLevel]);
 

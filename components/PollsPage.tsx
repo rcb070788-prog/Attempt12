@@ -183,7 +183,7 @@ export default function PollsPage({
       {!selectedPoll ? (
         <div className="space-y-8 animate-slide-up">
           <div className="flex flex-col md:flex-row justify-between items-end gap-6">
-            <div>
+            <div className="-ml-1 md:ml-0">
               <h2 className="text-4xl font-black uppercase tracking-tighter">Community Polls</h2>
               <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Voice your opinion on county decisions</p>
             </div>

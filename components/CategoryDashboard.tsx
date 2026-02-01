@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CATEGORIES, DASHBOARDS } from '../constants';
-import { formatCurrency } from '../utils/financeUtils';
+import { formatCurrency, pctChangeFromBaseline, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
 import { NetWorthChart } from './NetWorthChart';
 
 // These are the "Remote Controls" coming from the main App
@@ -75,6 +75,161 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const solvencyTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const solvencyDrawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
+  // Mobile peeking right tab + full-screen compare drawer for Debt & Solvency Trend
+  const [solvencyCompareDrawerOpen, setSolvencyCompareDrawerOpen] = useState(false);
+  const [solvencyCompareDrawerDragOffset, setSolvencyCompareDrawerDragOffset] = useState(0);
+  const [solvencyCompareDraggingDrawer, setSolvencyCompareDraggingDrawer] = useState(false);
+  const solvencyCompareDrawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const solvencyCompareTabTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const [solvencyTooltipOffsetX, setSolvencyTooltipOffsetX] = useState(56);
+  const [isLandscapeMobile, setIsLandscapeMobile] = useState(false);
+  const [solvencySelectedYearRange, setSolvencySelectedYearRange] = useState<[number, number] | null>(null);
+  const [solvencyPendingYearRange, setSolvencyPendingYearRange] = useState<[number, number] | null>(null);
+  const solvencyRangeDragStartX = useRef<number | null>(null);
+  const solvencyRangeDragCurrentX = useRef<number | null>(null);
+  const solvencyEdgeBeingDragged = useRef<'left' | 'right' | null>(null);
+  const [solvencyDragBand, setSolvencyDragBand] = useState<{ startX: number; endX: number } | null>(null);
+
+  const solvencyDisplayedData = useMemo(() => {
+    if (!chartData.length) return [];
+    if (!solvencySelectedYearRange) return chartData;
+    const [minY, maxY] = solvencySelectedYearRange;
+    const filtered = chartData.filter((d: any) => d.year >= minY && d.year <= maxY);
+    if (filtered.length < 2) return chartData;
+    return recomputeTrendsForSlice(filtered, selectedParents);
+  }, [chartData, solvencySelectedYearRange, selectedParents]);
+
+  const solvencyBaselineRow = solvencyDisplayedData.length ? solvencyDisplayedData[0] : null;
+
+  const solvencyChartYears = useMemo(() => chartData.map((d: any) => d.year), [chartData]);
+  const solvencyChartMinYear = solvencyChartYears[0] ?? 2005;
+  const solvencyChartMaxYear = solvencyChartYears[solvencyChartYears.length - 1] ?? 2025;
+
+  const solvencyClientXToYear = (clientX: number): number | null => {
+    const rect = solvencyChartContainerRef.current?.getBoundingClientRect();
+    if (!rect || !solvencyChartYears.length) return null;
+    const t = (clientX - rect.left) / rect.width;
+    const index = Math.round(t * (solvencyChartYears.length - 1));
+    const i = Math.max(0, Math.min(index, solvencyChartYears.length - 1));
+    return solvencyChartYears[i];
+  };
+
+  const solvencyYearToClientX = (year: number): number => {
+    const rect = solvencyChartContainerRef.current?.getBoundingClientRect();
+    if (!rect || solvencyChartYears.length < 2) return rect?.left ?? 0;
+    const index = solvencyChartYears.indexOf(year);
+    const i = index === -1 ? 0 : index;
+    const t = i / (solvencyChartYears.length - 1);
+    return rect.left + t * rect.width;
+  };
+
+  const handleSolvencyChartPointerDown = (clientX: number) => {
+    if (solvencyPendingYearRange) return;
+    solvencyRangeDragStartX.current = clientX;
+    solvencyRangeDragCurrentX.current = clientX;
+    setSolvencyDragBand({ startX: clientX, endX: clientX });
+  };
+
+  const handleSolvencyChartPointerMove = (clientX: number) => {
+    if (solvencyEdgeBeingDragged.current === 'left' && solvencyPendingYearRange) {
+      const y = solvencyClientXToYear(clientX);
+      if (y != null) {
+        const [, endY] = solvencyPendingYearRange;
+        const newStart = Math.max(solvencyChartMinYear, Math.min(y, endY - 1));
+        setSolvencyPendingYearRange([newStart, endY]);
+      }
+      return;
+    }
+    if (solvencyEdgeBeingDragged.current === 'right' && solvencyPendingYearRange) {
+      const y = solvencyClientXToYear(clientX);
+      if (y != null) {
+        const [startY] = solvencyPendingYearRange;
+        const newEnd = Math.min(solvencyChartMaxYear, Math.max(y, startY + 1));
+        setSolvencyPendingYearRange([startY, newEnd]);
+      }
+      return;
+    }
+    if (solvencyRangeDragStartX.current != null) {
+      solvencyRangeDragCurrentX.current = clientX;
+      setSolvencyDragBand((b) => (b ? { ...b, endX: clientX } : null));
+    }
+  };
+
+  const handleSolvencyChartPointerUp = (clientX: number) => {
+    if (solvencyEdgeBeingDragged.current) {
+      solvencyEdgeBeingDragged.current = null;
+      return;
+    }
+    if (solvencyRangeDragStartX.current != null) {
+      const y1 = solvencyClientXToYear(solvencyRangeDragStartX.current);
+      const y2 = solvencyClientXToYear(clientX);
+      if (y1 != null && y2 != null) {
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        if (maxY - minY >= 1) setSolvencyPendingYearRange([minY, maxY]);
+      }
+      solvencyRangeDragStartX.current = null;
+      solvencyRangeDragCurrentX.current = null;
+      setSolvencyDragBand(null);
+    }
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0]?.clientX : e.clientX;
+      if (clientX != null) handleSolvencyChartPointerMove(clientX);
+    };
+    const onUp = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
+      if (clientX != null) handleSolvencyChartPointerUp(clientX);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, [solvencyPendingYearRange]);
+
+  useEffect(() => {
+    const onPopstate = () => {
+      if (solvencySelectedYearRange) setSolvencySelectedYearRange(null);
+    };
+    window.addEventListener('popstate', onPopstate);
+    return () => window.removeEventListener('popstate', onPopstate);
+  }, [solvencySelectedYearRange]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setSolvencyPendingYearRange(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // Orientation: landscape on mobile for peeking tab repositioning
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px) and (orientation: landscape)');
+    const update = () => setIsLandscapeMobile(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  // Responsive tooltip horizontal offset for Debt & Solvency charts
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const update = () => setSolvencyTooltipOffsetX(mq.matches ? 72 : 56);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
   // Scroll/resize: position Debt & Solvency peeking tab from chart container visibility
   useEffect(() => {
     const handleScroll = () => {
@@ -123,6 +278,15 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       solvencyDrawerTouchStartRef.current = null;
     }
   }, [solvencyDrawerOpen]);
+
+  // Reset drag state when compare (right) drawer closes
+  useEffect(() => {
+    if (!solvencyCompareDrawerOpen) {
+      setSolvencyCompareDrawerDragOffset(0);
+      setSolvencyCompareDraggingDrawer(false);
+      solvencyCompareDrawerTouchStartRef.current = null;
+    }
+  }, [solvencyCompareDrawerOpen]);
 
   // Touch handlers for Debt & Solvency peeking tab - drag to open
   const handleSolvencyTabTouchStart = (e: React.TouchEvent) => {
@@ -185,10 +349,102 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     solvencyDrawerTouchStartRef.current = null;
   };
 
+  // Touch handlers for compare (right) drawer - drag right to close
+  const handleSolvencyCompareDrawerTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    solvencyCompareDrawerTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    setSolvencyCompareDraggingDrawer(true);
+  };
+
+  const handleSolvencyCompareDrawerTouchMove = (e: React.TouchEvent) => {
+    if (!solvencyCompareDrawerTouchStartRef.current || !solvencyCompareDraggingDrawer) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - solvencyCompareDrawerTouchStartRef.current.x;
+
+    if (deltaX > 0) {
+      e.preventDefault();
+      setSolvencyCompareDrawerDragOffset(deltaX);
+    }
+  };
+
+  const handleSolvencyCompareDrawerTouchEnd = () => {
+    if (!solvencyCompareDraggingDrawer) return;
+
+    if (solvencyCompareDrawerDragOffset > 100) {
+      setSolvencyCompareDrawerOpen(false);
+    }
+
+    setSolvencyCompareDrawerDragOffset(0);
+    setSolvencyCompareDraggingDrawer(false);
+    solvencyCompareDrawerTouchStartRef.current = null;
+  };
+
+  // Touch handlers for peeking right tab - swipe left to open compare drawer (mirror of left tab)
+  const openCompareDrawer = () => {
+    if (chartLevel === 1) setChartLevel(2);
+    setSolvencyCompareDrawerOpen(true);
+  };
+
+  const handleSolvencyCompareTabTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    solvencyCompareTabTouchStartRef.current = { x: touch.clientX, y: touch.clientY };
+  };
+
+  const handleSolvencyCompareTabTouchMove = (e: React.TouchEvent) => {
+    if (!solvencyCompareTabTouchStartRef.current) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - solvencyCompareTabTouchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - solvencyCompareTabTouchStartRef.current.y);
+
+    if (deltaX < -50 && deltaY < 100) {
+      openCompareDrawer();
+      solvencyCompareTabTouchStartRef.current = null;
+    }
+  };
+
+  const handleSolvencyCompareTabTouchEnd = (e: React.TouchEvent) => {
+    if (!solvencyCompareTabTouchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - solvencyCompareTabTouchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - solvencyCompareTabTouchStartRef.current.y);
+
+    if (Math.abs(deltaX) < 10 && deltaY < 10) {
+      openCompareDrawer();
+    }
+
+    solvencyCompareTabTouchStartRef.current = null;
+  };
+
   // Reset detail view when leaving solvency category
   React.useEffect(() => {
     if (selectedCategory !== 'solvency') setShowSolvencyDetail(false);
   }, [selectedCategory]);
+
+  // Default to Governmental when Debt & Solvency view is shown with no component selected
+  React.useEffect(() => {
+    const onDebtSolvencyView = selectedCategory === 'solvency' && showSolvencyDetail;
+    if (onDebtSolvencyView && selectedParents.length === 0) {
+      setChartLevel(2);
+      setSelectedParents(['Governmental']);
+    }
+  }, [selectedCategory, showSolvencyDetail, selectedParents.length]);
+
+  // Auto-expand Debt & Solvency Trend to full screen when entering view
+  React.useEffect(() => {
+    const onDebtSolvencyView = selectedCategory === 'solvency' && showSolvencyDetail;
+    if (onDebtSolvencyView) {
+      setExpandedChart('solvency');
+    } else if (expandedChart === 'solvency') {
+      setExpandedChart(null);
+    }
+  }, [selectedCategory, showSolvencyDetail]);
+
+  const solvencyComponentOptions = [
+    { id: 'Governmental', label: 'Governmental', highlightClass: 'bg-blue-600' },
+    { id: 'Business-type', label: 'Business-type', highlightClass: 'bg-cyan-600' },
+    { id: 'School Department', label: 'School Dept', highlightClass: 'bg-pink-600' },
+    { id: 'Emergency Communications District', label: 'Emerg Comm Dist', highlightClass: 'bg-amber-600' }
+  ];
 
   if (currentPage !== 'home' || !selectedCategory) return null;
 
@@ -197,8 +453,8 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   /* County Net Worth: full-viewport layout, no scrolling */
   if (selectedCategory === 'solvency' && !showSolvencyDetail) {
     return (
-      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up">
-        <div className="shrink-0 px-4 md:px-6 py-3 flex flex-col gap-1">
+      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
           <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
             <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
           </button>
@@ -215,7 +471,11 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             toggles={toggles}
             setToggles={setToggles}
             setSelectedCategory={setSelectedCategory}
-            onMoreClick={() => setShowSolvencyDetail(true)}
+            onMoreClick={() => {
+              setShowSolvencyDetail(true);
+              setChartLevel(2);
+              setSelectedParents(['Governmental']);
+            }}
             fullScreen
           />
         </div>
@@ -241,109 +501,276 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
         {/* SOLVENCY VIEW - TIER 2: Debt & Solvency Trend (detail screen) */}
         {selectedCategory === 'solvency' && showSolvencyDetail && (
           <>
-            <button
-              onClick={() => setShowSolvencyDetail(false)}
-              className="mb-6 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2"
-            >
-              <i className="fa-solid fa-arrow-left"></i> Back to County Net Worth
-            </button>
-            <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
+            {expandedChart !== 'solvency' && (
+              <button
+                onClick={() => setShowSolvencyDetail(false)}
+                className="mb-6 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-black uppercase tracking-widest transition-all flex items-center gap-2"
+              >
+                <i className="fa-solid fa-arrow-left"></i> Back to County Net Worth
+              </button>
+            )}
+            <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white flex flex-col overflow-hidden h-[100dvh] md:h-screen solvency-fullscreen-container' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
             
-            {/* MOBILE PEEKING COMPARISON (RIGHT) */}
-            <div className="md:hidden peeking-tab-right">
-              <button className="bg-pink-600 text-white p-3 rounded-l-2xl shadow-2xl">
+            {/* MOBILE PEEKING COMPARISON (RIGHT) - button + swipe left to open full-screen compare */}
+            <div
+              className="md:hidden peeking-tab-right"
+              style={{
+                ...(isLandscapeMobile ? { opacity: 1, pointerEvents: 'auto' } : {
+                  top: `${solvencyTabTop}%`,
+                  opacity: solvencyTabTop < 0 ? 0 : 1,
+                  pointerEvents: solvencyTabTop < 0 ? 'none' : 'auto'
+                }),
+                ...(expandedChart === 'solvency' ? { zIndex: 510 } : {})
+              }}
+              onTouchStart={handleSolvencyCompareTabTouchStart}
+              onTouchMove={handleSolvencyCompareTabTouchMove}
+              onTouchEnd={handleSolvencyCompareTabTouchEnd}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openCompareDrawer();
+                }}
+                className="bg-pink-600 text-white p-3 rounded-l-2xl shadow-2xl touch-none"
+              >
                 <i className="fa-solid fa-layer-group text-xl"></i>
               </button>
             </div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-full">
-              <div className="flex items-center justify-between w-full mb-2 gap-3">
-                  <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">
-                    Debt & Solvency Trend
-                  </h3>
-                  <div className="hidden md:flex flex-1 justify-center">
-                    {!hoveredData && (
-                      <div className="px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
-                        Hover or Tap chart for values
-                      </div>
-                    )}
-                  </div>
-                  {!hoveredData && (
-                    <div className="md:hidden px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
-                      Hover or Tap chart for values
-                    </div>
-                  )}
+            <div className={`flex shrink-0 items-center gap-2 mb-2 relative ${expandedChart === 'solvency' ? 'flex-wrap' : ''}`}>
+              <div className="flex items-center gap-2">
+                {expandedChart === 'solvency' && (
                   <button
-                    onClick={() => setExpandedChart(expandedChart === 'solvency' ? null : 'solvency')}
-                    className="bg-gray-100 hover:bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl transition-all"
+                    onClick={() => setShowSolvencyDetail(false)}
+                    className="shrink-0 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-1"
                   >
-                    <i className={`fa-solid ${expandedChart === 'solvency' ? 'fa-compress' : 'fa-expand'}`}></i>
+                    <i className="fa-solid fa-arrow-left"></i> Back
                   </button>
-                </div>
-
-                {hoveredData && (
-                  <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px] mb-4">
-                    {hoveredData.isCovidGap ? (
-                      <div className="flex items-center gap-3">
-                        <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
-                        <p className="text-[14px] font-black text-indigo-600 uppercase italic">
-                          Data not collected due to COVID.
-                        </p>
-                      </div>
-                    ) : (
+                )}
+                <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">
+                  Debt & Solvency Trend
+                </h3>
+              </div>
+              {/* Desktop: Button group for component selection */}
+              <div className="hidden md:flex items-center gap-2 absolute left-1/2 -translate-x-1/2">
+                {solvencyComponentOptions.map(opt => {
+                  const isSelected = selectedParents.length === 1 && selectedParents[0] === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => {
+                        setChartLevel(2);
+                        setSelectedParents([opt.id]);
+                      }}
+                      className={`px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all shrink-0 ${
+                        isSelected 
+                          ? `${opt.highlightClass} text-white shadow-lg` 
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {/* Mobile: Dropdown for component selection */}
+              <select
+                value={selectedParents.length === 1 ? selectedParents[0] : 'Governmental'}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setChartLevel(2);
+                  setSelectedParents([id]);
+                }}
+                className="md:hidden px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-black uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shrink-0"
+              >
+                {solvencyComponentOptions.map(opt => (
+                  <option key={opt.id} value={opt.id}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div
+              ref={solvencyChartContainerRef}
+              className={`relative ${expandedChart === 'solvency' ? 'flex-1 min-h-0' : 'h-[400px] mb-12'} w-full`}
+              onMouseDown={(e) => { if (!solvencyPendingYearRange && e.button === 0) handleSolvencyChartPointerDown(e.clientX); }}
+              onTouchStart={(e) => { if (!solvencyPendingYearRange && e.touches[0]) handleSolvencyChartPointerDown(e.touches[0].clientX); }}
+            >
+              {solvencySelectedYearRange && (
+                <button
+                  type="button"
+                  onClick={() => setSolvencySelectedYearRange(null)}
+                  className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-indigo-600 text-white text-xs font-black uppercase rounded-lg hover:bg-indigo-700"
+                >
+                  Back
+                </button>
+              )}
+              {(solvencyDragBand || solvencyPendingYearRange) && solvencyChartContainerRef.current && (() => {
+                const rect = solvencyChartContainerRef.current.getBoundingClientRect();
+                let bandLeft: number, bandWidth: number, centerX: number;
+                if (solvencyPendingYearRange) {
+                  const [minY, maxY] = solvencyPendingYearRange;
+                  const x0 = solvencyYearToClientX(minY) - rect.left;
+                  const x1 = solvencyYearToClientX(maxY) - rect.left;
+                  bandLeft = x0;
+                  bandWidth = Math.max(0, x1 - x0);
+                  centerX = x0 + bandWidth / 2;
+                } else if (solvencyDragBand) {
+                  bandLeft = Math.min(solvencyDragBand.startX, solvencyDragBand.endX) - rect.left;
+                  bandWidth = Math.abs(solvencyDragBand.endX - solvencyDragBand.startX);
+                  centerX = bandLeft + bandWidth / 2;
+                } else return null;
+                const edgeWidth = 12;
+                return (
+                  <div
+                    className="absolute inset-0 z-[5]"
+                    style={{ pointerEvents: 'auto' }}
+                    onClick={() => { if (solvencyPendingYearRange) setSolvencyPendingYearRange(null); }}
+                  >
+                    <div
+                      className="absolute top-0 bottom-0 bg-indigo-200/30"
+                      style={{ left: bandLeft, width: bandWidth }}
+                    />
+                    {solvencyPendingYearRange && (
                       <>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-indigo-400 uppercase">Year</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-green-700">
-                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-red-700">
-                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-blue-600">
-                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}
-                          </p>
-                        </div>
+                        <div
+                          className="absolute top-0 bottom-0 w-3 cursor-ew-resize hover:bg-indigo-300/50"
+                          style={{ left: bandLeft - edgeWidth / 2, width: edgeWidth }}
+                          onMouseDown={(e) => { e.stopPropagation(); solvencyEdgeBeingDragged.current = 'left'; }}
+                          onTouchStart={(e) => { e.stopPropagation(); solvencyEdgeBeingDragged.current = 'left'; }}
+                        />
+                        <div
+                          className="absolute top-0 bottom-0 w-3 cursor-ew-resize hover:bg-indigo-300/50"
+                          style={{ left: bandLeft + bandWidth - edgeWidth / 2, width: edgeWidth }}
+                          onMouseDown={(e) => { e.stopPropagation(); solvencyEdgeBeingDragged.current = 'right'; }}
+                          onTouchStart={(e) => { e.stopPropagation(); solvencyEdgeBeingDragged.current = 'right'; }}
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (solvencyPendingYearRange) {
+                              setSolvencySelectedYearRange(solvencyPendingYearRange);
+                              setSolvencyPendingYearRange(null);
+                              window.history.pushState({ chartPeriodSelection: true }, '', window.location.href);
+                            }
+                          }}
+                          className="absolute top-2 px-4 py-2 bg-indigo-600 text-white text-sm font-black uppercase rounded-xl hover:bg-indigo-700 shadow-lg"
+                          style={{ left: centerX - 40 }}
+                        >
+                          Select
+                        </button>
                       </>
                     )}
                   </div>
-                )}
-              </div>
-            </div>
-            <div ref={solvencyChartContainerRef} className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
+                );
+              })()}
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart 
-                  data={chartData} 
-                  onMouseMove={(e: any) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
-                  onMouseLeave={() => setHoveredData(null)}
+                  data={solvencyDisplayedData} 
                   onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
                 >
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
+                  <XAxis
+                    dataKey="year"
+                    stroke="#475569"
+                    fontSize={12}
+                    fontWeight="900"
+                    ticks={solvencyDisplayedData.length >= 2 ? (() => {
+                      const years = solvencyDisplayedData.map((d: any) => d.year);
+                      const n = years.length;
+                      if (n <= 3) return years;
+                      const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+                      if (isMobile) return [years[0], years[Math.floor(n / 2)], years[n - 1]].filter((v: number, i: number, a: number[]) => a.indexOf(v) === i);
+                      const step = Math.max(1, Math.floor((n - 1) / 3));
+                      return years.filter((_: number, i: number) => i % step === 0 || i === n - 1);
+                    })() : [2005, 2010, 2015, 2020, 2025]}
+                    axisLine={false}
+                    tickLine={false}
+                  />
                   <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
-                  <Tooltip content={<div className="hidden" />} />
+                  <Tooltip 
+                    position={{ x: solvencyTooltipOffsetX, y: 10 }}
+                    isAnimationActive={false}
+                    cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length && solvencyDisplayedData.length && solvencyBaselineRow) {
+                        const data = payload[0].payload;
+                        const baselineRow = solvencyBaselineRow;
+                        const useEntity = selectedParents.length === 1;
+                        const keyBase = useEntity ? selectedParents[0].replace(/\s+/g, '') : '';
+                        const netWorthVal = useEntity ? data[`${keyBase}NetWorth`] : (chartLevel === 3 ? data.subNetWorth : data.totalNetWorth);
+                        const assetsVal = useEntity ? data[`${keyBase}Assets`] : (chartLevel === 3 ? data.subAssets : data.totalAssets);
+                        const liabsVal = useEntity ? data[`${keyBase}Liabs`] : (chartLevel === 3 ? data.subLiabs : data.totalLiabs);
+                        const netWorthTrendLabel = solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
+                        const assetsTrendLabel = solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
+                        const liabsTrendLabel = solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
+                        const nwTrendKey = useEntity ? (solvencyTrendToggles.netWorthInf ? `${keyBase}NetWorthRealTrend` : `${keyBase}NetWorthTrend`) : (solvencyTrendToggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend');
+                        const aTrendKey = useEntity ? (solvencyTrendToggles.assetsInf ? `${keyBase}AssetsRealTrend` : `${keyBase}AssetsTrend`) : (solvencyTrendToggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend');
+                        const lTrendKey = useEntity ? (solvencyTrendToggles.liabsInf ? `${keyBase}LiabsRealTrend` : `${keyBase}LiabsTrend`) : (solvencyTrendToggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend');
+                        const netWorthPct = pctChangeFromBaseline(Number(data[nwTrendKey]), Number(baselineRow[nwTrendKey]));
+                        const assetsPct = pctChangeFromBaseline(Number(data[aTrendKey]), Number(baselineRow[aTrendKey]));
+                        const liabsPct = pctChangeFromBaseline(Number(data[lTrendKey]), Number(baselineRow[lTrendKey]));
+                        const nwFmt = formatPctChange(netWorthPct);
+                        const aFmt = formatPctChange(assetsPct);
+                        const lFmt = formatPctChange(liabsPct);
+                        return (
+                          <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
+                            {data.isCovidGap ? (
+                              <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
+                            ) : (
+                              <>
+                                <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">{data.year} Records</p>
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Net Worth</span><span className="text-sm font-black text-blue-600">{formatCurrency(Number(netWorthVal))}</span></div>
+                                  {solvencyTrendToggles.netWorthTrend && (
+                                    <div className="flex justify-between items-center gap-6 pl-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#3b82f6' }} />
+                                        <span className="text-[10px] font-black uppercase text-gray-400">{netWorthTrendLabel}</span>
+                                      </div>
+                                      <span className={`text-sm font-black ${nwFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{nwFmt.text}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Assets</span><span className="text-sm font-black text-green-600">{formatCurrency(Number(assetsVal))}</span></div>
+                                  {solvencyTrendToggles.assetsTrend && (
+                                    <div className="flex justify-between items-center gap-6 pl-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#4ade80' }} />
+                                        <span className="text-[10px] font-black uppercase text-gray-400">{assetsTrendLabel}</span>
+                                      </div>
+                                      <span className={`text-sm font-black ${aFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{aFmt.text}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Debt</span><span className="text-sm font-black text-red-600">{formatCurrency(Number(liabsVal))}</span></div>
+                                  {solvencyTrendToggles.liabsTrend && (
+                                    <div className="flex justify-between items-center gap-6 pl-3">
+                                      <div className="flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#f87171' }} />
+                                        <span className="text-[10px] font-black uppercase text-gray-400">{liabsTrendLabel}</span>
+                                      </div>
+                                      <span className={`text-sm font-black ${lFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{lFmt.text}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
                   
                   <React.Fragment>
                     {selectedParents.length === 0 ? (
                       <React.Fragment>
                         {solvencyTrendToggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend'} name={solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                         {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                         {solvencyTrendToggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend'} name={solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                         {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                         {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={solvencyTrendToggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend'} name={solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                         {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                       </React.Fragment>
                     ) : (
@@ -354,17 +781,17 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                           <React.Fragment key={sel}>
                             {/* Net Worth Logic */}
                             {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
-                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={solvencyTrendToggles.netWorthInf ? `${kb}NetWorthRealTrend` : `${kb}NetWorthTrend`} name={solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
                             
-                            {/* Assets Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
+                            {/* Assets Logic */}
                             {solvencyTrendToggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
-                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.assetsInf ? `${kb}AssetsRealTrend` : `${kb}AssetsTrend`} name={solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
 
-                            {/* Liabilities Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
+                            {/* Liabilities Logic */}
                             {solvencyTrendToggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
-                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.liabsInf ? `${kb}LiabsRealTrend` : `${kb}LiabsTrend`} name={solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
                           </React.Fragment>
                         );
@@ -375,7 +802,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               </ResponsiveContainer>
             </div>
 
-            <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 mb-12 border-t border-gray-50 pt-10">
+            <div className={`hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 border-t border-gray-50 pt-10 ${expandedChart === 'solvency' ? 'shrink-0' : 'mb-12'}`}>
               <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
               {(['assets', 'liabs', 'netWorth'] as const).map(key => {
                 const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
@@ -485,186 +912,20 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           </div>
         )}
 
-        {/* LIABILITIES VIEW */}
-        {selectedCategory === 'liabilities' && (
-          <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
-            
-            {/* MOBILE PEEKING COMPARISON (RIGHT) */}
-            <div className="md:hidden peeking-tab-right">
-              <button className="bg-pink-600 text-white p-3 rounded-l-2xl shadow-2xl">
-                <i className="fa-solid fa-layer-group text-xl"></i>
-              </button>
-            </div>
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-full">
-              <div className="flex items-center justify-between w-full mb-2 gap-3">
-                  <h3 className="text-xl md:text-[18.66px] font-black uppercase tracking-tighter">
-                    Debt & Solvency Trend
-                  </h3>
-                  <div className="hidden md:flex flex-1 justify-center">
-                    {!hoveredData && (
-                      <div className="px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
-                        Hover or Tap chart for values
-                      </div>
-                    )}
-                  </div>
-                  {!hoveredData && (
-                    <div className="md:hidden px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[9px] md:text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
-                      Hover or Tap chart for values
-                    </div>
-                  )}
-                  <button
-                    onClick={() => setExpandedChart(expandedChart === 'solvency' ? null : 'solvency')}
-                    className="bg-white/10 hover:bg-white/20 text-white w-10 h-10 rounded-xl transition-all"
-                  >
-                    <i className={`fa-solid ${expandedChart === 'solvency' ? 'fa-compress' : 'fa-expand'}`}></i>
-                  </button>
-                </div>
-
-                {hoveredData && (
-                  <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px] mb-4">
-                    {hoveredData.isCovidGap ? (
-                      <div className="flex items-center gap-3">
-                        <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
-                        <p className="text-[14px] font-black text-indigo-600 uppercase italic">
-                          Data not collected due to COVID.
-                        </p>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-indigo-400 uppercase">Year</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-gray-900">{hoveredData.year}</p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-green-600 uppercase">Assets</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-green-700">
-                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-red-600 uppercase">Debt</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-red-700">
-                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subLiabs : hoveredData.totalLiabs))}
-                          </p>
-                        </div>
-                        <div className="text-center">
-                          <p className="text-[10px] font-black text-indigo-600 uppercase">Net Worth</p>
-                          <p className="text-lg md:text-[18.66px] font-black text-blue-600">
-                            {formatCurrency(Number(chartLevel === 3 ? hoveredData.subNetWorth : hoveredData.totalNetWorth))}
-                          </p>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div ref={solvencyChartContainerRef} className={`${expandedChart === 'solvency' ? 'h-[70vh]' : 'h-[400px]'} w-full mb-12`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart 
-                  data={chartData} 
-                  onMouseMove={(e: any) => e?.activePayload && setHoveredData(e.activePayload[0].payload)}
-                  onMouseLeave={() => setHoveredData(null)}
-                  onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
-                  <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
-                  <Tooltip content={<div className="hidden" />} />
-                  
-                  <React.Fragment>
-                    {selectedParents.length === 0 ? (
-                      <React.Fragment>
-                        {solvencyTrendToggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                        {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
-                      </React.Fragment>
-                    ) : (
-                      selectedParents.map((sel, idx) => {
-                        const kb = sel.replace(/\s+/g, '');
-                        const color = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'][idx % 5];
-                        return (
-                          <React.Fragment key={sel}>
-                            {/* Net Worth Logic */}
-                            {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
-                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={`${kb}NetWorthTrend`} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
-                            
-                            {/* Assets Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
-                            {solvencyTrendToggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
-                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={`${kb}AssetsTrend`} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
-
-                            {/* Liabilities Logic - Fixed: Removed Hardcoded Dashes & Added Trend/Inf */}
-                            {solvencyTrendToggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
-                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={`${kb}LiabsTrend`} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
-                            {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
-                          </React.Fragment>
-                        );
-                      })
-                    )}
-                  </React.Fragment>
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 mb-12 border-t border-gray-50 pt-10">
-              <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
-              {(['assets', 'liabs', 'netWorth'] as const).map(key => {
-                const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
-                const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
-                const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
-                return (
-                  <div key={key} className="text-center">
-                    <button 
-                      onClick={() => setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key] })} 
-                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${solvencyTrendToggles[key] ? colors[key] : strobeClass}`}
-                    >
-                      <div className={`w-12 h-1.5 rounded-full transition-all ${solvencyTrendToggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
-                      {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-                    </button>
-                  </div>
-                );
-              })}
-              
-              <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-              {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
-                const base = key.replace('Trend', '');
-                return (
-                  <div key={key} className="flex justify-center">
-                    <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
-                  </div>
-                );
-              })}
-
-              <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-              {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
-                <div key={key} className="flex justify-center">
-                  <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* MOBILE PEEKING LEFT + DRAWER for Debt & Solvency Trend (when either solvency detail or liabilities view) */}
-        {((selectedCategory === 'solvency' && showSolvencyDetail) || selectedCategory === 'liabilities') && (
+        {/* MOBILE PEEKING LEFT + DRAWER for Debt & Solvency Trend */}
+        {(selectedCategory === 'solvency' && showSolvencyDetail) && (
           <>
             <div
               className="md:hidden peeking-tab-left"
               style={{
+...(isLandscapeMobile ? { opacity: 1, pointerEvents: 'auto' } : {
                 top: `${solvencyTabTop}%`,
                 opacity: solvencyTabTop < 0 ? 0 : 1,
                 pointerEvents: solvencyTabTop < 0 ? 'none' : 'auto'
-              }}
-              onClick={(e) => e.stopPropagation()}
+              }),
+              ...(expandedChart === 'solvency' ? { zIndex: 510 } : {})
+            }}
+            onClick={(e) => e.stopPropagation()}
             >
               <button
                 onClick={(e) => {
@@ -790,6 +1051,72 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 </div>
               </div>
             )}
+
+            {/* MOBILE FULL-SCREEN COMPARE (RIGHT) DRAWER - same condition as left tab/drawer */}
+            {solvencyCompareDrawerOpen && (
+              <div className={`md:hidden fixed inset-0 flex justify-end ${expandedChart === 'solvency' ? 'z-[501]' : 'z-[201]'}`}>
+                <div
+                  className="mobile-drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSolvencyCompareDrawerOpen(false);
+                  }}
+                />
+                <div
+                  className="mobile-drawer-panel-right relative w-80 bg-white h-full shadow-2xl flex flex-col p-8 touch-pan-y"
+                  style={{
+                    transform: `translateX(${solvencyCompareDrawerDragOffset}px)`,
+                    transition: solvencyCompareDraggingDrawer ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+                  }}
+                  onTouchStart={handleSolvencyCompareDrawerTouchStart}
+                  onTouchMove={handleSolvencyCompareDrawerTouchMove}
+                  onTouchEnd={handleSolvencyCompareDrawerTouchEnd}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {/* Drag handle: swipe right from this strip to close */}
+                  <div
+                    className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center flex-shrink-0 touch-none"
+                    aria-label="Swipe right to close"
+                  >
+                    <div className="w-1.5 h-12 rounded-full bg-gray-200" />
+                  </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSolvencyCompareDrawerOpen(false);
+                    }}
+                    className="self-end text-gray-300 hover:text-red-500 mb-6 transition-colors"
+                  >
+                    <i className="fa-solid fa-xmark text-2xl"></i>
+                  </button>
+
+                  <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Select component unit</h3>
+
+                  <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6 p-3">
+                    <div className="grid grid-cols-1 gap-4">
+                      {[
+                        { id: 'Governmental', label: 'Governmental', color: 'bg-blue-600' },
+                        { id: 'Business-type', label: 'Business-type', color: 'bg-cyan-600' },
+                        { id: 'School Department', label: 'School Dept', color: 'bg-pink-600' },
+                        { id: 'Emergency Communications District', label: 'Emerg Comm Dist', color: 'bg-amber-600' }
+                      ].map(btn => (
+                        <button
+                          key={btn.id}
+                          onClick={() => {
+                            const active = selectedParents.includes(btn.id);
+                            if (active) setSelectedParents([]);
+                            else setSelectedParents([btn.id]);
+                          }}
+                          className={`px-4 py-4 rounded-xl text-xs font-black uppercase shadow-lg transition-all border-4 ${selectedParents.includes(btn.id) ? 'border-white ring-4 ring-indigo-500 ' + btn.color + ' text-white' : 'bg-white text-gray-400 border-gray-100'}`}
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -835,44 +1162,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* NAVIGATION CONTROLS - only for Debt & Solvency Trend (solvency detail view / liabilities) */}
-        {((selectedCategory === 'solvency' && showSolvencyDetail) || selectedCategory === 'liabilities') && (
-          <div className="flex flex-wrap gap-3 mb-6 animate-slide-up">
-            {chartLevel > 1 && (
-              <button onClick={() => { setChartLevel(1); setSelectedParent(null); }} className="px-6 py-3 bg-gray-900 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">
-                <i className="fa-solid fa-house-chimney mr-2"></i> Reset to Total
-              </button>
-            )}
-            {chartLevel === 1 && (
-              <button onClick={() => setChartLevel(2)} className="px-6 py-3 bg-indigo-600 text-white rounded-xl text-[18.66px] font-black uppercase shadow-lg hover:scale-105 transition-all">
-                Compare Primary vs Component Units
-              </button>
-            )}
-            {chartLevel === 2 && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                {[
-                  { id: 'Governmental', label: 'Governmental', color: 'bg-blue-600' },
-                  { id: 'Business-type', label: 'Business-type', color: 'bg-cyan-600' },
-                  { id: 'School Department', label: 'School Dept', color: 'bg-pink-600' },
-                  { id: 'Emergency Communications District', label: 'Emerg Comm Dist', color: 'bg-amber-600' }
-                ].map(btn => (
-                  <button 
-                    key={btn.id}
-                    onClick={() => {
-                      const active = selectedParents.includes(btn.id);
-                      if (active) setSelectedParents(selectedParents.filter(p => p !== btn.id));
-                      else setSelectedParents([...selectedParents, btn.id]);
-                    }} 
-                    className={`px-4 py-4 rounded-xl text-xs font-black uppercase shadow-lg transition-all border-4 ${selectedParents.includes(btn.id) ? 'border-white ring-4 ring-indigo-500 ' + btn.color + ' text-white' : 'bg-white text-gray-400 border-gray-100'}`}
-                  >
-                    {btn.label}
-                  </button>
-                ))}
-              </div>
-            )}
           </div>
         )}
 

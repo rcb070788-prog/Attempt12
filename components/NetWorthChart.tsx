@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { formatCurrency } from '../utils/financeUtils';
+import { formatCurrency, pctChangeFromBaseline, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
 
 // We are defining our "Remote Controls" (Props) here
 interface NetWorthChartProps {
@@ -39,6 +39,143 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const drawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const [tooltipOffsetX, setTooltipOffsetX] = useState(56); // mobile default; desktop set in useEffect
+  const [selectedYearRange, setSelectedYearRange] = useState<[number, number] | null>(null);
+  const [pendingYearRange, setPendingYearRange] = useState<[number, number] | null>(null);
+  const rangeDragStartX = useRef<number | null>(null);
+  const rangeDragCurrentX = useRef<number | null>(null);
+  const edgeBeingDragged = useRef<'left' | 'right' | null>(null);
+  const [dragBand, setDragBand] = useState<{ startX: number; endX: number } | null>(null);
+
+  const displayedData = useMemo(() => {
+    if (!chartData.length) return [];
+    if (!selectedYearRange) return chartData;
+    const [minY, maxY] = selectedYearRange;
+    const filtered = chartData.filter((d: any) => d.year >= minY && d.year <= maxY);
+    if (filtered.length < 2) return chartData;
+    return recomputeTrendsForSlice(filtered, []);
+  }, [chartData, selectedYearRange]);
+
+  const baselineRow = displayedData.length ? displayedData[0] : null;
+
+  const chartYears = useMemo(() => chartData.map((d: any) => d.year), [chartData]);
+  const chartMinYear = chartYears[0] ?? 2005;
+  const chartMaxYear = chartYears[chartYears.length - 1] ?? 2025;
+
+  const clientXToYear = (clientX: number): number | null => {
+    const rect = chartRef.current?.getBoundingClientRect();
+    if (!rect || !chartYears.length) return null;
+    const t = (clientX - rect.left) / rect.width;
+    const index = Math.round(t * (chartYears.length - 1));
+    const i = Math.max(0, Math.min(index, chartYears.length - 1));
+    return chartYears[i];
+  };
+
+  const yearToClientX = (year: number): number => {
+    const rect = chartRef.current?.getBoundingClientRect();
+    if (!rect || chartYears.length < 2) return rect?.left ?? 0;
+    const idx = chartYears.indexOf(year);
+    const i = idx === -1 ? 0 : idx;
+    const t = i / (chartYears.length - 1);
+    return rect.left + t * rect.width;
+  };
+
+  const handleChartPointerDown = (clientX: number) => {
+    if (pendingYearRange) return;
+    rangeDragStartX.current = clientX;
+    rangeDragCurrentX.current = clientX;
+    setDragBand({ startX: clientX, endX: clientX });
+  };
+
+  const handleChartPointerMove = (clientX: number) => {
+    if (edgeBeingDragged.current === 'left' && pendingYearRange) {
+      const y = clientXToYear(clientX);
+      if (y != null) {
+        const [, endY] = pendingYearRange;
+        const newStart = Math.max(chartMinYear, Math.min(y, endY - 1));
+        setPendingYearRange([newStart, endY]);
+      }
+      return;
+    }
+    if (edgeBeingDragged.current === 'right' && pendingYearRange) {
+      const y = clientXToYear(clientX);
+      if (y != null) {
+        const [startY] = pendingYearRange;
+        const newEnd = Math.min(chartMaxYear, Math.max(y, startY + 1));
+        setPendingYearRange([startY, newEnd]);
+      }
+      return;
+    }
+    if (rangeDragStartX.current != null) {
+      rangeDragCurrentX.current = clientX;
+      setDragBand((b) => (b ? { ...b, endX: clientX } : null));
+    }
+  };
+
+  const handleChartPointerUp = (clientX: number) => {
+    if (edgeBeingDragged.current) {
+      edgeBeingDragged.current = null;
+      return;
+    }
+    if (rangeDragStartX.current != null) {
+      const y1 = clientXToYear(rangeDragStartX.current);
+      const y2 = clientXToYear(clientX);
+      if (y1 != null && y2 != null) {
+        const minY = Math.min(y1, y2);
+        const maxY = Math.max(y1, y2);
+        if (maxY - minY >= 1) setPendingYearRange([minY, maxY]);
+      }
+      rangeDragStartX.current = null;
+      rangeDragCurrentX.current = null;
+      setDragBand(null);
+    }
+  };
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0]?.clientX : e.clientX;
+      if (clientX != null) handleChartPointerMove(clientX);
+    };
+    const onUp = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
+      if (clientX != null) handleChartPointerUp(clientX);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onMove, { passive: true });
+    window.addEventListener('touchend', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onUp);
+    };
+  }, [pendingYearRange]);
+
+  useEffect(() => {
+    const onPopstate = () => {
+      if (selectedYearRange) setSelectedYearRange(null);
+    };
+    window.addEventListener('popstate', onPopstate);
+    return () => window.removeEventListener('popstate', onPopstate);
+  }, [selectedYearRange]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPendingYearRange(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  // Responsive tooltip horizontal offset so it doesn't overlay y-axis dollar values
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const update = () => setTooltipOffsetX(mq.matches ? 72 : 56);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
 
   // Scroll tracking to position tab based on chart visibility
   useEffect(() => {
@@ -178,7 +315,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
           </button>
         </div>
       )}
-      <div className={`flex justify-between items-start mb-10 ${fullScreen ? 'shrink-0 mb-4' : ''}`}>
+      <div className={`hidden md:flex justify-between items-start mb-10 ${fullScreen ? 'shrink-0 mb-4' : ''}`}>
         <div>
           <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Net Worth</h3>
           <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">20-Year Financial Net Worth Trend</p>
@@ -191,28 +328,157 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
       <div 
         ref={chartRef} 
         className={
-          fullScreen
+          'relative ' +
+          (fullScreen
             ? 'flex-1 min-h-0 min-h-[180px] w-full'
-            : 'h-[300px] md:h-[450px] w-full landscape:h-[70vh] mb-12'
+            : 'h-[300px] md:h-[450px] w-full landscape:h-[70vh] mb-12')
         }
+        onMouseDown={(e) => { if (!pendingYearRange && e.button === 0) handleChartPointerDown(e.clientX); }}
+        onTouchStart={(e) => { if (!pendingYearRange && e.touches[0]) handleChartPointerDown(e.touches[0].clientX); }}
       >
+        {selectedYearRange && (
+          <button
+            type="button"
+            onClick={() => setSelectedYearRange(null)}
+            className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-indigo-600 text-white text-xs font-black uppercase rounded-lg hover:bg-indigo-700"
+          >
+            Back
+          </button>
+        )}
+        {(dragBand || pendingYearRange) && chartRef.current && (() => {
+          const rect = chartRef.current.getBoundingClientRect();
+          let bandLeft: number, bandWidth: number, centerX: number;
+          if (pendingYearRange) {
+            const [minY, maxY] = pendingYearRange;
+            const x0 = yearToClientX(minY) - rect.left;
+            const x1 = yearToClientX(maxY) - rect.left;
+            bandLeft = x0;
+            bandWidth = Math.max(0, x1 - x0);
+            centerX = x0 + bandWidth / 2;
+          } else if (dragBand) {
+            bandLeft = Math.min(dragBand.startX, dragBand.endX) - rect.left;
+            bandWidth = Math.abs(dragBand.endX - dragBand.startX);
+            centerX = bandLeft + bandWidth / 2;
+          } else return null;
+          const edgeWidth = 12;
+          return (
+            <div
+              className="absolute inset-0 z-[5]"
+              style={{ pointerEvents: 'auto' }}
+              onClick={() => { if (pendingYearRange) setPendingYearRange(null); }}
+            >
+              <div
+                className="absolute top-0 bottom-0 bg-indigo-200/30"
+                style={{ left: bandLeft, width: bandWidth }}
+              />
+              {pendingYearRange && (
+                <>
+                  <div
+                    className="absolute top-0 bottom-0 w-3 cursor-ew-resize hover:bg-indigo-300/50"
+                    style={{ left: bandLeft - edgeWidth / 2, width: edgeWidth }}
+                    onMouseDown={(e) => { e.stopPropagation(); edgeBeingDragged.current = 'left'; }}
+                    onTouchStart={(e) => { e.stopPropagation(); edgeBeingDragged.current = 'left'; }}
+                  />
+                  <div
+                    className="absolute top-0 bottom-0 w-3 cursor-ew-resize hover:bg-indigo-300/50"
+                    style={{ left: bandLeft + bandWidth - edgeWidth / 2, width: edgeWidth }}
+                    onMouseDown={(e) => { e.stopPropagation(); edgeBeingDragged.current = 'right'; }}
+                    onTouchStart={(e) => { e.stopPropagation(); edgeBeingDragged.current = 'right'; }}
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (pendingYearRange) {
+                        setSelectedYearRange(pendingYearRange);
+                        setPendingYearRange(null);
+                        window.history.pushState({ chartPeriodSelection: true }, '', window.location.href);
+                      }
+                    }}
+                    className="absolute top-2 px-4 py-2 bg-indigo-600 text-white text-sm font-black uppercase rounded-xl hover:bg-indigo-700 shadow-lg"
+                    style={{ left: centerX - 40 }}
+                  >
+                    Select
+                  </button>
+                </>
+              )}
+            </div>
+          );
+        })()}
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
+          <LineChart data={displayedData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-            <XAxis dataKey="year" stroke="#475569" fontSize={12} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} axisLine={false} tickLine={false} />
+            <XAxis
+              dataKey="year"
+              stroke="#475569"
+              fontSize={12}
+              fontWeight="900"
+              ticks={displayedData.length >= 2 ? (() => {
+                const years = displayedData.map((d: any) => d.year);
+                const n = years.length;
+                if (n <= 3) return years;
+                const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+                if (isMobile) return [years[0], years[Math.floor(n / 2)], years[n - 1]].filter((v, i, a) => a.indexOf(v) === i);
+                const step = Math.max(1, Math.floor((n - 1) / 3));
+                return years.filter((_, i) => i % step === 0 || i === n - 1);
+              })() : [2005, 2010, 2015, 2020, 2025]}
+              axisLine={false}
+              tickLine={false}
+            />
             <YAxis stroke="#475569" fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(Number(v || 0) / 1000000).toFixed(0)}M`} axisLine={false} tickLine={false} />
             <Tooltip 
+              position={{ x: tooltipOffsetX, y: 10 }}
+              isAnimationActive={false}
               cursor={{stroke: '#cbd5e1', strokeWidth: 1}}
               content={({ active, payload }) => {
-                if (active && payload && payload.length) {
+                if (active && payload && payload.length && displayedData.length && baselineRow) {
                   const data = payload[0].payload;
+                  const netWorthTrendLabel = toggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
+                  const assetsTrendLabel = toggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
+                  const liabsTrendLabel = toggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend';
+                  const netWorthTrendKey = toggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend';
+                  const assetsTrendKey = toggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend';
+                  const liabsTrendKey = toggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend';
+                  const netWorthPct = pctChangeFromBaseline(Number(data[netWorthTrendKey]), Number(baselineRow[netWorthTrendKey]));
+                  const assetsPct = pctChangeFromBaseline(Number(data[assetsTrendKey]), Number(baselineRow[assetsTrendKey]));
+                  const liabsPct = pctChangeFromBaseline(Number(data[liabsTrendKey]), Number(baselineRow[liabsTrendKey]));
+                  const nwFmt = formatPctChange(netWorthPct);
+                  const aFmt = formatPctChange(assetsPct);
+                  const lFmt = formatPctChange(liabsPct);
                   return (
                     <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
                       <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">{data.year} Records</p>
                       <div className="space-y-2">
                         <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Net Worth</span><span className="text-sm font-black text-blue-600">{formatCurrency(data.totalNetWorth)}</span></div>
+                        {toggles.netWorthTrend && (
+                          <div className="flex justify-between items-center gap-6 pl-3">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#3b82f6' }} />
+                              <span className="text-[10px] font-black uppercase text-gray-400">{netWorthTrendLabel}</span>
+                            </div>
+                            <span className={`text-sm font-black ${nwFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{nwFmt.text}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Assets</span><span className="text-sm font-black text-green-600">{formatCurrency(data.totalAssets)}</span></div>
+                        {toggles.assetsTrend && (
+                          <div className="flex justify-between items-center gap-6 pl-3">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#4ade80' }} />
+                              <span className="text-[10px] font-black uppercase text-gray-400">{assetsTrendLabel}</span>
+                            </div>
+                            <span className={`text-sm font-black ${aFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{aFmt.text}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between items-center gap-6"><span className="text-[10px] font-black uppercase text-gray-400">Debt</span><span className="text-sm font-black text-red-600">{formatCurrency(data.totalLiabs)}</span></div>
+                        {toggles.liabsTrend && (
+                          <div className="flex justify-between items-center gap-6 pl-3">
+                            <div className="flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: '#f87171' }} />
+                              <span className="text-[10px] font-black uppercase text-gray-400">{liabsTrendLabel}</span>
+                            </div>
+                            <span className={`text-sm font-black ${lFmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{lFmt.text}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   );
@@ -221,15 +487,15 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
               }}
             />
             {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={4} dot={false} />}
-            {toggles.assetsTrend && <Line type="monotone" dataKey="totalAssetsTrend" stroke="#4ade80" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+            {toggles.assetsTrend && <Line type="monotone" dataKey={toggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend'} name={toggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#4ade80" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
             {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
             
             {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={4} dot={false} />}
-            {toggles.liabsTrend && <Line type="monotone" dataKey="totalLiabsTrend" stroke="#f87171" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+            {toggles.liabsTrend && <Line type="monotone" dataKey={toggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend'} name={toggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#f87171" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
             {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
             
             {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={5} dot={false} />}
-            {toggles.netWorthTrend && <Line type="monotone" dataKey="totalNetWorthTrend" stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+            {toggles.netWorthTrend && <Line type="monotone" dataKey={toggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend'} name={toggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
             {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
           </LineChart>
         </ResponsiveContainer>

@@ -1,16 +1,25 @@
 #!/usr/bin/env node
 /**
- * Generates PWA placeholder icons: public/icon-192.png and public/icon-512.png
- * Run: node scripts/generate-pwa-icons.mjs
+ * Generates PWA icons: public/icon-192.png and public/icon-512.png
+ *
+ * With optional source image:
+ *   node scripts/generate-pwa-icons.mjs [path/to/source.png]
+ * Resizes the source image to 192x192 and 512x512.
+ *
+ * Without arguments (placeholder):
+ *   node scripts/generate-pwa-icons.mjs
+ * Generates MCT placeholder SVG and resizes to 192 and 512.
+ *
  * Requires: npm install sharp (dev)
  */
 import sharp from 'sharp';
-import { writeFileSync, mkdirSync } from 'fs';
-import { dirname, join } from 'path';
+import { existsSync } from 'fs';
+import { dirname, join, resolve } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const publicDir = join(__dirname, '..', 'public');
+const sourcePath = process.argv[2] ? resolve(process.cwd(), process.argv[2]) : null;
 
 const themeColor = '#4f46e5';
 const svg = `
@@ -22,14 +31,24 @@ const svg = `
 
 async function generate() {
   const sizes = [192, 512];
-  const buffer = Buffer.from(svg);
-  for (const size of sizes) {
-    const outPath = join(publicDir, `icon-${size}.png`);
-    await sharp(buffer)
-      .resize(size, size)
-      .png()
-      .toFile(outPath);
-    console.log('Written', outPath);
+
+  if (sourcePath && existsSync(sourcePath)) {
+    for (const size of sizes) {
+      const outPath = join(publicDir, `icon-${size}.png`);
+      await sharp(sourcePath).resize(size, size).png().toFile(outPath);
+      console.log('Written', outPath, '(from source image)');
+    }
+  } else {
+    if (sourcePath) {
+      console.warn('Source image not found:', sourcePath);
+      console.warn('Falling back to placeholder.');
+    }
+    const buffer = Buffer.from(svg);
+    for (const size of sizes) {
+      const outPath = join(publicDir, `icon-${size}.png`);
+      await sharp(buffer).resize(size, size).png().toFile(outPath);
+      console.log('Written', outPath, '(placeholder)');
+    }
   }
 }
 

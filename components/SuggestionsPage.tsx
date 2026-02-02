@@ -32,6 +32,7 @@ export default function SuggestionsPage({
   const [isUploading, setIsUploading] = useState(false);
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [isViewingArchive, setIsViewingArchive] = useState(false);
+  const [openCommentSuggestionId, setOpenCommentSuggestionId] = useState<string | null>(null);
 
   // --- ACTIONS (FUNCTIONS) ---
 
@@ -112,24 +113,29 @@ export default function SuggestionsPage({
   const displayedSuggestions = suggestions.filter(s => 
     isViewingArchive ? s.is_archived === true : (s.is_archived === false || s.is_archived === null)
   );
-  const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0) => {
+  const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0, isOverlay = false) => {
     return (comments || []).filter(c => c.parent_id === parentId).map(comment => {
       const reactions = comment.suggestion_reactions || [];
       const likes = reactions.filter((r: any) => r.reaction_type === 'like').length;
       const dislikes = reactions.filter((r: any) => r.reaction_type === 'dislike').length;
       const userReaction = reactions.find((r: any) => r.user_id === user?.id)?.reaction_type;
-      
+      const rootCls = depth > 0
+        ? (isOverlay ? 'ml-6 mt-4 border-l-2 border-indigo-100 pl-4' : 'ml-4 mt-2 border-l-2 border-indigo-50 pl-3')
+        : (isOverlay ? 'bg-white p-5 rounded-2xl mb-4 border border-gray-100 shadow-sm' : 'bg-white p-3 rounded-xl mb-2 border border-gray-100');
+      const metaCls = isOverlay ? 'text-xs font-black uppercase text-indigo-600' : 'text-[10px] font-black uppercase text-indigo-600';
+      const contentCls = isOverlay ? 'text-gray-700 text-base leading-relaxed break-words whitespace-pre-wrap font-medium mt-2' : 'text-gray-700 text-sm md:text-base leading-snug break-words whitespace-pre-wrap font-medium';
+      const actionsCls = isOverlay ? 'flex gap-6 mt-3 text-sm font-black uppercase' : 'flex gap-4 mt-2 text-[10px] font-black uppercase';
       return (
-        <div key={comment.id} className={`${depth > 0 ? 'ml-4 mt-2 border-l-2 border-indigo-50 pl-3' : 'bg-white p-3 rounded-xl mb-2 border border-gray-100'}`}>
+        <div key={comment.id} className={rootCls}>
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-1">
                <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
-               <span className="text-[10px] font-black uppercase text-indigo-600">
+               <span className={metaCls}>
                 {comment.profiles?.full_name} • {formatDate(comment.created_at)}
                </span>
             </div>
-            <div className="text-gray-700 text-sm md:text-base leading-snug break-words whitespace-pre-wrap font-medium">{comment.content}</div>
-            <div className="flex gap-4 mt-2 text-[10px] font-black uppercase">
+            <div className={contentCls}>{comment.content}</div>
+            <div className={actionsCls}>
               <button onClick={() => handleReaction(comment.id, 'like')} className={userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}>
                 <i className="fa-solid fa-thumbs-up"></i> {likes}
               </button>
@@ -147,12 +153,12 @@ export default function SuggestionsPage({
                 setReplyTo(null); 
                 fetchSuggestions(); 
               }} className="mt-2 flex gap-2">
-                <input name="content" autoFocus placeholder="Reply..." className="flex-grow p-3 bg-gray-50 rounded-lg text-sm outline-none border border-gray-200" />
-                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-lg text-[10px] font-black uppercase">Send</button>
+                <input name="content" autoFocus placeholder="Reply..." className={`flex-grow rounded-lg outline-none border border-gray-200 ${isOverlay ? 'p-4 text-base' : 'p-3 text-sm bg-gray-50'}`} />
+                <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-[10px] font-black uppercase">Send</button>
               </form>
             )}
           </div>
-          {renderSuggestionComments(comments, suggestionId, comment.id, depth + 1)}
+          {renderSuggestionComments(comments, suggestionId, comment.id, depth + 1, isOverlay)}
         </div>
       );
     });
@@ -174,12 +180,26 @@ export default function SuggestionsPage({
       </div>
 
       <div className="relative">
-        <button 
+        {/* Mobile: inline "+" above list with label */}
+        <div className="lg:hidden max-w-4xl mx-auto mb-6">
+          <button
+            type="button"
+            onClick={() => setIsSuggestionModalOpen(true)}
+            className="flex items-center gap-3 w-full sm:w-auto bg-indigo-600 text-white rounded-2xl shadow-xl py-4 px-5 hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            <span className="flex-shrink-0 w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+              <i className="fa-solid fa-plus text-xl"></i>
+            </span>
+            <span className="font-black uppercase text-sm">Create a new suggestion</span>
+          </button>
+        </div>
+        {/* Desktop: fixed FAB */}
+        <button
           onClick={() => setIsSuggestionModalOpen(true)}
-          className="fixed bottom-8 right-8 lg:bottom-auto lg:right-auto lg:top-24 lg:left-4 z-[100] bg-indigo-600 text-white w-16 h-16 rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group"
+          className="hidden lg:flex fixed bottom-auto right-auto top-24 left-4 z-[100] bg-indigo-600 text-white w-16 h-16 rounded-2xl shadow-2xl items-center justify-center hover:scale-110 active:scale-95 transition-all group"
         >
           <i className="fa-solid fa-plus text-2xl group-hover:rotate-90 transition-transform"></i>
-          <span className="absolute left-20 bg-gray-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden lg:block">New Proposal</span>
+          <span className="absolute left-20 bg-gray-900 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">New Proposal</span>
         </button>
 
         {isSuggestionModalOpen && (
@@ -255,6 +275,56 @@ export default function SuggestionsPage({
           </div>
         )}
 
+        {/* Mobile: full-screen comment thread overlay (Facebook-style) */}
+        {openCommentSuggestionId && (() => {
+          const suggestion = suggestions.find(s => s.id === openCommentSuggestionId);
+          if (!suggestion) return null;
+          return (
+            <div className="md:hidden fixed inset-0 z-[200] flex flex-col bg-white max-h-[100dvh] overflow-hidden animate-slide-up">
+              <header className="flex-shrink-0 flex items-center gap-3 px-4 py-4 border-b border-gray-100 bg-white">
+                <button
+                  type="button"
+                  onClick={() => setOpenCommentSuggestionId(null)}
+                  className="flex-shrink-0 w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center text-gray-600 hover:bg-gray-200 transition-colors"
+                  aria-label="Close comments"
+                >
+                  <i className="fa-solid fa-arrow-left"></i>
+                </button>
+                <h3 className="flex-1 min-w-0 text-base font-black uppercase text-gray-900 truncate pr-2">
+                  {suggestion.title}
+                </h3>
+              </header>
+              <div className="flex-1 overflow-y-auto custom-scrollbar px-4 py-4">
+                <div className="space-y-4 pb-6">
+                  {renderSuggestionComments(suggestion.suggestion_comments || [], suggestion.id, null, 0, true)}
+                </div>
+              </div>
+              <footer className="flex-shrink-0 p-4 border-t border-gray-100 bg-white">
+                {user ? (
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const fd = new FormData(e.currentTarget);
+                      const { error } = await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestion.id, user_id: user.id, content: fd.get('content') }) ?? {};
+                      if (error) { showToast(error.message, 'error'); return; }
+                      (e.target as HTMLFormElement).reset();
+                      fetchSuggestions();
+                    }}
+                    className="flex gap-3"
+                  >
+                    <input name="content" required placeholder="Add a comment..." className="flex-grow p-4 bg-gray-50 rounded-2xl text-base outline-none border border-gray-200 focus:ring-2 ring-indigo-500/20 transition-all" />
+                    <button type="submit" className="bg-indigo-600 text-white px-6 py-4 rounded-2xl text-sm font-black uppercase shadow-lg flex-shrink-0">Post</button>
+                  </form>
+                ) : (
+                  <button type="button" onClick={() => setCurrentPage('login')} className="w-full py-4 border-2 border-dashed border-gray-200 rounded-2xl text-sm font-black uppercase text-gray-400">
+                    Login to comment
+                  </button>
+                )}
+              </footer>
+            </div>
+          );
+        })()}
+
         <div className="max-w-4xl mx-auto space-y-6">
           {displayedSuggestions.map(sug => (
             <div key={sug.id} className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
@@ -326,35 +396,39 @@ export default function SuggestionsPage({
                   const commentCount = (sug.suggestion_comments || []).length;
                   const shareCount = (sug.suggestion_shares || []).length;
                   return (
-                    <div className="md:hidden flex gap-4 mb-4 px-2 text-[10px] font-black uppercase">
+                    <div className="md:hidden flex gap-6 md:gap-4 mb-4 px-2 py-3 text-sm font-black uppercase items-center">
                       <button
                         type="button"
                         onClick={() => handlePostReaction(sug.id, 'like')}
-                        className={userPostReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}
+                        className={`flex items-center gap-1.5 py-2 px-2 min-w-[2.5rem] ${userPostReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}`}
                       >
-                        <i className="fa-solid fa-thumbs-up mr-1"></i> {likeCount}
+                        <i className="fa-solid fa-thumbs-up text-lg"></i> {likeCount}
                       </button>
                       <button
                         type="button"
                         onClick={() => handlePostReaction(sug.id, 'dislike')}
-                        className={userPostReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'}
+                        className={`flex items-center gap-1.5 py-2 px-2 min-w-[2.5rem] ${userPostReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'}`}
                       >
-                        <i className="fa-solid fa-thumbs-down mr-1"></i> {dislikeCount}
+                        <i className="fa-solid fa-thumbs-down text-lg"></i> {dislikeCount}
                       </button>
-                      <span className="text-gray-500">
-                        <i className="fa-regular fa-comment mr-1"></i> {commentCount}
-                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setOpenCommentSuggestionId(sug.id)}
+                        className="flex items-center gap-1.5 py-2 px-2 min-w-[2.5rem] text-gray-500 hover:text-indigo-600 transition-colors"
+                      >
+                        <i className="fa-regular fa-comment text-lg"></i> {commentCount}
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleShare(sug.id)}
-                        className="text-gray-400 hover:text-indigo-600"
+                        className="flex items-center gap-1.5 py-2 px-2 min-w-[2.5rem] text-gray-400 hover:text-indigo-600 transition-colors"
                       >
-                        <i className="fa-solid fa-share-from-square mr-1"></i> {shareCount}
+                        <i className="fa-solid fa-share-from-square text-lg"></i> {shareCount}
                       </button>
                     </div>
                   );
                 })()}
-                <div className="flex-grow overflow-y-auto custom-scrollbar px-2">
+                <div className="hidden md:block flex-grow overflow-y-auto custom-scrollbar px-2">
                   {renderSuggestionComments(sug.suggestion_comments || [], sug.id)}
                 </div>
               </div>

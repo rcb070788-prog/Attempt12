@@ -24,9 +24,6 @@ export function useFeatures(user: any, profile: any) {
         .from('suggestions')
         .select(`*, profiles(full_name, district, avatar_url), suggestion_comments(id, content, created_at, parent_id, profiles(full_name, district, avatar_url), suggestion_reactions(*)), suggestion_post_reactions(*), suggestion_shares(*)`)
         .order('created_at', { ascending: false });
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'useFeatures.ts:fetchSuggestions', message: 'fetch result', data: { dataLength: data?.length ?? 0, error: error?.message, firstIsArchived: data?.[0]?.is_archived }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H1-H4' }) }).catch(() => {});
-      // #endregion
       if (!error) setSuggestions(data || []);
     } catch (err) { console.error(err); }
   };

@@ -113,12 +113,6 @@ export default function SuggestionsPage({
   const displayedSuggestions = suggestions.filter(s => 
     isViewingArchive ? s.is_archived === true : (s.is_archived === false || s.is_archived === null)
   );
-  // #region agent log
-  (() => {
-    const first = suggestions[0];
-    fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'SuggestionsPage.tsx:displayedSuggestions', message: 'suggestions vs displayed', data: { suggestionsLength: suggestions.length, displayedLength: displayedSuggestions.length, isViewingArchive, firstId: first?.id, firstIsArchived: first?.is_archived, innerWidth: typeof window !== 'undefined' ? window.innerWidth : null }, timestamp: Date.now(), sessionId: 'debug-session', hypothesisId: 'H1-H2-H3' }) }).catch(() => {});
-  })();
-  // #endregion
   const renderSuggestionComments = (comments: any[], suggestionId: string, parentId: string | null = null, depth = 0, isOverlay = false) => {
     return (comments || []).filter(c => c.parent_id === parentId).map(comment => {
       const reactions = comment.suggestion_reactions || [];

@@ -170,8 +170,16 @@ export default function SuggestionsPage({
     });
   };
 
+  const showDebug = typeof window !== 'undefined' && window.location.search.includes('debug=1');
+  const firstSug = suggestions[0];
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-slide-up pb-20">
+      {showDebug && (
+        <div className="max-w-4xl mx-auto mb-4 p-3 bg-amber-100 border border-amber-400 rounded-lg text-xs font-mono">
+          <strong>Debug (Netlify/mobile):</strong> suggestions={suggestions.length} displayed={displayedSuggestions.length} isViewingArchive={String(isViewingArchive)} firstIsArchived={firstSug != null ? String(firstSug.is_archived) : 'n/a'} supabase={supabase ? 'ok' : 'null'}
+        </div>
+      )}
       <div className="flex justify-between items-end mb-8">
         <div>
           <h2 className="text-5xl font-black uppercase tracking-tighter text-gray-900">Suggestion Box</h2>

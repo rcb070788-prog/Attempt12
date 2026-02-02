@@ -50,6 +50,40 @@
 .peeking-tab-right { position: fixed; right: -10px; top: 50%; transform: translateY(-50%); z-index: 100; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
 .peeking-tab-right:hover { right: 0; }
 
+/* Solvency chart: peeking tabs anchored to center of graph (no scroll bounce) */
+.peeking-tab-left-anchored {
+  position: absolute;
+  left: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.peeking-tab-left-anchored:hover { left: 0; }
+/* Solvency left tab: same visual size as peeking right tab on mobile */
+.peeking-tab-left-anchored button {
+  padding-left: 6px;
+  padding-right: 3px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+.peeking-tab-right-anchored {
+  position: absolute;
+  right: -10px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  transition: right 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.peeking-tab-right-anchored:hover { right: 0; }
+/* Right tab: minimal left padding (75% reduction); right padding reduced 50% */
+.peeking-tab-right-anchored button {
+  padding-left: 3px;
+  padding-right: 6px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
 /* Peeking tabs - landscape repositioning (mobile) */
 @media (max-width: 768px) and (orientation: landscape) {
   .peeking-tab-left {

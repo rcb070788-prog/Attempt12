@@ -148,11 +148,13 @@ export const MainView: React.FC<MainViewProps> = (props) => {
       {currentPage === 'home' && !selectedCategory && (
         <div className="max-w-4xl mx-auto space-y-12 py-10 px-4 md:px-0">
           <div className="hide-on-landscape">
-            <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center">
-              Moore{' '}
-              <span className="inline-block overflow-hidden align-middle min-w-[12ch]" style={{ height: '1.2em' }} aria-live="polite">
-                <span key={HEADER_WORDS[wordIndex]} className="animate-word-in block">
-                  {HEADER_WORDS[wordIndex]}
+            <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center flex justify-center items-center md:items-baseline">
+              <span className="flex flex-col md:flex-row items-center md:items-baseline gap-[calc(0.5rem+0.25em)] ml-0 md:ml-[0.5em]">
+                <span className="inline-block w-[6ch]">Moore</span>
+                <span className="inline-block overflow-hidden w-[14ch] text-center md:text-left" aria-live="polite">
+                  <span key={HEADER_WORDS[wordIndex]} className="animate-word-in block">
+                    {HEADER_WORDS[wordIndex]}
+                  </span>
                 </span>
               </span>
             </h1>

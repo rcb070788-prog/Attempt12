@@ -70,7 +70,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const [solvencyDrawerOpen, setSolvencyDrawerOpen] = useState(false);
   const [solvencyDrawerDragOffset, setSolvencyDrawerDragOffset] = useState(0);
   const [solvencyDraggingDrawer, setSolvencyDraggingDrawer] = useState(false);
-  const [solvencyTabTop, setSolvencyTabTop] = useState(50);
   const solvencyChartContainerRef = useRef<HTMLDivElement | null>(null);
   const solvencyTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const solvencyDrawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -83,7 +82,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const solvencyCompareTabTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const [solvencyTooltipOffsetX, setSolvencyTooltipOffsetX] = useState(56);
-  const [isLandscapeMobile, setIsLandscapeMobile] = useState(false);
   const [solvencySelectedYearRange, setSolvencySelectedYearRange] = useState<[number, number] | null>(null);
   const [solvencyPendingYearRange, setSolvencyPendingYearRange] = useState<[number, number] | null>(null);
   const solvencyRangeDragStartX = useRef<number | null>(null);
@@ -147,7 +145,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const handleSolvencyChartPointerDown = (clientX: number) => {
     if (solvencyPendingYearRange) return;
     // #region agent log
-    fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerDown',message:'pointer down',data:{clientX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerDown',message:'pointer down',data:{clientX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
     // #endregion
     solvencyRangeDragStartX.current = clientX;
     solvencyRangeDragCurrentX.current = clientX;
@@ -187,7 +185,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     const hasStartX = solvencyRangeDragStartX.current != null;
     if (!hasStartX) {
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up no startX',data:{clientX,hasStartX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up no startX',data:{clientX,hasStartX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
       // #endregion
     }
     if (solvencyRangeDragStartX.current != null) {
@@ -198,7 +196,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       const rangeOk = minY != null && maxY != null && maxY - minY >= 1;
       const didSetPending = rangeOk;
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up',data:{clientX,y1,y2,minY,maxY,rangeOk,didSetPending,hasRect:!!solvencyChartContainerRef.current?.getBoundingClientRect()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up',data:{clientX,y1,y2,minY,maxY,rangeOk,didSetPending,hasRect:!!solvencyChartContainerRef.current?.getBoundingClientRect()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
       // #endregion
       if (y1 != null && y2 != null) {
         const minY_ = Math.min(y1, y2);
@@ -222,7 +220,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     const onUp = (e: MouseEvent | TouchEvent) => {
       const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:onUp',message:'window up',data:{clientX,hasChangedTouches:'changedTouches' in e && (e as TouchEvent).changedTouches?.length,willCallHandler:clientX!=null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:onUp',message:'window up',data:{clientX,hasChangedTouches:'changedTouches' in e && (e as TouchEvent).changedTouches?.length,willCallHandler:clientX!=null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
       // #endregion
       if (clientX != null) handleSolvencyChartPointerUp(clientX);
     };
@@ -254,15 +252,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
-  // Orientation: landscape on mobile for peeking tab repositioning
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px) and (orientation: landscape)');
-    const update = () => setIsLandscapeMobile(mq.matches);
-    update();
-    mq.addEventListener('change', update);
-    return () => mq.removeEventListener('change', update);
-  }, []);
-
   // Responsive tooltip horizontal offset for Debt & Solvency charts
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 768px)');
@@ -271,46 +260,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     mq.addEventListener('change', update);
     return () => mq.removeEventListener('change', update);
   }, []);
-
-  // Scroll/resize: position Debt & Solvency peeking tab from chart container visibility
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!solvencyChartContainerRef.current) return;
-      const rect = solvencyChartContainerRef.current.getBoundingClientRect();
-      const viewportHeight = window.innerHeight;
-
-      if (rect.bottom < 0 || rect.top > viewportHeight) {
-        setSolvencyTabTop(-100);
-        return;
-      }
-
-      const visibleTop = Math.max(0, rect.top);
-      const visibleBottom = Math.min(viewportHeight, rect.bottom);
-      const visibleHeight = visibleBottom - visibleTop;
-      const centerY = visibleTop + (visibleHeight / 2);
-      const percentage = (centerY / viewportHeight) * 100;
-      setSolvencyTabTop(Math.max(10, Math.min(90, percentage)));
-    };
-
-    let rafId: number | null = null;
-    const throttledScroll = () => {
-      if (rafId) return;
-      rafId = requestAnimationFrame(() => {
-        handleScroll();
-        rafId = null;
-      });
-    };
-
-    window.addEventListener('scroll', throttledScroll, { passive: true });
-    window.addEventListener('resize', throttledScroll, { passive: true });
-    handleScroll();
-
-    return () => {
-      window.removeEventListener('scroll', throttledScroll);
-      window.removeEventListener('resize', throttledScroll);
-      if (rafId) cancelAnimationFrame(rafId);
-    };
-  }, [selectedCategory, showSolvencyDetail]);
 
   // Reset drag state when Debt & Solvency drawer closes
   useEffect(() => {
@@ -553,32 +502,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             )}
             <div className={`${expandedChart === 'solvency' ? 'fixed inset-0 z-[500] bg-white flex flex-col overflow-hidden h-[100dvh] md:h-screen solvency-fullscreen-container' : 'bg-white p-4 md:p-10 rounded-[3rem] shadow-xl text-gray-900 mb-6 border border-gray-100 landscape-fullscreen'}`}>
             
-            {/* MOBILE PEEKING COMPARISON (RIGHT) - button + swipe left to open full-screen compare */}
-            <div
-              className="md:hidden peeking-tab-right"
-              style={{
-                ...(isLandscapeMobile ? { opacity: 1, pointerEvents: 'auto' } : {
-                  top: `${solvencyTabTop}%`,
-                  opacity: solvencyTabTop < 0 ? 0 : 1,
-                  pointerEvents: solvencyTabTop < 0 ? 'none' : 'auto'
-                }),
-                ...(expandedChart === 'solvency' ? { zIndex: 510 } : {})
-              }}
-              onTouchStart={handleSolvencyCompareTabTouchStart}
-              onTouchMove={handleSolvencyCompareTabTouchMove}
-              onTouchEnd={handleSolvencyCompareTabTouchEnd}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openCompareDrawer();
-                }}
-                className="bg-pink-600 text-white p-3 rounded-l-2xl shadow-2xl touch-none"
-              >
-                <i className="fa-solid fa-layer-group text-xl"></i>
-              </button>
-            </div>
             <div className={`flex shrink-0 items-center gap-2 mb-2 relative ${expandedChart === 'solvency' ? 'flex-wrap' : ''}`}>
               <div className="flex items-center gap-2">
                 {expandedChart === 'solvency' && (
@@ -615,20 +538,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   );
                 })}
               </div>
-              {/* Mobile: Dropdown for component selection */}
-              <select
-                value={selectedParents.length === 1 ? selectedParents[0] : 'Governmental'}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setChartLevel(2);
-                  setSelectedParents([id]);
-                }}
-                className="md:hidden px-3 py-2 rounded-xl border border-gray-200 bg-white text-gray-900 text-xs font-black uppercase tracking-wider focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 shrink-0"
-              >
-                {solvencyComponentOptions.map(opt => (
-                  <option key={opt.id} value={opt.id}>{opt.label}</option>
-                ))}
-              </select>
             </div>
             <div
               ref={solvencyChartContainerRef}
@@ -636,6 +545,44 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               onMouseDown={(e) => { if (!solvencyPendingYearRange && e.button === 0) handleSolvencyChartPointerDown(e.clientX); }}
               onTouchStart={(e) => { if (!solvencyPendingYearRange && e.touches[0]) handleSolvencyChartPointerDown(e.touches[0].clientX); }}
             >
+              {/* MOBILE PEEKING LEFT - anchored to center of graph, touch on wrapper */}
+              <div
+                className="md:hidden peeking-tab-left-anchored"
+                style={expandedChart === 'solvency' ? { zIndex: 510 } : {}}
+                onTouchStart={handleSolvencyTabTouchStart}
+                onTouchMove={handleSolvencyTabTouchMove}
+                onTouchEnd={handleSolvencyTabTouchEnd}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSolvencyDrawerOpen(!solvencyDrawerOpen);
+                  }}
+                  className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
+                >
+                  <i className="fa-solid fa-sliders text-xl"></i>
+                </button>
+              </div>
+              {/* MOBILE PEEKING RIGHT - anchored to center of graph, minimal left padding */}
+              <div
+                className="md:hidden peeking-tab-right-anchored"
+                style={expandedChart === 'solvency' ? { zIndex: 510 } : {}}
+                onTouchStart={handleSolvencyCompareTabTouchStart}
+                onTouchMove={handleSolvencyCompareTabTouchMove}
+                onTouchEnd={handleSolvencyCompareTabTouchEnd}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    openCompareDrawer();
+                  }}
+                  className="bg-pink-600 text-white rounded-l-2xl shadow-2xl touch-none"
+                >
+                  <i className="fa-solid fa-layer-group text-xl"></i>
+                </button>
+              </div>
               {solvencySelectedYearRange && (
                 <button
                   type="button"
@@ -668,7 +615,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                     onClick={() => {
                       const ignore = solvencyIgnoreNextOverlayClick.current;
                       // #region agent log
-                      fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:overlayClick',message:'overlay click',data:{ignore,hadPending:!!solvencyPendingYearRange},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+                      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:overlayClick',message:'overlay click',data:{ignore,hadPending:!!solvencyPendingYearRange},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
                       // #endregion
                       if (ignore) {
                         solvencyIgnoreNextOverlayClick.current = false;
@@ -894,111 +841,10 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 </div>
               ))}
             </div>
-          </div>
-          </>
-        )}
 
-        {/* ASSETS VIEW */}
-        {selectedCategory === 'assets' && (
-          <div className={`${expandedChart === 'assets' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-6 md:p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6'}`}>
-            <div className="flex justify-between items-start mb-4">
-              <div className="w-full">
-                <div className="flex justify-between items-center w-full mb-2">
-                   <h3 className="text-xl md:text-[18.66px] font-black uppercase text-gray-900 tracking-tighter">Asset Trend Analysis</h3>
-                   <button onClick={() => setExpandedChart(expandedChart === 'assets' ? null : 'assets')} className="bg-gray-100 hover:bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl transition-all">
-                     <i className={`fa-solid ${expandedChart === 'assets' ? 'fa-compress' : 'fa-expand'}`}></i>
-                   </button>
-                </div>
-                
-                <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
-                  {hoveredData ? (
-                    <>
-                      {hoveredData.isCovidGap ? (
-                        <div className="flex items-center gap-3">
-                          <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
-                          <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
-                        </div>
-                      ) : (
-                        <>
-                          <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{hoveredData.year}</p></div>
-                          <div className="text-center"><p className="text-[10px] font-black text-indigo-600 uppercase">Total Assets</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p></div>
-                          {chartLevel < 3 && (
-                            <>
-                              <div className="text-center"><p className="text-[10px] font-black text-[#4f46e5] uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">{formatCurrency(Number(hoveredData.primaryAssets))}</p></div>
-                              <div className="text-center"><p className="text-[10px] font-black text-[#ec4899] uppercase">Component Units</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">{formatCurrency(Number(hoveredData.schoolAssets))}</p></div>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className={`${expandedChart === 'assets' ? 'h-[70vh]' : 'h-[300px]'} w-full`}>
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart 
-                  data={chartData} 
-                  onMouseMove={(e: any) => (e && e.activePayload) ? setHoveredData(e.activePayload[0].payload) : null}
-                  onMouseLeave={() => setHoveredData(null)}
-                  onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
-                >
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                  <XAxis dataKey="year" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} stroke="#94a3b8" />
-                  <YAxis fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#374151" axisLine={false} tickLine={false} />
-                  <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
-                  <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
-                  {selectedParents.length === 0 ? (
-                    <Line type="monotone" dataKey="totalAssets" name="Moore County Total" stroke="#4ade80" strokeWidth={5} dot={false} />
-                  ) : (
-                    selectedParents.map((sel, idx) => {
-                      const kb = sel.replace(/\s+/g, '');
-                      const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
-                      return (
-                        <Line key={sel} type="monotone" dataKey={`${kb}Assets`} name={`${sel}`} stroke={colors[idx % colors.length]} strokeWidth={4} dot={expandedChart === 'assets'} />
-                      );
-                    })
-                  )}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* MOBILE PEEKING LEFT + DRAWER for Debt & Solvency Trend */}
-        {(selectedCategory === 'solvency' && showSolvencyDetail) && (
-          <>
-            <div
-              className="md:hidden peeking-tab-left"
-              style={{
-...(isLandscapeMobile ? { opacity: 1, pointerEvents: 'auto' } : {
-                top: `${solvencyTabTop}%`,
-                opacity: solvencyTabTop < 0 ? 0 : 1,
-                pointerEvents: solvencyTabTop < 0 ? 'none' : 'auto'
-              }),
-              ...(expandedChart === 'solvency' ? { zIndex: 510 } : {})
-            }}
-            onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSolvencyDrawerOpen(!solvencyDrawerOpen);
-                }}
-                onTouchStart={handleSolvencyTabTouchStart}
-                onTouchMove={handleSolvencyTabTouchMove}
-                onTouchEnd={handleSolvencyTabTouchEnd}
-                className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
-              >
-                <i className="fa-solid fa-sliders text-2xl"></i>
-              </button>
-            </div>
-
+            {/* MOBILE LEFT DRAWER - Chart Controls (z above fullscreen when open) */}
             {solvencyDrawerOpen && (
-              <div className="md:hidden fixed inset-0 z-[200] flex">
+              <div className={`md:hidden fixed inset-0 flex ${expandedChart === 'solvency' ? 'z-[501]' : 'z-[201]'}`}>
                 <div
                   className="mobile-drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
                   onClick={(e) => {
@@ -1108,7 +954,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               </div>
             )}
 
-            {/* MOBILE FULL-SCREEN COMPARE (RIGHT) DRAWER - same condition as left tab/drawer */}
+            {/* MOBILE FULL-SCREEN COMPARE (RIGHT) DRAWER */}
             {solvencyCompareDrawerOpen && (
               <div className={`md:hidden fixed inset-0 flex justify-end ${expandedChart === 'solvency' ? 'z-[501]' : 'z-[201]'}`}>
                 <div
@@ -1129,7 +975,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                   onTouchEnd={handleSolvencyCompareDrawerTouchEnd}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Drag handle: swipe right from this strip to close */}
                   <div
                     className="absolute left-0 top-0 bottom-0 w-8 flex items-center justify-center flex-shrink-0 touch-none"
                     aria-label="Swipe right to close"
@@ -1173,7 +1018,78 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                 </div>
               </div>
             )}
+          </div>
           </>
+        )}
+
+        {/* ASSETS VIEW */}
+        {selectedCategory === 'assets' && (
+          <div className={`${expandedChart === 'assets' ? 'fixed inset-0 z-[500] bg-white p-4 md:p-10' : 'bg-white p-6 md:p-8 rounded-[3rem] border-2 border-indigo-600 shadow-xl mb-6'}`}>
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-full">
+                <div className="flex justify-between items-center w-full mb-2">
+                   <h3 className="text-xl md:text-[18.66px] font-black uppercase text-gray-900 tracking-tighter">Asset Trend Analysis</h3>
+                   <button onClick={() => setExpandedChart(expandedChart === 'assets' ? null : 'assets')} className="bg-gray-100 hover:bg-indigo-100 text-indigo-600 w-10 h-10 rounded-xl transition-all">
+                     <i className={`fa-solid ${expandedChart === 'assets' ? 'fa-compress' : 'fa-expand'}`}></i>
+                   </button>
+                </div>
+                
+                <div className="bg-indigo-50 rounded-2xl p-4 flex justify-around items-center border border-indigo-100 min-h-[60px]">
+                  {hoveredData ? (
+                    <>
+                      {hoveredData.isCovidGap ? (
+                        <div className="flex items-center gap-3">
+                          <i className="fa-solid fa-circle-exclamation text-indigo-400"></i>
+                          <p className="text-[14px] font-black text-indigo-600 uppercase italic">Data not collected due to COVID.</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-center"><p className="text-[10px] font-black text-indigo-400 uppercase">Year</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{hoveredData.year}</p></div>
+                          <div className="text-center"><p className="text-[10px] font-black text-indigo-600 uppercase">Total Assets</p><p className="text-lg md:text-[18.66px] font-black text-indigo-900">{formatCurrency(Number(chartLevel === 3 ? hoveredData.subAssets : hoveredData.totalAssets))}</p></div>
+                          {chartLevel < 3 && (
+                            <>
+                              <div className="text-center"><p className="text-[10px] font-black text-[#4f46e5] uppercase">Primary Govt</p><p className="text-lg md:text-[18.66px] font-black text-[#4f46e5]">{formatCurrency(Number(hoveredData.primaryAssets))}</p></div>
+                              <div className="text-center"><p className="text-[10px] font-black text-[#ec4899] uppercase">Component Units</p><p className="text-lg md:text-[18.66px] font-black text-[#ec4899]">{formatCurrency(Number(hoveredData.schoolAssets))}</p></div>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <p className="text-[10px] md:text-[14px] font-black text-indigo-300 uppercase animate-pulse">Hover or Tap chart for values</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            <div className={`${expandedChart === 'assets' ? 'h-[70vh]' : 'h-[300px]'} w-full`}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart 
+                  data={chartData} 
+                  onMouseMove={(e: any) => (e && e.activePayload) ? setHoveredData(e.activePayload[0].payload) : null}
+                  onMouseLeave={() => setHoveredData(null)}
+                  onClick={(d) => { if (d?.activeLabel) { const yr = Number(d.activeLabel); setSelectedFinancialYear(yr); fetchYearDetails(yr); }}}
+                >
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                  <XAxis dataKey="year" fontSize={14} fontWeight="900" ticks={[2005, 2010, 2015, 2020, 2025]} stroke="#94a3b8" />
+                  <YAxis fontSize={12} fontWeight="900" tickFormatter={(v) => `$${(v / 1000000).toFixed(0)}M`} stroke="#374151" axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{stroke: '#4f46e5', strokeWidth: 2}} content={expandedChart === 'assets' ? undefined : <div className="hidden" />} />
+                  <Legend verticalAlign="bottom" height={60} iconType="circle" wrapperStyle={{fontSize: '12px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '20px'}} />
+                  {selectedParents.length === 0 ? (
+                    <Line type="monotone" dataKey="totalAssets" name="Moore County Total" stroke="#4ade80" strokeWidth={5} dot={false} />
+                  ) : (
+                    selectedParents.map((sel, idx) => {
+                      const kb = sel.replace(/\s+/g, '');
+                      const colors = ['#3b82f6', '#ec4899', '#f59e0b', '#10b981', '#8b5cf6'];
+                      return (
+                        <Line key={sel} type="monotone" dataKey={`${kb}Assets`} name={`${sel}`} stroke={colors[idx % colors.length]} strokeWidth={4} dot={expandedChart === 'assets'} />
+                      );
+                    })
+                  )}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         )}
 
         {/* TIER 4: AUDIT TABLE */}

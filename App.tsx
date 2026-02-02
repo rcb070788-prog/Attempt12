@@ -201,6 +201,11 @@ export default function App() {
     }
   }, [currentPage, profile]);
 
+  // Ensure suggestions load when user opens Suggestions page (fixes Netlify/mobile empty list)
+  useEffect(() => {
+    if (currentPage === 'suggestions') fetchSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when navigating to suggestions
+  }, [currentPage]);
 
   if (activeDashboard) {
     return (

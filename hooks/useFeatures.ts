@@ -22,7 +22,7 @@ export function useFeatures(user: any, profile: any) {
     try {
       const { data, error } = await supabase
         .from('suggestions')
-        .select(`*, profiles(full_name, district, avatar_url), suggestion_comments(id, content, created_at, profiles(full_name, district, avatar_url), suggestion_reactions(*))`)
+        .select(`*, profiles(full_name, district, avatar_url), suggestion_comments(id, content, created_at, parent_id, profiles(full_name, district, avatar_url), suggestion_reactions(*))`)
         .order('created_at', { ascending: false });
       if (!error) setSuggestions(data || []);
     } catch (err) { console.error(err); }

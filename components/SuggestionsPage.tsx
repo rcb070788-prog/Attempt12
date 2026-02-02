@@ -97,7 +97,8 @@ export default function SuggestionsPage({
               <form onSubmit={async (e) => { 
                 e.preventDefault(); 
                 const fd = new FormData(e.currentTarget); 
-                await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestionId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }); 
+                const { error } = await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestionId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }) ?? {}; 
+                if (error) { showToast(error.message, 'error'); return; }
                 setReplyTo(null); 
                 fetchSuggestions(); 
               }} className="mt-2 flex gap-2">
@@ -262,7 +263,8 @@ export default function SuggestionsPage({
                      <form onSubmit={async (e) => { 
                        e.preventDefault(); 
                        const fd = new FormData(e.currentTarget); 
-                       await supabase?.from('suggestion_comments').insert({ suggestion_id: sug.id, user_id: user.id, content: fd.get('content') }); 
+                       const { error } = await supabase?.from('suggestion_comments').insert({ suggestion_id: sug.id, user_id: user.id, content: fd.get('content') }) ?? {}; 
+                       if (error) { showToast(error.message, 'error'); return; }
                        (e.target as HTMLFormElement).reset(); 
                        fetchSuggestions(); 
                      }} className="mb-6 flex gap-3">

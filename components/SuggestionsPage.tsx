@@ -63,6 +63,51 @@ export default function SuggestionsPage({
     else fetchSuggestions();
   };
 
+  const handlePostReaction = async (suggestionId: string, type: 'like' | 'dislike') => {
+    if (!user || !supabase) return setCurrentPage('login');
+    const sug = suggestions.find(s => s.id === suggestionId);
+    const postReactions = sug?.suggestion_post_reactions || [];
+    const existing = postReactions.find((r: any) => r.user_id === user.id);
+    if (existing?.reaction_type === type) {
+      const { error } = await supabase
+        .from('suggestion_post_reactions')
+        .delete()
+        .eq('suggestion_id', suggestionId)
+        .eq('user_id', user.id);
+      if (error) showToast("Reaction failed", "error");
+      else fetchSuggestions();
+    } else {
+      const { error } = await supabase
+        .from('suggestion_post_reactions')
+        .upsert({ suggestion_id: suggestionId, user_id: user.id, reaction_type: type }, { onConflict: 'suggestion_id,user_id' });
+      if (error) showToast("Reaction failed", "error");
+      else fetchSuggestions();
+    }
+  };
+
+  const handleShare = async (suggestionId: string) => {
+    if (!user || !supabase) return setCurrentPage('login');
+    const { error } = await supabase
+      .from('suggestion_shares')
+      .upsert({ suggestion_id: suggestionId, user_id: user.id }, { onConflict: 'suggestion_id,user_id' });
+    if (error) {
+      if (error.code !== '23505') showToast(error.message, 'error');
+      else fetchSuggestions();
+      return;
+    }
+    fetchSuggestions();
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Suggestion', url });
+      } catch {
+        if (url) navigator.clipboard?.writeText(url).then(() => showToast("Link copied"));
+      }
+    } else if (url) {
+      navigator.clipboard?.writeText(url).then(() => showToast("Link copied"));
+    }
+  };
+
   // --- NESTED COMMENT LOOP (THE BRAINS FOR THREADING) ---
   const displayedSuggestions = suggestions.filter(s => 
     isViewingArchive ? s.is_archived === true : (s.is_archived === false || s.is_archived === null)
@@ -257,8 +302,8 @@ export default function SuggestionsPage({
               </div>
 
               <div className="p-8 md:w-1/2 bg-gray-50/50 flex flex-col h-[500px]">
-                <h5 className="text-xs font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
-                <div className="flex-grow overflow-y-auto custom-scrollbar px-2">
+                <div className="hidden md:block">
+                  <h5 className="text-xs font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
                   {user ? (
                      <form onSubmit={async (e) => { 
                        e.preventDefault(); 
@@ -272,6 +317,44 @@ export default function SuggestionsPage({
                        <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase shadow-lg shadow-indigo-100">Post</button>
                      </form>
                   ) : null}
+                </div>
+                {(() => {
+                  const postReactions = sug.suggestion_post_reactions || [];
+                  const likeCount = postReactions.filter((r: any) => r.reaction_type === 'like').length;
+                  const dislikeCount = postReactions.filter((r: any) => r.reaction_type === 'dislike').length;
+                  const userPostReaction = postReactions.find((r: any) => r.user_id === user?.id)?.reaction_type;
+                  const commentCount = (sug.suggestion_comments || []).length;
+                  const shareCount = (sug.suggestion_shares || []).length;
+                  return (
+                    <div className="md:hidden flex gap-4 mb-4 px-2 text-[10px] font-black uppercase">
+                      <button
+                        type="button"
+                        onClick={() => handlePostReaction(sug.id, 'like')}
+                        className={userPostReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}
+                      >
+                        <i className="fa-solid fa-thumbs-up mr-1"></i> {likeCount}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handlePostReaction(sug.id, 'dislike')}
+                        className={userPostReaction === 'dislike' ? 'text-red-500' : 'text-gray-400'}
+                      >
+                        <i className="fa-solid fa-thumbs-down mr-1"></i> {dislikeCount}
+                      </button>
+                      <span className="text-gray-500">
+                        <i className="fa-regular fa-comment mr-1"></i> {commentCount}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleShare(sug.id)}
+                        className="text-gray-400 hover:text-indigo-600"
+                      >
+                        <i className="fa-solid fa-share-from-square mr-1"></i> {shareCount}
+                      </button>
+                    </div>
+                  );
+                })()}
+                <div className="flex-grow overflow-y-auto custom-scrollbar px-2">
                   {renderSuggestionComments(sug.suggestion_comments || [], sug.id)}
                 </div>
               </div>

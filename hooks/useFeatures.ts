@@ -22,7 +22,7 @@ export function useFeatures(user: any, profile: any) {
     try {
       const { data, error } = await supabase
         .from('suggestions')
-        .select(`*, profiles(full_name, district, avatar_url), suggestion_comments(id, content, created_at, parent_id, profiles(full_name, district, avatar_url), suggestion_reactions(*))`)
+        .select(`*, profiles(full_name, district, avatar_url), suggestion_comments(id, content, created_at, parent_id, profiles(full_name, district, avatar_url), suggestion_reactions(*)), suggestion_post_reactions(*), suggestion_shares(*)`)
         .order('created_at', { ascending: false });
       if (!error) setSuggestions(data || []);
     } catch (err) { console.error(err); }
@@ -85,6 +85,8 @@ export function useFeatures(user: any, profile: any) {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'poll_comments' }, () => fetchPolls())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestions' }, () => fetchSuggestions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestion_comments' }, () => fetchSuggestions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestion_post_reactions' }, () => fetchSuggestions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suggestion_shares' }, () => fetchSuggestions())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'board_messages' }, () => fetchBoardMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_messages' }, () => fetchAdminMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_email_deletion_votes' }, () => fetchAdminEmailDeletionVotes())

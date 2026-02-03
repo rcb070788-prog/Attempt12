@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../supabaseClient';
+import { readFileAsArrayBuffer, normalizeUploadErrorMessage } from '../utils/fileUtils';
 
 export function useActions(
   user: any, 
@@ -50,12 +51,19 @@ export function useActions(
     const uploadedUrls = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-      const filePath = `board/${Date.now()}_${safeName}`;
-      const { error: uploadError } = await supabase.storage.from('board_attachments').upload(filePath, file);
-      if (!uploadError) {
+      try {
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const filePath = `board/${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabase.storage.from('board_attachments').upload(filePath, arrayBuffer, { contentType: file.type });
+        if (uploadError) {
+          showToast(normalizeUploadErrorMessage(uploadError.message), 'error');
+          continue;
+        }
         const { data: { publicUrl } } = supabase.storage.from('board_attachments').getPublicUrl(filePath);
         uploadedUrls.push(`${publicUrl}?filename=${encodeURIComponent(file.name)}`);
+      } catch (err: any) {
+        showToast(normalizeUploadErrorMessage(err?.message || 'Upload failed'), 'error');
       }
     }
     return uploadedUrls;
@@ -66,12 +74,17 @@ export function useActions(
     setIsUploading(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
-      const filePath = `polls/${Date.now()}_${cleanFileName}`;
-      const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, file);
-      if (uploadError) { showToast(uploadError.message, 'error'); continue; }
-      const { data: { publicUrl } } = supabase.storage.from('poll_attachments').getPublicUrl(filePath);
-      setStagedPollFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+      try {
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, "");
+        const filePath = `polls/${Date.now()}_${cleanFileName}`;
+        const { error: uploadError } = await supabase.storage.from('poll_attachments').upload(filePath, arrayBuffer, { contentType: file.type });
+        if (uploadError) { showToast(normalizeUploadErrorMessage(uploadError.message), 'error'); continue; }
+        const { data: { publicUrl } } = supabase.storage.from('poll_attachments').getPublicUrl(filePath);
+        setStagedPollFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+      } catch (err: any) {
+        showToast(normalizeUploadErrorMessage(err?.message || 'Upload failed'), 'error');
+      }
     }
     setIsUploading(false);
   };
@@ -81,13 +94,18 @@ export function useActions(
     setIsUploading(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
-      const filePath = `outbound/${Date.now()}_${safeName}`;
-      const { error: uploadError } = await supabase.storage.from('admin_inbox_attachments').upload(filePath, file);
-      if (uploadError) { showToast(uploadError.message, 'error'); continue; }
-      const { data } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
-      const publicUrl = `${data.publicUrl}?filename=${encodeURIComponent(file.name)}`;
-      setStagedAdminReplyFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+      try {
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const safeName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+        const filePath = `outbound/${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabase.storage.from('admin_inbox_attachments').upload(filePath, arrayBuffer, { contentType: file.type });
+        if (uploadError) { showToast(normalizeUploadErrorMessage(uploadError.message), 'error'); continue; }
+        const { data } = supabase.storage.from('admin_inbox_attachments').getPublicUrl(filePath);
+        const publicUrl = `${data.publicUrl}?filename=${encodeURIComponent(file.name)}`;
+        setStagedAdminReplyFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+      } catch (err: any) {
+        showToast(normalizeUploadErrorMessage(err?.message || 'Upload failed'), 'error');
+      }
     }
     setIsUploading(false);
   };

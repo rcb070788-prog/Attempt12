@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { formatDate } from '../utils/formatUtils';
+import { readFileAsArrayBuffer, normalizeUploadErrorMessage } from '../utils/fileUtils';
 
 interface SuggestionsPageProps {
   user: any;
@@ -60,15 +61,20 @@ export default function SuggestionsPage({
     setIsUploading(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, ""); 
-      const filePath = `suggestions/${Date.now()}_${cleanFileName}`;
-      const { error: uploadError } = await supabase.storage.from('suggestion_attachments').upload(filePath, file);
-      if (uploadError) {
-        showToast(uploadError.message, 'error');
-        continue;
+      try {
+        const arrayBuffer = await readFileAsArrayBuffer(file);
+        const cleanFileName = file.name.replace(/[^\x00-\x7F]/g, "");
+        const filePath = `suggestions/${Date.now()}_${cleanFileName}`;
+        const { error: uploadError } = await supabase.storage.from('suggestion_attachments').upload(filePath, arrayBuffer, { contentType: file.type });
+        if (uploadError) {
+          showToast(normalizeUploadErrorMessage(uploadError.message), 'error');
+          continue;
+        }
+        const { data: { publicUrl } } = supabase.storage.from('suggestion_attachments').getPublicUrl(filePath);
+        setStagedSuggestionFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
+      } catch (err: any) {
+        showToast(normalizeUploadErrorMessage(err?.message || 'Upload failed'), 'error');
       }
-      const { data: { publicUrl } } = supabase.storage.from('suggestion_attachments').getPublicUrl(filePath);
-      setStagedSuggestionFiles(prev => [...prev, { url: publicUrl, name: file.name }]);
     }
     setIsUploading(false);
   };
@@ -347,7 +353,7 @@ export default function SuggestionsPage({
         <div className="max-w-4xl mx-auto space-y-6">
           {displayedSuggestions.map(sug => (
             <div key={sug.id} className="bg-white rounded-[3rem] border border-gray-100 shadow-sm overflow-hidden flex flex-col md:flex-row">
-              <div className="p-10 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
+              <div className="p-4 pb-1.5 md:p-10 md:w-1/2 border-b md:border-b-0 md:border-r border-gray-50 flex flex-col">
                 <div className="flex items-center gap-4 mb-6">
                   <UserAvatar url={sug.profiles?.avatar_url} size="md" />
                   <div>
@@ -390,7 +396,7 @@ export default function SuggestionsPage({
                 </div>
               </div>
 
-              <div className="p-8 md:w-1/2 bg-gray-50/50 flex flex-col h-[500px]">
+              <div className="pt-1.5 px-4 pb-2 md:p-8 md:w-1/2 bg-gray-50/50 flex flex-col h-auto md:h-[500px]">
                 <div className="hidden md:block">
                   <h5 className="text-xs font-black uppercase text-indigo-400 mb-4 tracking-widest px-2">Engagement Feed</h5>
                   {user ? (
@@ -415,7 +421,7 @@ export default function SuggestionsPage({
                   const commentCount = (sug.suggestion_comments || []).length;
                   const shareCount = (sug.suggestion_shares || []).length;
                   return (
-                    <div className="md:hidden flex gap-6 md:gap-4 mb-4 px-2 py-3 text-sm font-black uppercase items-center">
+                    <div className="md:hidden flex gap-6 md:gap-4 mb-0 md:mb-4 px-2 py-3 text-sm font-black uppercase items-center">
                       <button
                         type="button"
                         onClick={() => handlePostReaction(sug.id, 'like')}

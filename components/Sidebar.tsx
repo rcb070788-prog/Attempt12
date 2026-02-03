@@ -102,7 +102,7 @@ export const Sidebar = ({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        <button onClick={() => setIsMenuOpen(false)} onTouchEnd={() => { if (!isDragging) setIsMenuOpen(false); }} className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors">
+        <button onClick={() => setIsMenuOpen(false)} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setIsMenuOpen(false); } }} className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors">
           <i className="fa-solid fa-xmark text-2xl"></i>
         </button>
         
@@ -131,25 +131,25 @@ export const Sidebar = ({
         )}
 
         <div className="space-y-4">
-          <button onClick={() => { setCurrentPage('home'); setSelectedCategory(null); setIsMenuOpen(false); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('home'); setSelectedCategory(null); setIsMenuOpen(false); } }} className="text-xl font-black uppercase block">Home</button>
-          <button onClick={() => { setCurrentPage('polls'); setSelectedPoll(null); setIsMenuOpen(false); fetchPolls(); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('polls'); setSelectedPoll(null); setIsMenuOpen(false); fetchPolls(); } }} className="text-xl font-black uppercase block">Polls</button>
-          <button onClick={() => { setCurrentPage('board'); setIsMenuOpen(false); fetchBoardMessages(); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('board'); setIsMenuOpen(false); fetchBoardMessages(); } }} className="text-xl font-black uppercase block">Message Officials</button>
-          <button onClick={() => { setCurrentPage('suggestions'); setIsMenuOpen(false); fetchSuggestions(); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('suggestions'); setIsMenuOpen(false); fetchSuggestions(); } }} className="text-xl font-black uppercase block">Suggestions</button>
-          {profile?.is_admin && <button onClick={() => { setCurrentPage('admin'); setIsMenuOpen(false); fetchUsers(); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('admin'); setIsMenuOpen(false); fetchUsers(); } }} className="text-xl font-black uppercase text-red-600 block">Admin Center</button>}
+          <button onClick={() => { setCurrentPage('home'); setSelectedCategory(null); setIsMenuOpen(false); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('home'); setSelectedCategory(null); setIsMenuOpen(false); } }} className="text-xl font-black uppercase block">Home</button>
+          <button onClick={() => { setCurrentPage('polls'); setSelectedPoll(null); setIsMenuOpen(false); fetchPolls(); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('polls'); setSelectedPoll(null); setIsMenuOpen(false); fetchPolls(); } }} className="text-xl font-black uppercase block">Polls</button>
+          <button onClick={() => { setCurrentPage('board'); setIsMenuOpen(false); fetchBoardMessages(); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('board'); setIsMenuOpen(false); fetchBoardMessages(); } }} className="text-xl font-black uppercase block">Message Officials</button>
+          <button onClick={() => { setCurrentPage('suggestions'); setIsMenuOpen(false); fetchSuggestions(); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('suggestions'); setIsMenuOpen(false); fetchSuggestions(); } }} className="text-xl font-black uppercase block">Suggestions</button>
+          {profile?.is_admin && <button onClick={() => { setCurrentPage('admin'); setIsMenuOpen(false); fetchUsers(); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('admin'); setIsMenuOpen(false); fetchUsers(); } }} className="text-xl font-black uppercase text-red-600 block">Admin Center</button>}
           
           <div className="pt-8 mt-8 border-t border-gray-100 space-y-4">
             {user ? (
               <button 
                 onClick={() => { supabase?.auth.signOut(); setIsMenuOpen(false); }} 
-                onTouchEnd={() => { if (!isDragging) { supabase?.auth.signOut(); setIsMenuOpen(false); } }}
+                onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); supabase?.auth.signOut(); setIsMenuOpen(false); } }}
                 className="text-xl font-black uppercase block text-red-500 hover:text-red-700 transition-colors"
               >
                 Log Out
               </button>
             ) : (
               <>
-                <button onClick={() => { setCurrentPage('login'); setIsMenuOpen(false); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('login'); setIsMenuOpen(false); } }} className="text-xl font-black uppercase block text-green-600 hover:text-green-700 transition-colors">Login</button>
-                <button onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} onTouchEnd={() => { if (!isDragging) { setCurrentPage('signup'); setIsMenuOpen(false); } }} className="text-xl font-black uppercase block text-indigo-600 hover:text-indigo-700 transition-colors">Register</button>
+                <button onClick={() => { setCurrentPage('login'); setIsMenuOpen(false); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('login'); setIsMenuOpen(false); } }} className="text-xl font-black uppercase block text-green-600 hover:text-green-700 transition-colors">Login</button>
+                <button onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} onTouchEnd={(e) => { if (!isDragging) { e.preventDefault(); e.stopPropagation(); setCurrentPage('signup'); setIsMenuOpen(false); } }} className="text-xl font-black uppercase block text-indigo-600 hover:text-indigo-700 transition-colors">Register</button>
               </>
             )}
           </div>

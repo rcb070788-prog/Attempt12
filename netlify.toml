@@ -17,6 +17,12 @@
   force = true
   conditions = {Host = ["www.concernedcitizens.netlify.app"]}
 
+# Don't cache index.html so new deploys are picked up quickly (especially on mobile)
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
 # Manifest MIME type for PWA installability
 [[headers]]
   for = "/manifest.json"

@@ -8,15 +8,17 @@ export const useAuth = () => {
 
   const fetchProfile = async (userId: string) => {
     if (!supabase) return;
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (data) {
-      setProfile(data);
-      return;
+    // Force client to have latest session before first request (helps mobile tab)
+    await supabase.auth.getSession();
+    const delays = [0, 800, 1500];
+    for (const delay of delays) {
+      if (delay > 0) await new Promise((r) => setTimeout(r, delay));
+      const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+      if (data) {
+        setProfile(data);
+        return;
+      }
     }
-    // Retry once after a short delay (helps when first request ran before client had session, e.g. mobile tab)
-    await new Promise((r) => setTimeout(r, 400));
-    const { data: retryData } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (retryData) setProfile(retryData);
   };
 
   useEffect(() => {
@@ -51,6 +53,23 @@ export const useAuth = () => {
       subscription.unsubscribe();
     };
   }, []);
+
+  // When user exists but profile is still null (e.g. mobile tab race), retry fetch at 1s, 2s, 4s
+  useEffect(() => {
+    if (!user?.id || profile != null || !supabase) return;
+    const delays = [1000, 2000, 4000];
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (let i = 0; i < delays.length; i++) {
+      timers.push(
+        setTimeout(() => {
+          supabase.from('profiles').select('*').eq('id', user.id).maybeSingle().then(({ data }) => {
+            if (data) setProfile(data);
+          });
+        }, delays[i])
+      );
+    }
+    return () => timers.forEach((t) => clearTimeout(t));
+  }, [user?.id, profile]);
 
   return { user, profile, setProfile, setUser, sessionHydrated };
 };

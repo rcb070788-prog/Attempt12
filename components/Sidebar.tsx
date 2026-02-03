@@ -47,6 +47,7 @@ export const Sidebar = ({
   const [isDragging, setIsDragging] = useState(false);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const touchTargetRef = useRef<EventTarget | null>(null);
+  const logoutHandledByTouchRef = useRef(false);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -54,6 +55,7 @@ export const Sidebar = ({
       setIsDragging(false);
       touchStartRef.current = null;
       touchTargetRef.current = null;
+      logoutHandledByTouchRef.current = false;
     }
   }, [isMenuOpen]);
 
@@ -99,9 +101,9 @@ export const Sidebar = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
+      <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} aria-hidden="true"></div>
       <div
-        className="relative w-80 bg-white h-full shadow-2xl p-8 flex flex-col touch-pan-y"
+        className="relative z-10 w-80 bg-white h-full shadow-2xl p-8 flex flex-col touch-pan-y"
         style={{
           transform: `translateX(${dragOffset}px)`,
           transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
@@ -148,7 +150,21 @@ export const Sidebar = ({
           <div className="pt-8 mt-8 border-t border-gray-100 space-y-4">
             {user ? (
               <button
-                onClick={() => { supabase?.auth.signOut(); setIsMenuOpen(false); }}
+                onClick={() => {
+                  if (logoutHandledByTouchRef.current) {
+                    logoutHandledByTouchRef.current = false;
+                    return;
+                  }
+                  supabase?.auth.signOut();
+                  setIsMenuOpen(false);
+                }}
+                onTouchEnd={(e) => {
+                  if (isDragging) return;
+                  e.preventDefault();
+                  logoutHandledByTouchRef.current = true;
+                  supabase?.auth.signOut();
+                  setIsMenuOpen(false);
+                }}
                 className="text-xl font-black uppercase block text-red-500 hover:text-red-700 transition-colors"
               >
                 Log Out

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 
 interface SidebarProps {
@@ -34,12 +34,74 @@ export const Sidebar = ({
   fetchUsers,
   supabase
 }: SidebarProps) => {
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const touchTargetRef = useRef<EventTarget | null>(null);
+
+  useEffect(() => {
+    if (!isMenuOpen) {
+      setDragOffset(0);
+      setIsDragging(false);
+      touchStartRef.current = null;
+      touchTargetRef.current = null;
+    }
+  }, [isMenuOpen]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    touchStartRef.current = { x: touch.clientX, y: touch.clientY };
+    touchTargetRef.current = e.target;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!touchStartRef.current) return;
+    const target = touchTargetRef.current as Element | null;
+    if (target?.closest('button, a, input, select, textarea, [role="button"]')) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
+
+    if (!isDragging) {
+      if (deltaX > 25 && deltaX > Math.abs(deltaY)) {
+        setIsDragging(true);
+        e.preventDefault();
+        setDragOffset(deltaX);
+      }
+      return;
+    }
+    if (deltaX > 0) {
+      e.preventDefault();
+      setDragOffset(deltaX);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDragging) return;
+    if (dragOffset > 100) {
+      setIsMenuOpen(false);
+    }
+    setDragOffset(0);
+    setIsDragging(false);
+    touchStartRef.current = null;
+    touchTargetRef.current = null;
+  };
+
   if (!isMenuOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)}></div>
-      <div className="relative w-80 bg-white h-full shadow-2xl p-8 flex flex-col">
+      <div
+        className="relative w-80 bg-white h-full shadow-2xl p-8 flex flex-col touch-pan-y"
+        style={{
+          transform: `translateX(${dragOffset}px)`,
+          transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)'
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+      >
         <button onClick={() => setIsMenuOpen(false)} className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors">
           <i className="fa-solid fa-xmark text-2xl"></i>
         </button>

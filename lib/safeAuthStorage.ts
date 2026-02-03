@@ -1,6 +1,6 @@
 /**
- * Safe auth storage for Supabase: tests localStorage before use and falls back
- * to in-memory storage when it's unavailable (e.g. private mode, quota, mobile quirks).
+ * Safe auth storage for Supabase: tests localStorage before use, then sessionStorage,
+ * then in-memory when both are unavailable (e.g. private mode, quota, mobile quirks).
  * Used so the app never crashes on storage and session can persist where possible.
  */
 
@@ -10,6 +10,19 @@ function isLocalStorageAvailable(): boolean {
   if (typeof window === 'undefined') return false;
   try {
     const storage = window.localStorage;
+    storage.setItem(TEST_KEY, '1');
+    storage.getItem(TEST_KEY);
+    storage.removeItem(TEST_KEY);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isSessionStorageAvailable(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const storage = window.sessionStorage;
     storage.setItem(TEST_KEY, '1');
     storage.getItem(TEST_KEY);
     storage.removeItem(TEST_KEY);
@@ -61,11 +74,41 @@ function createSafeLocalStorageWrapper(): { getItem: (k: string) => string | nul
   };
 }
 
+function createSafeSessionStorageWrapper(): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } {
+  const fallback = createMemoryStorage();
+  return {
+    getItem(key: string) {
+      try {
+        return window.sessionStorage.getItem(key);
+      } catch {
+        return fallback.getItem(key);
+      }
+    },
+    setItem(key: string, value: string) {
+      try {
+        window.sessionStorage.setItem(key, value);
+      } catch {
+        fallback.setItem(key, value);
+      }
+    },
+    removeItem(key: string) {
+      try {
+        window.sessionStorage.removeItem(key);
+      } catch {
+        fallback.removeItem(key);
+      }
+    },
+  };
+}
+
 let storageAdapter: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void };
 let _isPersistent = false;
 
 if (isLocalStorageAvailable()) {
   storageAdapter = createSafeLocalStorageWrapper();
+  _isPersistent = true;
+} else if (isSessionStorageAvailable()) {
+  storageAdapter = createSafeSessionStorageWrapper();
   _isPersistent = true;
 } else {
   storageAdapter = createMemoryStorage();
@@ -75,5 +118,5 @@ if (isLocalStorageAvailable()) {
 /** Adapter to pass to Supabase auth.storage (getItem, setItem, removeItem). */
 export const safeAuthStorage = storageAdapter;
 
-/** True when session is stored in localStorage (persists across refresh). False when using in-memory fallback. */
+/** True when session is stored in localStorage or sessionStorage (persists across refresh/tab). False when using in-memory fallback. */
 export const isAuthStoragePersistent = _isPersistent;

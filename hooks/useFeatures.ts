@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-export function useFeatures(user: any, profile: any) {
+export function useFeatures(user: any, profile: any, sessionHydrated: boolean = true) {
   const [polls, setPolls] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [boardMessages, setBoardMessages] = useState<any[]>([]);
@@ -75,9 +75,9 @@ export function useFeatures(user: any, profile: any) {
     fetchAdminEmailDeletionVotes();
   };
 
-  // Live Update "Listener" (Real-time)
+  // Live Update "Listener" (Real-time). Fetch only after session has been restored so RLS sees auth.
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabase || !sessionHydrated) return;
 
     const channel = supabase
       .channel('feature-changes')
@@ -95,7 +95,7 @@ export function useFeatures(user: any, profile: any) {
     fetchAllData();
 
     return () => { supabase.removeChannel(channel); };
-  }, [profile]); // Refetch if admin status changes
+  }, [profile, sessionHydrated]); // Refetch when session hydrated or admin status changes
 
   return {
     polls, setPolls, fetchPolls,

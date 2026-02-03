@@ -80,7 +80,7 @@ import './index.css';
 
 export default function App() {
   // 1. CORE AUTH (Must come first so others know who the user is)
-  const { user, profile, setProfile, setUser } = useAuth();
+  const { user, profile, setProfile, setUser, sessionHydrated } = useAuth();
 
   // 2. SHARED STATE (Remote controls for UI pieces)
   const [selectedPoll, setSelectedPoll] = useState<any>(null);
@@ -97,8 +97,8 @@ export default function App() {
     activeDashboard, setActiveDashboard
   } = useNavigation(user, selectedPoll, setSelectedPoll);
 
-  // 4. FEATURE DATA (The "Social Hub")
-  const features = useFeatures(user, profile);
+  // 4. FEATURE DATA (The "Social Hub") — fetch after session hydrated so RLS sees auth
+  const features = useFeatures(user, profile, sessionHydrated);
   const { 
     polls, setPolls, fetchPolls, 
     suggestions, setSuggestions, fetchSuggestions, 
@@ -202,11 +202,11 @@ export default function App() {
     }
   }, [currentPage, profile]);
 
-  // Ensure suggestions load when user opens Suggestions page (fixes Netlify/mobile empty list)
+  // Ensure suggestions load when user opens Suggestions page, after session hydrated
   useEffect(() => {
-    if (currentPage === 'suggestions') fetchSuggestions();
+    if (sessionHydrated && currentPage === 'suggestions') fetchSuggestions();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when navigating to suggestions
-  }, [currentPage]);
+  }, [sessionHydrated, currentPage]);
 
   if (activeDashboard) {
     return (

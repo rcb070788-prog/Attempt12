@@ -101,7 +101,9 @@ export const Sidebar = ({
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
-      <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsMenuOpen(false)} aria-hidden="true"></div>
+      {/* Click-catcher for "click outside to close"; on desktop the visual layer has pointer-events: none so panel buttons receive clicks */}
+      <div className="absolute inset-0 z-0" onClick={() => setIsMenuOpen(false)} aria-hidden="true" />
+      <div className="absolute inset-0 z-0 bg-black/40 backdrop-blur-sm md:pointer-events-none" onClick={() => setIsMenuOpen(false)} aria-hidden="true" />
       <div
         className="relative z-10 w-80 bg-white h-full shadow-2xl p-8 flex flex-col touch-pan-y"
         style={{

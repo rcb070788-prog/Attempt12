@@ -61,7 +61,7 @@
 // - Supabase SQL: Implemented a Trigger and Function to automatically timestamp closed items and move them to the archive after 30 days.
 
 import React, { useState, useEffect } from 'react';
-import { supabase, supabaseAnonKey } from './supabaseClient';
+import { supabase, supabaseAnonKey, isAuthStoragePersistent } from './supabaseClient';
 // New Modular Imports
 import { formatDate } from './utils/formatUtils';
 import { Toast } from './components/Toast';
@@ -80,7 +80,7 @@ import './index.css';
 
 export default function App() {
   // 1. CORE AUTH (Must come first so others know who the user is)
-  const { user, profile, setProfile, setUser } = useAuth();
+  const { user, profile, setProfile, setUser, sessionHydrated } = useAuth();
 
   // 2. SHARED STATE (Remote controls for UI pieces)
   const [selectedPoll, setSelectedPoll] = useState<any>(null);
@@ -98,8 +98,8 @@ export default function App() {
     activeDashboard, setActiveDashboard
   } = useNavigation(user, selectedPoll, setSelectedPoll);
 
-  // 4. FEATURE DATA (The "Social Hub")
-  const features = useFeatures(user, profile);
+  // 4. FEATURE DATA (The "Social Hub") — fetch after session hydrated so RLS sees auth
+  const features = useFeatures(user, profile, sessionHydrated);
   const { 
     polls, setPolls, fetchPolls, 
     suggestions, setSuggestions, fetchSuggestions, 
@@ -240,6 +240,13 @@ export default function App() {
   return (
     <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
+
+      {user && !isAuthStoragePersistent && !dismissStorageBanner && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-100 border-b border-amber-200 text-amber-800 text-sm">
+          <span className="font-medium">Sign-in may not persist on this device. Use normal browsing mode to stay logged in after closing the tab.</span>
+          <button type="button" onClick={() => setDismissStorageBanner(true)} className="flex-shrink-0 text-amber-600 hover:text-amber-800 font-black uppercase text-xs" aria-label="Dismiss">Dismiss</button>
+        </div>
+      )}
 
       {showHomescreenBanner && (
         <div className="flex items-center justify-between gap-3 px-4 py-2 bg-indigo-50 border-b border-indigo-100 text-indigo-800 text-sm flex-shrink-0">

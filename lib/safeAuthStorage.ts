@@ -142,19 +142,11 @@ function wrapWithCookieMirror(
 ): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } {
   return {
     getItem(key: string) {
-      let value = primary.getItem(key);
-      if (value == null || value === '') {
-        const cookieVal = getCookie(cookieNameFor(key));
-        if (cookieVal != null && cookieVal !== '') {
-          value = cookieVal;
-          try {
-            primary.setItem(key, value);
-          } catch {
-            // ignore
-          }
-        }
-      }
-      return value;
+      const value = primary.getItem(key);
+      if (value != null && value !== '') return value;
+      const cookieVal = getCookie(cookieNameFor(key));
+      if (cookieVal != null && cookieVal !== '') return cookieVal;
+      return null;
     },
     setItem(key: string, value: string) {
       primary.setItem(key, value);

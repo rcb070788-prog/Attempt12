@@ -9,7 +9,14 @@ export const useAuth = () => {
   const fetchProfile = async (userId: string) => {
     if (!supabase) return;
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
-    if (data) setProfile(data);
+    if (data) {
+      setProfile(data);
+      return;
+    }
+    // Retry once after a short delay (helps when first request ran before client had session, e.g. mobile tab)
+    await new Promise((r) => setTimeout(r, 400));
+    const { data: retryData } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
+    if (retryData) setProfile(retryData);
   };
 
   useEffect(() => {

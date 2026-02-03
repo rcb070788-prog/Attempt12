@@ -82,12 +82,12 @@ export default function PollsPage({
           <div className="flex flex-col">
             <div className="flex items-center gap-2 mb-1">
                <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
-               <span className="text-[9px] font-black uppercase text-indigo-600">
+               <span className="text-xs md:text-[9px] font-black uppercase text-indigo-600">
                 {comment.profiles?.full_name || 'Verified Voter'} • Dist {comment.profiles?.district || '?'} • {formatDate(comment.created_at)}
                </span>
             </div>
-            <div className="text-gray-800 text-sm leading-relaxed break-words whitespace-pre-wrap">{renderTextWithLinks(comment.content)}</div>
-            <div className="flex gap-4 mt-3 text-[9px] font-black uppercase tracking-widest">
+            <div className="text-gray-800 text-base md:text-sm leading-relaxed break-words whitespace-pre-wrap">{renderTextWithLinks(comment.content)}</div>
+            <div className="flex gap-4 mt-3 text-xs md:text-[9px] font-black uppercase tracking-widest">
               <button onClick={() => handleReaction(comment.id, 'like')} className={userReaction === 'like' ? 'text-indigo-600' : 'text-gray-400'}>
                 <i className={`fa-${userReaction === 'like' ? 'solid' : 'regular'} fa-thumbs-up`}></i> {likes}
               </button>
@@ -104,8 +104,8 @@ export default function PollsPage({
                 setReplyTo(null); 
                 fetchPolls(); 
               }} className="mt-3 flex gap-2">
-                <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-xs outline-none border" />
-                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-[9px] font-black uppercase">Send</button>
+                <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-sm md:text-xs outline-none border" />
+                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-xs md:text-[9px] font-black uppercase">Send</button>
               </form>
             )}
           </div>
@@ -116,7 +116,7 @@ export default function PollsPage({
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className={selectedPoll ? 'w-full px-4 md:max-w-4xl md:mx-auto' : 'max-w-4xl mx-auto'}>
       {/* LOCAL POLL MODALS (Registry & Voting) */}
       {registryModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
@@ -217,15 +217,15 @@ export default function PollsPage({
                     <div className="min-w-0 flex-1">
                       <h3 className="text-2xl font-black uppercase break-words group-hover:text-indigo-600 transition-colors">{poll.title}</h3>
                       <div className="flex items-center gap-2 mt-1">
-                        <p className="text-gray-400 text-[10px] font-black uppercase">{poll.poll_votes?.length || 0} Votes</p>
-                        <span className="text-gray-200 text-[10px]">•</span>
-                        <p className={`${isExpired ? 'text-gray-400' : 'text-red-500'} text-[10px] font-black uppercase`}>
+                        <p className="text-gray-400 text-sm md:text-[10px] font-black uppercase">{poll.poll_votes?.length || 0} Votes</p>
+                        <span className="text-gray-200 text-sm md:text-[10px]">•</span>
+                        <p className={`${isExpired ? 'text-gray-400' : 'text-red-500'} text-sm md:text-[10px] font-black uppercase`}>
                           <i className="fa-regular fa-clock mr-1"></i>
                           {isExpired ? `Closed ${formatDate(poll.expires_at)}` : `Ends ${formatDate(poll.expires_at)}`}
                         </p>
                       </div>
                     </div>
-                    <button className={`px-8 py-4 rounded-xl font-black uppercase text-[10px] whitespace-nowrap ${voted || isExpired ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white shadow-indigo-200 shadow-lg'}`}>
+                    <button className={`px-8 py-4 rounded-xl font-black uppercase text-sm md:text-[10px] whitespace-nowrap ${voted || isExpired ? 'bg-gray-100 text-gray-500' : 'bg-indigo-600 text-white shadow-indigo-200 shadow-lg'}`}>
                       {isExpired ? 'Final Results' : voted ? 'View Results' : 'Vote & Discuss'}
                     </button>
                   </div>
@@ -244,13 +244,13 @@ export default function PollsPage({
         </div>
       ) : (
         <div className="space-y-8 pb-20 animate-slide-up">
-          <button onClick={() => setSelectedPoll(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors"><i className="fa-solid fa-arrow-left mr-2"></i> All Polls</button>
-          <div className="bg-white p-10 md:p-16 rounded-[3rem] shadow-xl space-y-10 border border-gray-100">
+          <button onClick={() => setSelectedPoll(null)} className="text-sm md:text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors"><i className="fa-solid fa-arrow-left mr-2"></i> All Polls</button>
+          <div className="bg-white p-6 md:p-10 md:p-16 rounded-[3rem] shadow-xl space-y-10 border border-gray-100">
             <div className="space-y-4">
-              <h2 className="text-3xl md:text-5xl font-black uppercase leading-tight tracking-tighter text-gray-900 break-words">{selectedPoll.title}</h2>
+              <h2 className="text-4xl md:text-5xl font-black uppercase leading-tight tracking-tighter text-gray-900 break-words">{selectedPoll.title}</h2>
               {selectedPoll.description && (
                 <div className="space-y-4">
-                  <p className="text-gray-500 text-sm md:text-base leading-relaxed font-medium bg-gray-50 p-8 rounded-[2.5rem] break-words whitespace-pre-wrap">
+                  <p className="text-gray-500 text-base md:text-base leading-relaxed font-medium bg-gray-50 p-8 rounded-[2.5rem] break-words whitespace-pre-wrap">
                     {selectedPoll.description}
                   </p>
                   {selectedPoll.attachments?.length > 0 && (
@@ -258,7 +258,7 @@ export default function PollsPage({
                       {selectedPoll.attachments.map((url: string, i: number) => (
                         <a key={i} href={url} target="_blank" rel="noreferrer" className="flex items-center gap-3 px-5 py-3 bg-white border-2 border-gray-100 rounded-2xl hover:border-indigo-600 transition-all group">
                           <i className="fa-solid fa-file-invoice text-indigo-600"></i>
-                          <span className="text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">View Reference {i + 1}</span>
+                          <span className="text-sm md:text-[10px] font-black uppercase text-gray-400 group-hover:text-indigo-600">View Reference {i + 1}</span>
                         </a>
                       ))}
                     </div>
@@ -299,11 +299,11 @@ export default function PollsPage({
                       className={`w-full text-left p-6 rounded-[2rem] border-2 relative overflow-hidden flex justify-between items-start gap-4 transition-all ${isCurrentSelection ? 'border-indigo-600 ring-4 ring-indigo-600/10' : 'border-gray-100 hover:border-indigo-200'}`}
                     >
                       {(existingVote || isExpired) && <div className="absolute inset-y-0 left-0 bg-indigo-50 transition-all duration-1000" style={{ width: `${percent}%` }}></div>}
-                      <span className="relative z-10 text-xs font-black uppercase flex-1 break-words whitespace-normal leading-tight">{opt.text}</span>
+                      <span className="relative z-10 text-sm md:text-xs font-black uppercase flex-1 break-words whitespace-normal leading-tight">{opt.text}</span>
                       {(existingVote || isExpired) && (
                         <div className="relative z-10 text-right shrink-0">
-                          <span className="text-sm font-black text-indigo-600">{percent}%</span>
-                          <span className="block text-[8px] font-bold text-gray-400 uppercase">({votes.length} Votes)</span>
+                          <span className="text-base md:text-sm font-black text-indigo-600">{percent}%</span>
+                          <span className="block text-xs md:text-[8px] font-bold text-gray-400 uppercase">({votes.length} Votes)</span>
                         </div>
                       )}
                     </button>
@@ -319,8 +319,8 @@ export default function PollsPage({
                             />
                           ))}
                         </div>
-                        {votes.length > 5 && <span className="text-[9px] font-black text-gray-400">+ {votes.length - 5} More</span>}
-                        <span className="text-[8px] font-black text-indigo-400 uppercase ml-auto">View Registry</span>
+                        {votes.length > 5 && <span className="text-xs md:text-[9px] font-black text-gray-400">+ {votes.length - 5} More</span>}
+                        <span className="text-xs md:text-[8px] font-black text-indigo-400 uppercase ml-auto">View Registry</span>
                       </div>
                     )}
                   </div>
@@ -328,7 +328,7 @@ export default function PollsPage({
               })}
             </div>
             <div className="pt-10 border-t">
-              <h4 className="text-[10px] font-black uppercase text-indigo-600 mb-6 tracking-widest">Community Discussion</h4>
+              <h4 className="text-sm md:text-[10px] font-black uppercase text-indigo-600 mb-6 tracking-widest">Community Discussion</h4>
               {user ? (
                  <form onSubmit={async (e) => { 
                    e.preventDefault(); 
@@ -341,7 +341,7 @@ export default function PollsPage({
                    <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase">Post</button>
                  </form>
               ) : (
-                <button onClick={() => setCurrentPage('login')} className="w-full py-4 border-2 border-dashed rounded-2xl text-[10px] font-black uppercase text-gray-400 mb-8">Login to Comment</button>
+                <button onClick={() => setCurrentPage('login')} className="w-full py-4 border-2 border-dashed rounded-2xl text-sm md:text-[10px] font-black uppercase text-gray-400 mb-8">Login to Comment</button>
               )}
               {renderComments(selectedPoll.poll_comments || [], selectedPoll.id)}
             </div>

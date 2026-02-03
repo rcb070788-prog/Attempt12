@@ -3,6 +3,8 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { CATEGORIES, DASHBOARDS } from '../constants';
 import { formatCurrency, pctChangeOverRange, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
 import { NetWorthChart } from './NetWorthChart';
+import RevenueDashboard from './RevenueDashboard';
+import ExpenseDashboard from './ExpenseDashboard';
 
 // These are the "Remote Controls" coming from the main App
 interface CategoryDashboardProps {
@@ -1136,6 +1138,9 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             </div>
           </div>
         )}
+
+        {selectedCategory === 'revenues' && <RevenueDashboard />}
+        {selectedCategory === 'expenses' && <ExpenseDashboard />}
 
         {/* DASHBOARD FOLDERS */}
         {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (

@@ -85,8 +85,8 @@ export const Sidebar = ({
               </button>
             ) : (
               <>
-                <button onClick={() => { setCurrentPage('login'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-indigo-600">Login</button>
-                <button onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-gray-400">Register</button>
+                <button onClick={() => { setCurrentPage('login'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-green-600 hover:text-green-700 transition-colors">Login</button>
+                <button onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-indigo-600 hover:text-indigo-700 transition-colors">Register</button>
               </>
             )}
           </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-export function useFeatures(user: any, profile: any, sessionHydrated: boolean = true) {
+export function useFeatures(user: any, profile: any) {
   const [polls, setPolls] = useState<any[]>([]);
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [boardMessages, setBoardMessages] = useState<any[]>([]);
@@ -95,7 +95,7 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     fetchAllData();
 
     return () => { supabase.removeChannel(channel); };
-  }, [profile, sessionHydrated]); // Refetch when session hydrated or admin status changes
+  }, [profile]); // Refetch if admin status changes
 
   return {
     polls, setPolls, fetchPolls,

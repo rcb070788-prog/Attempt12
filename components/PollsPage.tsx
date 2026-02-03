@@ -78,8 +78,8 @@ export default function PollsPage({
       const dislikes = reactions.filter((r: any) => r.reaction_type === 'dislike').length;
       const userReaction = reactions.find((r: any) => r.user_id === user?.id)?.reaction_type;
       return (
-        <div key={comment.id} className={`${depth > 0 ? 'ml-6 mt-2 border-l-2 border-gray-100 pl-4' : 'bg-gray-50 p-4 rounded-2xl mb-4'}`}>
-          <div className="flex flex-col">
+        <div key={comment.id} className={`min-w-0 ${depth > 0 ? 'ml-6 mt-2 border-l-2 border-gray-100 pl-4' : 'bg-gray-50 p-4 rounded-2xl mb-4'}`}>
+          <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2 mb-1">
                <UserAvatar url={comment.profiles?.avatar_url} size="sm" />
                <span className="text-xs md:text-[9px] font-black uppercase text-indigo-600">
@@ -103,9 +103,9 @@ export default function PollsPage({
                 await supabase?.from('poll_comments').insert({ poll_id: pollId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }); 
                 setReplyTo(null); 
                 fetchPolls(); 
-              }} className="mt-3 flex gap-2">
-                <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow p-3 bg-white rounded-xl text-sm md:text-xs outline-none border" />
-                <button type="submit" className="bg-indigo-600 text-white px-4 py-1 rounded-xl text-xs md:text-[9px] font-black uppercase">Send</button>
+              }} className="mt-3 flex gap-2 min-w-0">
+                <input name="content" autoFocus placeholder="Write a reply..." className="flex-grow min-w-0 p-3 bg-white rounded-xl text-sm md:text-xs outline-none border" />
+                <button type="submit" className="flex-shrink-0 bg-indigo-600 text-white px-4 py-1 rounded-xl text-xs md:text-[9px] font-black uppercase">Send</button>
               </form>
             )}
           </div>
@@ -327,7 +327,7 @@ export default function PollsPage({
                 );
               })}
             </div>
-            <div className="pt-10 border-t">
+            <div className="pt-10 border-t min-w-0">
               <h4 className="text-sm md:text-[10px] font-black uppercase text-indigo-600 mb-6 tracking-widest">Community Discussion</h4>
               {user ? (
                  <form onSubmit={async (e) => { 
@@ -336,9 +336,9 @@ export default function PollsPage({
                    await supabase?.from('poll_comments').insert({ poll_id: selectedPoll.id, user_id: user.id, content: fd.get('content') }); 
                    (e.target as HTMLFormElement).reset(); 
                    fetchPolls(); 
-                 }} className="mb-8 flex gap-2">
-                   <input name="content" required placeholder="Add a comment..." className="flex-grow p-4 bg-gray-50 rounded-2xl text-xs outline-none" />
-                   <button type="submit" className="bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase">Post</button>
+                 }} className="mb-8 flex gap-2 min-w-0">
+                   <input name="content" required placeholder="Add a comment..." className="flex-grow min-w-0 p-4 bg-gray-50 rounded-2xl text-xs outline-none" />
+                   <button type="submit" className="flex-shrink-0 bg-indigo-600 text-white px-6 py-2 rounded-2xl text-[10px] font-black uppercase">Post</button>
                  </form>
               ) : (
                 <button onClick={() => setCurrentPage('login')} className="w-full py-4 border-2 border-dashed rounded-2xl text-sm md:text-[10px] font-black uppercase text-gray-400 mb-8">Login to Comment</button>

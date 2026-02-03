@@ -1,5 +1,6 @@
 import React from 'react';
 import { SupabaseClient } from '@supabase/supabase-js';
+import DateOfBirthInput from './DateOfBirthInput';
 
 interface SignupPageProps {
   supabase: SupabaseClient | null;
@@ -99,8 +100,8 @@ export default function SignupPage({
 
   return (
     <div className="max-w-2xl mx-auto py-10 bg-white p-8 md:p-12 rounded-[3rem] shadow-2xl">
-      <h2 className="text-3xl font-black uppercase text-indigo-600 text-center mb-2">Voter Verification</h2>
-      <p className="text-xs font-black uppercase text-gray-400 text-center mb-10 tracking-widest">Verify identity to participate</p>
+      <h2 className="text-4xl md:text-3xl font-black uppercase text-indigo-600 text-center mb-2">Voter Verification</h2>
+      <p className="text-sm md:text-xs font-black uppercase text-gray-400 text-center mb-10 tracking-widest">Verify identity to participate</p>
       
       <form className="space-y-6" onSubmit={handleSignup}>
         <div className="flex flex-col md:flex-row md:items-center gap-4 bg-indigo-50/30 p-2 rounded-[2rem]">
@@ -109,29 +110,28 @@ export default function SignupPage({
               name="voterId" 
               required 
               placeholder="VOTER ID # (MANDATORY)" 
-              className="w-full p-6 bg-white border-2 border-transparent focus:border-indigo-600 outline-none rounded-2xl font-black text-sm shadow-sm transition-all placeholder:text-gray-300" 
+              className="w-full p-6 bg-white border-2 border-transparent focus:border-indigo-600 outline-none rounded-2xl font-black text-base md:text-sm shadow-sm transition-all placeholder:text-gray-300" 
             />
           </div>
           <div className="px-4 py-2 md:w-48">
-            <p className="text-[11px] font-black uppercase text-gray-400 leading-tight">
+            <p className="text-xs md:text-[11px] font-black uppercase text-gray-400 leading-tight">
               Don't know your Voter ID? Click <a href="https://tnmap.tn.gov/voterlookup/" target="_blank" rel="noreferrer" className="text-indigo-600 underline decoration-2 underline-offset-2">HERE</a>.
             </p>
           </div>
         </div>
         
         <div className="bg-gray-50 p-8 rounded-[2.5rem] space-y-5 border border-gray-100">
-          <p className="text-[18.66px] font-black uppercase text-gray-400 text-center tracking-tighter">Provide Name <span className="text-indigo-600 mx-1">OR</span> Date of Birth</p>
+          <p className="text-xl md:text-[18.66px] font-black uppercase text-gray-400 text-center tracking-tighter">Provide Name <span className="text-indigo-600 mx-1">OR</span> Date of Birth</p>
           <input 
             name="lastName" 
             placeholder="LAST NAME" 
-            className="w-full p-5 bg-white rounded-xl uppercase text-[18.66px] font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
+            className="w-full p-5 bg-white rounded-xl uppercase text-xl md:text-[18.66px] font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
           />
           <div className="relative">
-            <span className="absolute -top-2 left-4 bg-white px-2 text-[10px] font-black text-indigo-400 uppercase">Date of Birth</span>
-            <input 
-              type="date" 
-              name="dob" 
-              className="w-full p-5 bg-white rounded-xl text-xs font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all" 
+            <span className="absolute -top-2 left-4 bg-white px-2 text-xs md:text-[10px] font-black text-indigo-400 uppercase">Date of Birth</span>
+            <DateOfBirthInput
+              name="dob"
+              className="w-full p-5 bg-white rounded-xl text-sm md:text-xs font-black border border-gray-200 focus:ring-2 ring-indigo-500/20 outline-none transition-all"
             />
           </div>
         </div>
@@ -142,20 +142,20 @@ export default function SignupPage({
             name="email" 
             required 
             placeholder="EMAIL ADDRESS" 
-            className="w-full p-5 bg-gray-50 rounded-xl text-xs font-black focus:bg-white border-2 border-transparent focus:border-gray-200 outline-none transition-all" 
+            className="w-full p-5 bg-gray-50 rounded-xl text-sm md:text-xs font-black focus:bg-white border-2 border-transparent focus:border-gray-200 outline-none transition-all" 
           />
           <input 
             type="password" 
             name="password" 
             required 
             placeholder="CREATE PASSWORD" 
-            className="w-full p-5 bg-gray-50 rounded-xl text-xs font-black focus:bg-white border-2 border-transparent focus:border-gray-200 outline-none transition-all" 
+            className="w-full p-5 bg-gray-50 rounded-xl text-sm md:text-xs font-black focus:bg-white border-2 border-transparent focus:border-gray-200 outline-none transition-all" 
           />
         </div>
 
         <button 
           disabled={isVerifying} 
-          className="w-full py-7 bg-indigo-600 text-white rounded-[2rem] font-black text-sm uppercase shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
+          className="w-full py-7 bg-indigo-600 text-white rounded-[2rem] font-black text-base md:text-sm uppercase shadow-xl hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
         >
           {isVerifying ? 'Verifying Registry...' : 'Verify & Register'}
         </button>

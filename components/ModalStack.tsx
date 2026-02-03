@@ -1,5 +1,6 @@
 import React from 'react';
-import { UserAvatar } from './UserAvatar'; 
+import { UserAvatar } from './UserAvatar';
+import DateOfBirthInput from './DateOfBirthInput'; 
 
 interface ModalStackProps {
   notFoundModal: boolean;
@@ -77,7 +78,7 @@ const ModalStack: React.FC<ModalStackProps> = ({
                 </div>
                 <div className="space-y-1">
                   <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Date of Birth</label>
-                  <input name="dob" type="date" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
+                  <DateOfBirthInput name="dob" required className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 text-[18.66px] font-bold outline-none focus:ring-2 ring-indigo-500/20" />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[14px] font-black uppercase text-gray-400 ml-2">Last 4 SSN</label>

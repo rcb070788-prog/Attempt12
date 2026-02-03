@@ -12,10 +12,10 @@
 # Replace YOUR_SITE_NAME with your Netlify site name (e.g. attempt12 or your custom subdomain).
 [[redirects]]
   from = "/*"
-  to = "https://YOUR_SITE_NAME.netlify.app/:splat"
+  to = "https://concernedcitizens.netlify.app/:splat"
   status = 301
   force = true
-  conditions = {Host = ["www.YOUR_SITE_NAME.netlify.app"]}
+  conditions = {Host = ["www.concernedcitizens.netlify.app"]}
 
 # Manifest MIME type for PWA installability
 [[headers]]

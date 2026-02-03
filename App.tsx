@@ -89,6 +89,7 @@ export default function App() {
   const [toast, setToast] = useState<{message: string, type: 'success' | 'error'} | null>(null);
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
   const [dismissStorageBanner, setDismissStorageBanner] = useState(false);
+  const [showHomescreenBanner, setShowHomescreenBanner] = useState(false);
 
   // 3. NAVIGATION (Now it has access to 'user' and 'selectedPoll')
   const {
@@ -208,6 +209,20 @@ export default function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- only refetch when navigating to suggestions
   }, [sessionHydrated, currentPage]);
 
+  // Show "Add to home screen" when on mobile in browser tab (not PWA) so session/storage behave consistently
+  useEffect(() => {
+    const update = () => {
+      if (typeof window === 'undefined') return;
+      const dismissed = window.sessionStorage?.getItem('mc_add_to_homescreen_dismissed') === '1';
+      const standalone = window.matchMedia('(display-mode: standalone)').matches;
+      const mobile = window.matchMedia('(max-width: 768px)').matches;
+      setShowHomescreenBanner(!dismissed && mobile && !standalone);
+    };
+    update();
+    window.addEventListener('resize', update);
+    return () => window.removeEventListener('resize', update);
+  }, []);
+
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden h-[100dvh]">
@@ -230,6 +245,23 @@ export default function App() {
         <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-100 border-b border-amber-200 text-amber-800 text-sm">
           <span className="font-medium">Sign-in may not persist on this device. Use normal browsing mode to stay logged in after closing the tab.</span>
           <button type="button" onClick={() => setDismissStorageBanner(true)} className="flex-shrink-0 text-amber-600 hover:text-amber-800 font-black uppercase text-xs" aria-label="Dismiss">Dismiss</button>
+        </div>
+      )}
+
+      {showHomescreenBanner && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2 bg-indigo-50 border-b border-indigo-100 text-indigo-800 text-sm flex-shrink-0">
+          <span className="font-medium">For the best experience on mobile, add this app to your home screen.</span>
+          <button
+            type="button"
+            onClick={() => {
+              try { window.sessionStorage?.setItem('mc_add_to_homescreen_dismissed', '1'); } catch { /* ignore */ }
+              setShowHomescreenBanner(false);
+            }}
+            className="flex-shrink-0 text-indigo-600 hover:text-indigo-800 font-black uppercase text-xs"
+            aria-label="Dismiss"
+          >
+            Dismiss
+          </button>
         </div>
       )}
 

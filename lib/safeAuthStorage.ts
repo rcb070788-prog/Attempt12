@@ -1,10 +1,14 @@
 /**
  * Safe auth storage for Supabase: tests localStorage before use, then sessionStorage,
  * then in-memory when both are unavailable (e.g. private mode, quota, mobile quirks).
- * Used so the app never crashes on storage and session can persist where possible.
+ * Also mirrors auth data to a cookie so browser-tab contexts can restore session when
+ * localStorage is partitioned or cleared (e.g. mobile browser tab vs PWA).
  */
 
 const TEST_KEY = '_supabase_auth_storage_test';
+const COOKIE_PREFIX = 'sb_auth_';
+const COOKIE_MAX_AGE_DAYS = 7;
+const COOKIE_VALUE_MAX_LENGTH = 4000;
 
 function isLocalStorageAvailable(): boolean {
   if (typeof window === 'undefined') return false;
@@ -101,14 +105,78 @@ function createSafeSessionStorageWrapper(): { getItem: (k: string) => string | n
   };
 }
 
+// --- Cookie mirror (for browser-tab session restore when primary storage is cleared/partitioned) ---
+
+function cookieNameFor(key: string): string {
+  const sanitized = key.replace(/[^a-zA-Z0-9-]/g, '_');
+  return COOKIE_PREFIX + sanitized;
+}
+
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const match = document.cookie.match(new RegExp('(?:^|;\\s*)' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function setCookie(name: string, value: string, maxAgeSeconds: number): void {
+  if (typeof document === 'undefined') return;
+  try {
+    const encoded = encodeURIComponent(value);
+    document.cookie = name + '=' + encoded + '; Path=/; Max-Age=' + maxAgeSeconds + '; SameSite=Lax; Secure';
+  } catch {
+    // ignore
+  }
+}
+
+function deleteCookie(name: string): void {
+  if (typeof document === 'undefined') return;
+  try {
+    document.cookie = name + '=; Path=/; Max-Age=0';
+  } catch {
+    // ignore
+  }
+}
+
+function wrapWithCookieMirror(
+  primary: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void }
+): { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void } {
+  return {
+    getItem(key: string) {
+      let value = primary.getItem(key);
+      if (value == null || value === '') {
+        const cookieVal = getCookie(cookieNameFor(key));
+        if (cookieVal != null && cookieVal !== '') {
+          value = cookieVal;
+          try {
+            primary.setItem(key, value);
+          } catch {
+            // ignore
+          }
+        }
+      }
+      return value;
+    },
+    setItem(key: string, value: string) {
+      primary.setItem(key, value);
+      if (value.length < COOKIE_VALUE_MAX_LENGTH) {
+        setCookie(cookieNameFor(key), value, COOKIE_MAX_AGE_DAYS * 24 * 3600);
+      }
+    },
+    removeItem(key: string) {
+      primary.removeItem(key);
+      deleteCookie(cookieNameFor(key));
+    },
+  };
+}
+
 let storageAdapter: { getItem: (k: string) => string | null; setItem: (k: string, v: string) => void; removeItem: (k: string) => void };
 let _isPersistent = false;
 
 if (isLocalStorageAvailable()) {
-  storageAdapter = createSafeLocalStorageWrapper();
+  storageAdapter = wrapWithCookieMirror(createSafeLocalStorageWrapper());
   _isPersistent = true;
 } else if (isSessionStorageAvailable()) {
-  storageAdapter = createSafeSessionStorageWrapper();
+  storageAdapter = wrapWithCookieMirror(createSafeSessionStorageWrapper());
   _isPersistent = true;
 } else {
   storageAdapter = createMemoryStorage();

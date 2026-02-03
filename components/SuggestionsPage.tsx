@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { UserAvatar } from './UserAvatar';
 import { formatDate } from '../utils/formatUtils';
 
@@ -33,6 +33,25 @@ export default function SuggestionsPage({
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const [isViewingArchive, setIsViewingArchive] = useState(false);
   const [openCommentSuggestionId, setOpenCommentSuggestionId] = useState<string | null>(null);
+  const suggestionsScrollTopRef = useRef(0);
+  const openCommentSuggestionIdRef = useRef(openCommentSuggestionId);
+  openCommentSuggestionIdRef.current = openCommentSuggestionId;
+
+  // Device back: close mobile comment overlay and restore scroll
+  useEffect(() => {
+    const onPopState = () => {
+      if (openCommentSuggestionIdRef.current !== null) {
+        setOpenCommentSuggestionId(null);
+        const saved = suggestionsScrollTopRef.current;
+        requestAnimationFrame(() => {
+          const main = document.querySelector('main');
+          if (main) main.scrollTop = saved;
+        });
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   // --- ACTIONS (FUNCTIONS) ---
 
@@ -413,7 +432,21 @@ export default function SuggestionsPage({
                       </button>
                       <button
                         type="button"
-                        onClick={() => setOpenCommentSuggestionId(sug.id)}
+                        onClick={() => {
+                          const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+                          if (isMobile) {
+                            const main = document.querySelector('main');
+                            if (main) suggestionsScrollTopRef.current = main.scrollTop;
+                          }
+                          setOpenCommentSuggestionId(sug.id);
+                          if (isMobile && typeof window !== 'undefined') {
+                            window.history.pushState(
+                              { ...window.history.state, suggestionsCommentView: sug.id },
+                              '',
+                              window.location.href
+                            );
+                          }
+                        }}
                         className="flex items-center gap-1.5 py-2 px-2 min-w-[2.5rem] text-gray-500 hover:text-indigo-600 transition-colors"
                       >
                         <i className="fa-regular fa-comment text-lg"></i> {commentCount}

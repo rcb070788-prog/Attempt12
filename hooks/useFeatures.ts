@@ -10,6 +10,7 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
   const [adminMessages, setAdminMessages] = useState<any[]>([]);
   const [adminEmailDeletionVotes, setAdminEmailDeletionVotes] = useState<any[]>([]);
   const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
+  const [contactSubmissions, setContactSubmissions] = useState<any[]>([]);
 
   const fetchPolls = async () => {
     if (!supabase) return;
@@ -64,6 +65,12 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     setDeletionVotes(data || []);
   };
 
+  const fetchContactSubmissions = async () => {
+    if (!supabase || !profile?.is_admin) return;
+    const { data } = await supabase.from('contact_submissions').select('*').order('created_at', { ascending: false });
+    setContactSubmissions(data || []);
+  };
+
   const fetchAllData = () => {
     fetchPolls();
     fetchSuggestions();
@@ -73,6 +80,7 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     fetchDeletionVotes();
     fetchAdminMessages();
     fetchAdminEmailDeletionVotes();
+    fetchContactSubmissions();
   };
 
   // Live Update "Listener" (Real-time). Fetch only after session has been restored so RLS sees auth.
@@ -90,6 +98,7 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
       .on('postgres_changes', { event: '*', schema: 'public', table: 'board_messages' }, () => fetchBoardMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_messages' }, () => fetchAdminMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_email_deletion_votes' }, () => fetchAdminEmailDeletionVotes())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_submissions' }, () => fetchContactSubmissions())
       .subscribe();
 
     fetchAllData();
@@ -106,6 +115,7 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     adminMessages, fetchAdminMessages,
     adminEmailDeletionVotes, fetchAdminEmailDeletionVotes,
     deletionVotes, fetchDeletionVotes,
+    contactSubmissions, fetchContactSubmissions,
     fetchAllData
   };
 }

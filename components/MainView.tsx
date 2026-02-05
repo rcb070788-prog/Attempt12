@@ -23,6 +23,8 @@ interface MainViewProps {
   selectedCategory: string | null;
   setSelectedCategory: any;
   setActiveDashboard: any;
+  documentsStack: string[];
+  setDocumentsStack: any;
   chartData: any[];
   yearDetailData: any[];
   fetchYearDetails: any;
@@ -99,6 +101,8 @@ interface MainViewProps {
   fetchManualRequests: any;
   adminEmailDeletionVotes: any[];
   formatDate: any;
+  contactSubmissions: any[];
+  fetchContactSubmissions: any;
 }
 
 export const MainView: React.FC<MainViewProps> = (props) => {
@@ -108,7 +112,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
 
   const {
     currentPage, user, profile, setCurrentPage,
-    selectedCategory, setSelectedCategory, setActiveDashboard,
+    selectedCategory, setSelectedCategory, setActiveDashboard, documentsStack, setDocumentsStack,
     chartData, yearDetailData, fetchYearDetails, selectedFinancialYear, setSelectedFinancialYear,
     expandedChart, setExpandedChart, chartLevel, setChartLevel,
     selectedParents, setSelectedParents, selectedParent, setSelectedParent,
@@ -124,7 +128,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
     handleUpdateSuggestionStatus, adminMessages, selectedAdminEmail, setSelectedAdminEmail,
     handleDeleteAdminEmail, stagedAdminReplyFiles, setStagedAdminReplyFiles, handleAdminInboxFileUpload,
     fetchAdminMessages, manualRequests, setPendingAction, pendingAction, fetchManualRequests,
-    adminEmailDeletionVotes, formatDate
+    adminEmailDeletionVotes, formatDate, contactSubmissions, fetchContactSubmissions
   } = props;
 
   React.useEffect(() => {
@@ -170,6 +174,8 @@ export const MainView: React.FC<MainViewProps> = (props) => {
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
         setActiveDashboard={setActiveDashboard}
+        documentsStack={documentsStack}
+        setDocumentsStack={setDocumentsStack}
         chartData={chartData}
         yearDetailData={yearDetailData}
         fetchYearDetails={fetchYearDetails}
@@ -331,6 +337,8 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           fetchManualRequests={fetchManualRequests}
           adminEmailDeletionVotes={adminEmailDeletionVotes}
           formatDate={formatDate}
+          contactSubmissions={contactSubmissions}
+          fetchContactSubmissions={fetchContactSubmissions}
           supabase={supabase}
           UserAvatar={UserAvatar}
         />

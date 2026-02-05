@@ -1,4 +1,30 @@
-import type { NormalizedLine } from './types';
+import type { NormalizedLine, NormalizedTotalRow } from './types';
+
+/** County expense entities: governmental + School Dept + ECD. Match exhibit_b_lines.entity_norm. In the DB, ECD rows use entity_norm='component_unit'; total_primary_government/component_unit total rows use row_kind='total' and are excluded by row_kind filter. */
+export const COUNTY_EXPENSE_ENTITY_NORMS = [
+  'governmental_activities',
+  'school_department',
+  'component_unit', // Emergency Communications District line items in the CSV/DB
+] as const;
+
+/** Display names for entity_norm (pie labels, etc.). */
+export const ENTITY_NORM_DISPLAY_NAMES: Record<string, string> = {
+  governmental_activities: 'Governmental activities',
+  business_type_activities: 'Water & Sewer (Enterprise Fund)',
+  school_department: 'Metropolitan School Department',
+  component_unit: 'Emergency Communications District',
+};
+
+/** metropolitan_school_department and school_department are the same entity (labeled differently by year in source PDFs). */
+function getExpenseEntityForGrouping(line: NormalizedLine): string {
+  if (
+    line.entity_norm === 'metropolitan_school_department' ||
+    line.label_norm === 'metropolitan_school_department'
+  ) {
+    return 'school_department';
+  }
+  return line.entity_norm;
+}
 
 function filterByEntity(
   lines: NormalizedLine[],
@@ -10,11 +36,11 @@ function filterByEntity(
       ? ['governmental_activities', 'business_type_activities']
       : ['governmental_activities']
   );
-  if (!includeBusinessType) {
+  if (!includeBusinessType && !entityNorms) {
     allowed = allowed.filter((e) => e !== 'business_type_activities');
     if (allowed.length === 0) allowed = ['governmental_activities'];
   }
-  return lines.filter((l) => allowed.includes(l.entity_norm));
+  return lines.filter((l) => l.row_kind === 'line_item' && allowed.includes(getExpenseEntityForGrouping(l)));
 }
 
 export interface ExpenseYearPoint {
@@ -58,6 +84,51 @@ export function getExpenseTrendByYear(
     }));
 }
 
+const GOVERNMENTAL_LABEL = 'total_governmental_activities';
+const BUSINESS_TYPE_LABEL = 'total_business_type_activities';
+const COMPONENT_LABELS = ['total_component_unit', 'total_component_units'];
+
+function isGovernmentalTotal(r: NormalizedTotalRow): boolean {
+  return r.label_norm === GOVERNMENTAL_LABEL;
+}
+function isBusinessTypeTotal(r: NormalizedTotalRow): boolean {
+  return r.label_norm === BUSINESS_TYPE_LABEL;
+}
+function isComponentTotal(r: NormalizedTotalRow): boolean {
+  return r.label_norm != null && COMPONENT_LABELS.includes(r.label_norm);
+}
+
+/**
+ * Build expense trend by year from stored total/subtotal rows (label_norm).
+ * When includeBusinessType is false, Total Business-type Activities is excluded from the sum.
+ */
+export function getExpenseTrendByYearFromTotals(
+  totalsRows: NormalizedTotalRow[],
+  yearMin: number,
+  yearMax: number,
+  includeBusinessType: boolean
+): ExpenseYearPoint[] {
+  const inRange = totalsRows.filter((r) => r.year >= yearMin && r.year <= yearMax);
+  const byYear = new Map<number, { gov: number; biz: number; comp: number; urls: string[] }>();
+
+  for (const r of inRange) {
+    const cur = byYear.get(r.year) ?? { gov: 0, biz: 0, comp: 0, urls: [] };
+    if (isGovernmentalTotal(r)) cur.gov += r.amount;
+    else if (isBusinessTypeTotal(r)) cur.biz += r.amount;
+    else if (isComponentTotal(r)) cur.comp += r.amount;
+    if (r.pdf_page_url) cur.urls.push(r.pdf_page_url);
+    byYear.set(r.year, cur);
+  }
+
+  return [...byYear.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, { gov, biz, comp, urls }]) => ({
+      year,
+      totalExpenses: gov + (includeBusinessType ? biz : 0) + comp,
+      pdf_page_url: urls.length ? urls.reduce((min, u) => (u < min ? u : min), urls[0]) : undefined,
+    }));
+}
+
 export function getExpensePieForYear(
   lines: NormalizedLine[],
   selectedYear: number,
@@ -95,4 +166,45 @@ export function getExpensePieForYear(
     top.push({ name: 'Other', value: otherValue, pdf_page_url: otherUrl });
   }
   return top.filter((s) => s.value !== 0);
+}
+
+/** Pie slices by entity (Governmental, MSD, ECD, optional Water & Sewer) for a given year. */
+export function getExpensePieByEntityForYear(
+  lines: NormalizedLine[],
+  selectedYear: number,
+  includeBusinessType: boolean,
+  entityNorms?: string[]
+): ExpensePieSlice[] {
+  const base = entityNorms ?? [...COUNTY_EXPENSE_ENTITY_NORMS];
+  let allowed = base.includes('business_type_activities')
+    ? base
+    : includeBusinessType
+      ? [...base, 'business_type_activities']
+      : base;
+  const filtered = lines.filter(
+    (l) =>
+      l.row_kind === 'line_item' &&
+      l.category_norm === 'expenses' &&
+      l.year === selectedYear &&
+      allowed.includes(getExpenseEntityForGrouping(l))
+  );
+
+  const byEntity = new Map<string, { amount: number; urls: string[] }>();
+  for (const line of filtered) {
+    const key = getExpenseEntityForGrouping(line);
+    const cur = byEntity.get(key) ?? { amount: 0, urls: [] };
+    cur.amount += line.amount;
+    if (line.pdf_page_url) cur.urls.push(line.pdf_page_url);
+    byEntity.set(key, cur);
+  }
+
+  const order = [...allowed].filter((e) => byEntity.has(e));
+  return order
+    .map((entityNorm) => {
+      const cur = byEntity.get(entityNorm)!;
+      const name = ENTITY_NORM_DISPLAY_NAMES[entityNorm] ?? entityNorm;
+      const pdf_page_url = cur.urls.length ? cur.urls.reduce((min, u) => (u < min ? u : min), cur.urls[0]) : undefined;
+      return { name, value: cur.amount, pdf_page_url };
+    })
+    .filter((s) => s.value !== 0);
 }

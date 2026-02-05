@@ -6,6 +6,7 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
   const [currentPage, setCurrentPage] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
+  const [documentsStack, setDocumentsStack] = useState<string[]>([]);
 
   // 1. Reset to home if user logs out
   useEffect(() => {
@@ -14,6 +15,13 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
       setSelectedPoll(null);
     }
   }, [user, setSelectedPoll]);
+
+  // Reset documents stack when leaving Documents
+  useEffect(() => {
+    if (selectedCategory !== 'documents') {
+      setDocumentsStack([]);
+    }
+  }, [selectedCategory]);
 
   // 2. Handle the "Close Report" signal from Dashboard iframes
   useEffect(() => {
@@ -31,20 +39,21 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
     const handlePopState = (event: PopStateEvent) => {
       if (activeDashboard) {
         setActiveDashboard(null);
-        window.history.pushState({ page: 'home', category: null, poll: null, dashboard: null }, '');
+        window.history.pushState({ page: 'home', category: null, poll: null, dashboard: null, documentsStack: [] }, '');
         return;
       }
 
-      const state = event.state || { page: 'home', category: null, poll: null, dashboard: null };
+      const state = event.state || { page: 'home', category: null, poll: null, dashboard: null, documentsStack: [] };
       setCurrentPage(state.page || 'home');
       setSelectedCategory(state.category || null);
       setSelectedPoll(state.poll || null);
       setActiveDashboard(state.dashboard || null);
+      setDocumentsStack(Array.isArray(state.documentsStack) ? state.documentsStack : []);
     };
 
     window.addEventListener('popstate', handlePopState);
     if (!window.history.state) {
-      window.history.replaceState({ page: 'home', category: null, poll: null, dashboard: null }, '');
+      window.history.replaceState({ page: 'home', category: null, poll: null, dashboard: null, documentsStack: [] }, '');
     }
     return () => window.removeEventListener('popstate', handlePopState);
   }, [activeDashboard, setSelectedPoll]);
@@ -61,27 +70,30 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
   // 5. Sync the App State with the Browser URL/History
   useEffect(() => {
     const hState = window.history.state;
-    const isDifferent = !hState || 
-      hState.page !== currentPage || 
-      hState.category !== selectedCategory || 
+    const isDifferent = !hState ||
+      hState.page !== currentPage ||
+      hState.category !== selectedCategory ||
       (hState.poll && hState.poll.id !== selectedPoll?.id) ||
       (!hState.poll && selectedPoll) ||
       (hState.dashboard && hState.dashboard.id !== activeDashboard?.id) ||
-      (!hState.dashboard && activeDashboard);
+      (!hState.dashboard && activeDashboard) ||
+      (Array.isArray(hState.documentsStack) ? (hState.documentsStack.length !== documentsStack.length || hState.documentsStack.some((id: string, i: number) => id !== documentsStack[i])) : documentsStack.length > 0);
 
     if (isDifferent) {
-      window.history.pushState({ 
-        page: currentPage, 
-        category: selectedCategory, 
-        poll: selectedPoll, 
-        dashboard: activeDashboard 
+      window.history.pushState({
+        page: currentPage,
+        category: selectedCategory,
+        poll: selectedPoll,
+        dashboard: activeDashboard,
+        documentsStack,
       }, '');
     }
-  }, [currentPage, selectedCategory, selectedPoll, activeDashboard]);
+  }, [currentPage, selectedCategory, selectedPoll, activeDashboard, documentsStack]);
 
   return {
     currentPage, setCurrentPage,
     selectedCategory, setSelectedCategory,
-    activeDashboard, setActiveDashboard
+    activeDashboard, setActiveDashboard,
+    documentsStack, setDocumentsStack,
   };
 }

@@ -30,6 +30,25 @@ export const CATEGORIES = [
   { id: 'revenues', label: 'Revenues', icon: 'fa-hand-holding-dollar', color: 'bg-green-500' },
   { id: 'assets', label: 'Assets', icon: 'fa-building-columns', color: 'bg-blue-500' },
   { id: 'solvency', label: 'County Net Worth', icon: 'fa-chart-line', color: 'bg-blue-500' },
+  { id: 'documents', label: 'Documents', icon: 'fa-book-open', color: 'bg-yellow-500' },
+];
+
+/**
+ * Document sections (folder structure) for the Documents dashboard.
+ * IDs are used in documentsStack and for future Supabase section_id.
+ */
+export const DOCUMENT_SECTIONS: { id: string; title: string; children?: { id: string; title: string }[] }[] = [
+  { id: 'expense-reports-by-fund', title: 'Expense Reports by Fund' },
+  {
+    id: 'wage-reports',
+    title: 'Wage Reports',
+    children: [
+      { id: 'county-wages', title: 'County Wages' },
+      { id: 'school-wages', title: 'School Wages' },
+    ],
+  },
+  { id: 'annual-financial-reports', title: 'Annual Financial Reports' },
+  { id: 'tax-rolls-by-assessment', title: 'Tax Rolls by Assessment' },
 ];
 
 /**
@@ -96,6 +115,28 @@ export const DASHBOARDS: (DashboardConfig & { status?: string })[] = [
     folderPath: '/dashboards/revenues/property-tax/index.html',
     status: 'Planned'
   }
+];
+
+export interface InternalReportConfig {
+  id: string;
+  category: 'expenses' | 'revenues';
+  title: string;
+  description: string;
+}
+
+export const INTERNAL_REPORTS: InternalReportConfig[] = [
+  {
+    id: 'county-expenditures',
+    category: 'expenses',
+    title: 'County Expenditures',
+    description: 'Charts and breakdown of county spending from Exhibit B.',
+  },
+  {
+    id: 'county-revenues',
+    category: 'revenues',
+    title: 'County Revenues',
+    description: 'Charts and breakdown of county revenues from Exhibit B.',
+  },
 ];
 
 export const TN_VOTER_LOOKUP_URL = "https://tnmap.tn.gov/voterlookup/";

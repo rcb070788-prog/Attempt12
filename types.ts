@@ -54,3 +54,11 @@ export interface UserProfile {
   contactPreference: 'email' | 'text' | 'both';
   isAdmin?: boolean;
 }
+
+export interface DocumentSectionConfig {
+  id: string;
+  title: string;
+  description?: string;
+  children?: { id: string; title: string }[];
+  storagePath?: string;
+}

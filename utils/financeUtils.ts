@@ -87,3 +87,45 @@ export const recomputeTrendsForSlice = (data: any[], selectedParents: string[]):
   });
   return list;
 };
+
+const REVENUE_METRIC_KEYS = ['totalRevenue', 'taxesFees', 'grants', 'chargesForServices', 'other'] as const;
+
+/** Add inflation-adjusted (*Real) values to revenue year-metric rows. Base year for CPI. */
+export function addRealToRevenueYearMetrics<T extends Record<string, unknown>>(rows: T[], baseYear: number): T[] {
+  return rows.map((row) => {
+    const year = Number((row as any).year);
+    const out = { ...row } as any;
+    for (const key of REVENUE_METRIC_KEYS) {
+      const val = Number((row as any)[key]);
+      if (Number.isFinite(val)) out[`${key}Real`] = getRealValue(val, year, baseYear);
+    }
+    return out as T;
+  });
+}
+
+/** Recompute trend and real-trend for revenue metrics on a slice. Input rows must already have *Real. */
+export function recomputeRevenueTrendsForSlice(data: any[]): any[] {
+  if (data.length < 2) return data;
+  let list = [...data];
+  for (const key of REVENUE_METRIC_KEYS) {
+    list = calculateTrendLine(list, key);
+    list = calculateTrendLine(list, `${key}Real`);
+  }
+  return list;
+}
+
+/** Add inflation-adjusted totalExpensesReal to expense year points. */
+export function addRealToExpenseYearPoints<T extends { year: number; totalExpenses: number }>(rows: T[], baseYear: number): (T & { totalExpensesReal: number })[] {
+  return rows.map((row) => ({
+    ...row,
+    totalExpensesReal: getRealValue(row.totalExpenses, row.year, baseYear),
+  }));
+}
+
+/** Recompute totalExpenses trend and totalExpensesReal trend on a slice. */
+export function recomputeExpenseTrendsForSlice(data: any[]): any[] {
+  if (data.length < 2) return data;
+  let list = calculateTrendLine([...data], 'totalExpenses');
+  list = calculateTrendLine(list, 'totalExpensesReal');
+  return list;
+}

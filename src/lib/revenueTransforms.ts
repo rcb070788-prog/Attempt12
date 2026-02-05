@@ -1,4 +1,4 @@
-import type { NormalizedLine } from './types';
+import type { NormalizedLine, NormalizedTotalRow } from './types';
 import { parseHierarchyPath } from './paths';
 
 const TAXES_PREFIX = 'General Revenues > Taxes >';
@@ -17,7 +17,7 @@ function filterByEntity(
     allowed = allowed.filter((e) => e !== 'business_type_activities');
     if (allowed.length === 0) allowed = ['governmental_activities'];
   }
-  return lines.filter((l) => allowed.includes(l.entity_norm));
+  return lines.filter((l) => l.row_kind === 'line_item' && allowed.includes(l.entity_norm));
 }
 
 function isTaxesFees(line: NormalizedLine): boolean {
@@ -123,6 +123,71 @@ export function getRevenueYearMetrics(
   }
 
   return result.sort((a, b) => a.year - b.year);
+}
+
+const REVENUE_GENERAL_TOTAL_PATH = 'general_revenues_total_general_revenues';
+const GOV_LABEL = 'total_governmental_activities';
+const BIZ_LABEL = 'total_business_type_activities';
+const COMP_LABELS = ['total_component_unit', 'total_component_units'];
+
+/** Entity/label values that identify component units (MSD + ECD) for general revenue bucketing. */
+const COMPONENT_ENTITY_OR_LABEL = new Set([
+  'school_department',
+  'metropolitan_school_department',
+  'component_unit',
+]);
+
+function isComponentUnitRow(r: NormalizedTotalRow): boolean {
+  return (
+    COMPONENT_ENTITY_OR_LABEL.has(r.entity_norm) ||
+    (r.label_norm != null && COMPONENT_ENTITY_OR_LABEL.has(r.label_norm))
+  );
+}
+
+/**
+ * Build revenue year metrics from stored total rows (general + program).
+ * When includeBusinessType is false, business-type total is excluded from totalRevenue.
+ * Returns YearMetric[] with totalRevenue set; breakdown (taxesFees, etc.) set to 0 for chart compatibility.
+ */
+export function getRevenueYearMetricsFromTotals(
+  totalsRows: NormalizedTotalRow[],
+  yearMin: number,
+  yearMax: number,
+  includeBusinessType: boolean
+): YearMetric[] {
+  const inRange = totalsRows.filter((r) => r.year >= yearMin && r.year <= yearMax);
+
+  const byYear = new Map<
+    number,
+    { gov: number; biz: number; comp: number; url: string }
+  >();
+
+  for (const r of inRange) {
+    const cur = byYear.get(r.year) ?? { gov: 0, biz: 0, comp: 0, url: '' };
+    if (r.category_norm === 'general_revenues' && r.hierarchy_path_norm === REVENUE_GENERAL_TOTAL_PATH) {
+      if (r.entity_norm === 'governmental_activities') cur.gov += r.amount;
+      else if (r.entity_norm === 'business_type_activities') cur.biz += r.amount;
+      else if (isComponentUnitRow(r)) cur.comp += r.amount;
+    } else if (r.category_norm === 'program_revenues' && r.label_norm != null) {
+      if (r.label_norm === GOV_LABEL) cur.gov += r.amount;
+      else if (r.label_norm === BIZ_LABEL) cur.biz += r.amount;
+      else if (COMP_LABELS.includes(r.label_norm)) cur.comp += r.amount;
+    }
+    if (r.pdf_page_url && !cur.url) cur.url = r.pdf_page_url;
+    byYear.set(r.year, cur);
+  }
+
+  return [...byYear.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, { gov, biz, comp, url }]) => ({
+      year,
+      totalRevenue: gov + (includeBusinessType ? biz : 0) + comp,
+      taxesFees: 0,
+      chargesForServices: 0,
+      grants: 0,
+      other: 0,
+      pdf_page_url_totalRevenue: url || undefined,
+    }));
 }
 
 export function getRevenuePieForYear(

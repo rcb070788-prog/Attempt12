@@ -15,6 +15,7 @@ interface SidebarProps {
   fetchBoardMessages: () => void;
   fetchSuggestions: () => void;
   fetchUsers: () => void;
+  setShowContactModal: (show: boolean) => void;
   supabase: any;
 }
 
@@ -41,6 +42,7 @@ export const Sidebar = ({
   fetchBoardMessages,
   fetchSuggestions,
   fetchUsers,
+  setShowContactModal,
   supabase
 }: SidebarProps) => {
   const [dragOffset, setDragOffset] = useState(0);
@@ -147,6 +149,7 @@ export const Sidebar = ({
           <button onClick={() => { setCurrentPage('polls'); setSelectedPoll(null); setIsMenuOpen(false); fetchPolls(); }} className="text-xl font-black uppercase block">Polls</button>
           <button onClick={() => { setCurrentPage('board'); setIsMenuOpen(false); fetchBoardMessages(); }} className="text-xl font-black uppercase block">Message Officials</button>
           <button onClick={() => { setCurrentPage('suggestions'); setIsMenuOpen(false); fetchSuggestions(); }} className="text-xl font-black uppercase block">Suggestions</button>
+          <button onClick={() => { setIsMenuOpen(false); setShowContactModal(true); }} className="text-xl font-black uppercase block">Contact Us</button>
           {profile?.is_admin && <button onClick={() => { setCurrentPage('admin'); setIsMenuOpen(false); fetchUsers(); }} className="text-xl font-black uppercase text-red-600 block">Admin Center</button>}
 
           <div className="pt-8 mt-8 border-t border-gray-100 space-y-4">

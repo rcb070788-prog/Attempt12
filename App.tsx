@@ -95,7 +95,8 @@ export default function App() {
   const {
     currentPage, setCurrentPage,
     selectedCategory, setSelectedCategory,
-    activeDashboard, setActiveDashboard
+    activeDashboard, setActiveDashboard,
+    documentsStack, setDocumentsStack,
   } = useNavigation(user, selectedPoll, setSelectedPoll);
 
   // 4. FEATURE DATA (The "Social Hub") — fetch after session hydrated so RLS sees auth
@@ -109,6 +110,7 @@ export default function App() {
     adminMessages, fetchAdminMessages,
     adminEmailDeletionVotes, fetchAdminEmailDeletionVotes,
     deletionVotes, fetchDeletionVotes,
+    contactSubmissions, fetchContactSubmissions,
     fetchAllData
   } = features;
 
@@ -162,7 +164,9 @@ export default function App() {
   const [isOfficialDropdownOpen, setIsOfficialDropdownOpen] = useState(false);
   // Note: Upload and Staging state moved to useActions.ts
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
-  const [isAdminSections, setIsAdminSections] = useState({ poll: false, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false, adminInbox: true });
+  const [showContactModal, setShowContactModal] = useState(false);
+  const [isSubmittingContact, setIsSubmittingContact] = useState(false);
+  const [isAdminSections, setIsAdminSections] = useState({ poll: false, registry: false, managePolls: false, manageSuggestions: false, manualRequests: false, adminInbox: true, contactInbox: false });
   const [notFoundModal, setNotFoundModal] = useState(false);
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   const [clearedItems, setClearedItems] = useState<string[]>(() => {
@@ -278,6 +282,11 @@ export default function App() {
   showPollLoginModal={showPollLoginModal}
   setShowPollLoginModal={setShowPollLoginModal}
   setCurrentPage={setCurrentPage}
+  showContactModal={showContactModal}
+  setShowContactModal={setShowContactModal}
+  isSubmittingContact={isSubmittingContact}
+  setIsSubmittingContact={setIsSubmittingContact}
+  fetchContactSubmissions={fetchContactSubmissions}
 />
 
       <Navbar 
@@ -300,6 +309,7 @@ export default function App() {
         fetchBoardMessages={fetchBoardMessages}
         fetchSuggestions={fetchSuggestions}
         fetchUsers={fetchUsers}
+        setShowContactModal={setShowContactModal}
         supabase={supabase}
       />
 
@@ -311,6 +321,8 @@ export default function App() {
         selectedCategory={selectedCategory}
         setSelectedCategory={setSelectedCategory}
         setActiveDashboard={setActiveDashboard}
+        documentsStack={documentsStack}
+        setDocumentsStack={setDocumentsStack}
         chartData={chartData}
         yearDetailData={yearDetailData}
         fetchYearDetails={fetchYearDetails}
@@ -379,6 +391,8 @@ export default function App() {
         fetchManualRequests={fetchManualRequests}
         adminEmailDeletionVotes={adminEmailDeletionVotes}
         formatDate={formatDate}
+        contactSubmissions={contactSubmissions}
+        fetchContactSubmissions={fetchContactSubmissions}
       />
 
       <Footer />

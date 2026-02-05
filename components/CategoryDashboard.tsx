@@ -1,10 +1,11 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { CATEGORIES, DASHBOARDS } from '../constants';
+import { CATEGORIES, DASHBOARDS, DOCUMENT_SECTIONS, INTERNAL_REPORTS } from '../constants';
 import { formatCurrency, pctChangeOverRange, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
 import { NetWorthChart } from './NetWorthChart';
-import RevenueDashboard from './RevenueDashboard';
-import ExpenseDashboard from './ExpenseDashboard';
+import CountyExpenditures from './CountyExpenditures';
+import CountyExpendituresPiePage from './CountyExpendituresPiePage';
+import CountyRevenues from './CountyRevenues';
 
 // These are the "Remote Controls" coming from the main App
 interface CategoryDashboardProps {
@@ -12,6 +13,8 @@ interface CategoryDashboardProps {
   selectedCategory: string | null;
   setSelectedCategory: (val: string | null) => void;
   setActiveDashboard: (dash: any) => void;
+  documentsStack: string[];
+  setDocumentsStack: (stack: string[] | ((prev: string[]) => string[])) => void;
   chartData: any[];
   yearDetailData: any[];
   fetchYearDetails: (year: number) => void;
@@ -37,6 +40,8 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   selectedCategory,
   setSelectedCategory,
   setActiveDashboard,
+  documentsStack,
+  setDocumentsStack,
   chartData,
   yearDetailData,
   fetchYearDetails,
@@ -91,6 +96,12 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const solvencyEdgeBeingDragged = useRef<'left' | 'right' | null>(null);
   const solvencyIgnoreNextOverlayClick = useRef(false);
   const [solvencyDragBand, setSolvencyDragBand] = useState<{ startX: number; endX: number } | null>(null);
+
+  const [activeInternalReportId, setActiveInternalReportId] = useState<string | null>(null);
+  const [expensePieInitialYear, setExpensePieInitialYear] = useState<number | undefined>(undefined);
+  React.useEffect(() => {
+    setActiveInternalReportId(null);
+  }, [selectedCategory]);
 
   const solvencyDisplayedData = useMemo(() => {
     if (!chartData.length) return [];
@@ -471,6 +482,91 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             }}
             fullScreen
           />
+        </div>
+      </div>
+    );
+  }
+
+  /* Documents: folder drill-down with per-level back */
+  if (selectedCategory === 'documents') {
+    const stack = documentsStack;
+    const isRoot = stack.length === 0;
+    const topId = stack[0];
+    const section = DOCUMENT_SECTIONS.find(s => s.id === topId);
+    const isInsideFolder = stack.length === 1 && section?.children;
+    const isViewLevel = stack.length >= 2 || (stack.length === 1 && (!section || !section.children));
+    const currentTitle = isRoot
+      ? 'Documents'
+      : isViewLevel
+        ? (stack.length === 1 && section ? section.title : DOCUMENT_SECTIONS.find(s => s.id === stack[0])?.children?.find(c => c.id === stack[1])?.title ?? stack[stack.length - 1])
+        : section?.title ?? 'Documents';
+    const backLabel = isRoot
+      ? 'Back to Main Menu'
+      : stack.length === 1
+        ? 'Back to Documents'
+        : `Back to ${section?.title ?? 'Documents'}`;
+    const handleBack = () => {
+      if (stack.length > 0) {
+        setDocumentsStack(prev => prev.slice(0, -1));
+      } else {
+        setSelectedCategory(null);
+      }
+    };
+
+    return (
+      <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
+        <button onClick={handleBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-yellow-600 transition-colors">
+          <i className="fa-solid fa-arrow-left mr-2"></i> {backLabel}
+        </button>
+        <div className="flex flex-col">
+          <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">
+            {currentTitle}
+          </h2>
+          <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
+            {isRoot ? 'Select a document category' : isViewLevel ? 'Documents will appear here once uploaded to Supabase' : 'Select a report'}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 mt-8">
+          {isRoot &&
+            DOCUMENT_SECTIONS.map(sec => (
+              <div
+                key={sec.id}
+                onClick={() => setDocumentsStack([sec.id])}
+                className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-yellow-600 tracking-tighter">{sec.title}</h3>
+                  {sec.children && <p className="text-gray-400 text-sm font-medium">{sec.children.length} reports</p>}
+                </div>
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-yellow-50 group-hover:text-yellow-600 transition-colors">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
+              </div>
+            ))}
+
+          {isInsideFolder &&
+            section?.children?.map(child => (
+              <div
+                key={child.id}
+                onClick={() => setDocumentsStack(prev => [...prev, child.id])}
+                className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-yellow-600 tracking-tighter">{child.title}</h3>
+                </div>
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-yellow-50 group-hover:text-yellow-600 transition-colors">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
+              </div>
+            ))}
+
+          {isViewLevel && (
+            <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+              <i className="fa-solid fa-folder-open text-yellow-200 text-4xl mb-4"></i>
+              <p className="text-gray-400 font-black uppercase text-xs">Documents will appear here once uploaded to Supabase.</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -1139,30 +1235,68 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           </div>
         )}
 
-        {selectedCategory === 'revenues' && <RevenueDashboard />}
-        {selectedCategory === 'expenses' && <ExpenseDashboard />}
+        {/* Internal report view: County Expenditures, Expense by entity pie, or County Revenues */}
+        {selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures' && (
+          <CountyExpenditures
+            onBack={() => setActiveInternalReportId(null)}
+            onOpenPiePage={(initialYear) => {
+              setExpensePieInitialYear(initialYear);
+              setActiveInternalReportId('county-expenditures-pie');
+            }}
+          />
+        )}
+        {selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures-pie' && (
+          <CountyExpendituresPiePage
+            onBack={() => setActiveInternalReportId('county-expenditures')}
+            initialYear={expensePieInitialYear}
+          />
+        )}
+        {selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues' && (
+          <CountyRevenues onBack={() => setActiveInternalReportId(null)} />
+        )}
 
-        {/* DASHBOARD FOLDERS */}
-        {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (
-          <div key={dash.id} onClick={() => setActiveDashboard(dash as any)} className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-indigo-600 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group">
-            <div className="space-y-1">
-              <div className="flex items-center gap-3">
-                <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-indigo-600 tracking-tighter">{dash.title}</h3>
-                {dash.status && <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-black uppercase rounded text-gray-500">{dash.status}</span>}
+        {/* Report cards (internal + iframe) when not showing an internal report */}
+        {!(selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures') &&
+         !(selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures-pie') &&
+         !(selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues') && (
+          <>
+            {INTERNAL_REPORTS.filter(r => r.category === selectedCategory).map(report => (
+              <div
+                key={report.id}
+                onClick={() => setActiveInternalReportId(report.id)}
+                className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-indigo-600 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+              >
+                <div className="space-y-1">
+                  <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-indigo-600 tracking-tighter">{report.title}</h3>
+                  <p className="text-gray-400 text-[18.66px] font-medium leading-tight">{report.description}</p>
+                </div>
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
               </div>
-              <p className="text-gray-400 text-[18.66px] font-medium leading-tight">{dash.description}</p>
-            </div>
-            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
-              <i className="fa-solid fa-chevron-right"></i>
-            </div>
-          </div>
-        ))}
-        
-        {DASHBOARDS.filter(dash => dash.category === selectedCategory).length === 0 && (
-          <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
-            <i className="fa-solid fa-folder-open text-gray-200 text-4xl mb-4"></i>
-            <p className="text-gray-400 font-black uppercase text-xs">No reports have been uploaded for this category yet.</p>
-          </div>
+            ))}
+            {DASHBOARDS.filter(dash => dash.category === selectedCategory).map(dash => (
+              <div key={dash.id} onClick={() => setActiveDashboard(dash as any)} className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-indigo-600 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-indigo-600 tracking-tighter">{dash.title}</h3>
+                    {dash.status && <span className="px-2 py-0.5 bg-gray-100 text-[10px] font-black uppercase rounded text-gray-500">{dash.status}</span>}
+                  </div>
+                  <p className="text-gray-400 text-[18.66px] font-medium leading-tight">{dash.description}</p>
+                </div>
+                <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
+              </div>
+            ))}
+            {INTERNAL_REPORTS.filter(r => r.category === selectedCategory).length === 0 &&
+             DASHBOARDS.filter(dash => dash.category === selectedCategory).length === 0 && (
+              <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+                <i className="fa-solid fa-folder-open text-gray-200 text-4xl mb-4"></i>
+                <p className="text-gray-400 font-black uppercase text-xs">No reports have been uploaded for this category yet.</p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

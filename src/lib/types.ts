@@ -66,3 +66,41 @@ export type NormalizedTotalRow = {
   label_norm: string | null;
   pdf_page_url: string;
 };
+
+/** Raw row from exhibit_b_revenues table (CSV-only schema). */
+export type ExhibitBRevenueRow = {
+  line_id: string;
+  doc_id: string;
+  doc_display_order: number;
+  year: number;
+  exhibit_id: string;
+  category_raw: string;
+  hierarchy_path: string;
+  label: string;
+  amount: number;
+  file_name: string | null;
+  storage_url: string | null;
+  pdf_page: number;
+  section: string;
+  row_kind: string;
+  entity: string;
+};
+
+/** Raw row from exhibit_b_expenses table (CSV-only schema). */
+export type ExhibitBExpenseRow = {
+  line_id: string;
+  doc_id: string;
+  doc_display_order: number;
+  year: number;
+  exhibit_id: string;
+  category_raw: string;
+  hierarchy_path: string;
+  label: string;
+  amount: number;
+  file_name: string | null;
+  storage_url: string | null;
+  pdf_page: number;
+  section: string;
+  row_kind: string;
+  entity: string;
+};

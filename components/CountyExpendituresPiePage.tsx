@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { useExhibitBLines } from '../src/lib/useExhibitBLines';
+import { useExhibitBExpenseLines } from '../src/lib/useExhibitBLines';
 import {
   getExpensePieByEntityForYear,
   COUNTY_EXPENSE_ENTITY_NORMS,
@@ -23,7 +23,7 @@ export const CountyExpendituresPiePage: React.FC<CountyExpendituresPiePageProps>
   onBack,
   initialYear,
 }) => {
-  const { data: lines, loading, error } = useExhibitBLines();
+  const { data: lines, loading, error } = useExhibitBExpenseLines();
   const [includeBusinessType, setIncludeBusinessType] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(() => initialYear ?? 2024);
 

@@ -114,18 +114,43 @@ export function recomputeRevenueTrendsForSlice(data: any[]): any[] {
   return list;
 }
 
-/** Add inflation-adjusted totalExpensesReal to expense year points. */
-export function addRealToExpenseYearPoints<T extends { year: number; totalExpenses: number }>(rows: T[], baseYear: number): (T & { totalExpensesReal: number })[] {
-  return rows.map((row) => ({
-    ...row,
-    totalExpensesReal: getRealValue(row.totalExpenses, row.year, baseYear),
-  }));
+const EXPENSE_METRIC_KEYS = [
+  'totalExpenses',
+  'totalPrimaryGovAndComponentUnits',
+  'genGov',
+  'schools',
+  'emergCommDist',
+  'mud',
+] as const;
+
+/** Add inflation-adjusted (*Real) values to expense year points. Base year for CPI. */
+export function addRealToExpenseYearPoints<T extends { year: number; totalExpenses: number }>(rows: T[], baseYear: number): T[] {
+  return rows.map((row) => {
+    const year = Number((row as any).year);
+    const out = { ...row } as any;
+    out.totalExpensesReal = getRealValue(row.totalExpenses, row.year, baseYear);
+    for (const key of EXPENSE_METRIC_KEYS) {
+      if (key === 'totalExpenses') continue;
+      const val = Number((row as any)[key]);
+      if (Number.isFinite(val)) out[`${key}Real`] = getRealValue(val, year, baseYear);
+    }
+    return out as T;
+  });
 }
 
-/** Recompute totalExpenses trend and totalExpensesReal trend on a slice. */
+const EXPENSE_ENTITY_KEYS = ['genGov', 'schools', 'emergCommDist', 'mud'] as const;
+
+/** Recompute totalExpenses, totalPrimaryGovAndComponentUnits, and per-entity trend and *Real trend on a slice. */
 export function recomputeExpenseTrendsForSlice(data: any[]): any[] {
   if (data.length < 2) return data;
-  let list = calculateTrendLine([...data], 'totalExpenses');
+  let list = [...data];
+  list = calculateTrendLine(list, 'totalExpenses');
   list = calculateTrendLine(list, 'totalExpensesReal');
+  list = calculateTrendLine(list, 'totalPrimaryGovAndComponentUnits');
+  list = calculateTrendLine(list, 'totalPrimaryGovAndComponentUnitsReal');
+  for (const key of EXPENSE_ENTITY_KEYS) {
+    list = calculateTrendLine(list, key);
+    list = calculateTrendLine(list, `${key}Real`);
+  }
   return list;
 }

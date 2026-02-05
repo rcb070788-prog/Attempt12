@@ -1,5 +1,11 @@
 import { useState, useEffect } from 'react';
-import { fetchExhibitBLines, fetchExhibitBExpenseTotals, fetchExhibitBRevenueTotals } from './api';
+import {
+  fetchExhibitBLines,
+  fetchExhibitBExpenseTotals,
+  fetchExhibitBExpenseLines,
+  fetchExhibitBRevenueTotals,
+  fetchExhibitBRevenueLines,
+} from './api';
 import type { NormalizedLine, NormalizedTotalRow } from './types';
 
 /**
@@ -40,7 +46,81 @@ export function useExhibitBLines(): {
 }
 
 /**
- * Fetches expense total/subtotal rows for the County Expenditures chart (label_norm-based).
+ * Fetches revenue line-level data from exhibit_b_revenues (row_kind = 'line_item').
+ * Use in County Revenues chart and pies.
+ */
+export function useExhibitBRevenueLines(): {
+  data: NormalizedLine[];
+  loading: boolean;
+  error: Error | null;
+} {
+  const [data, setData] = useState<NormalizedLine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchExhibitBRevenueLines()
+      .then((rows) => {
+        if (!cancelled) setData(rows);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { data, loading, error };
+}
+
+/**
+ * Fetches expense line-level data from exhibit_b_expenses (row_kind = 'line_item').
+ * Use in County Expenditures chart and pie page.
+ */
+export function useExhibitBExpenseLines(): {
+  data: NormalizedLine[];
+  loading: boolean;
+  error: Error | null;
+} {
+  const [data, setData] = useState<NormalizedLine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    fetchExhibitBExpenseLines()
+      .then((rows) => {
+        if (!cancelled) setData(rows);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { data, loading, error };
+}
+
+/**
+ * Fetches expense total/subtotal rows for the County Expenditures chart (from exhibit_b_expenses).
  */
 export function useExhibitBExpenseTotals(): {
   data: NormalizedTotalRow[];

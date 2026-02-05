@@ -293,6 +293,7 @@ export default function App() {
         setCurrentPage={setCurrentPage}
         setSelectedCategory={setSelectedCategory}
         setIsMenuOpen={setIsMenuOpen}
+        showMenuSparkle={currentPage === 'home' && !selectedCategory}
       />
 
       <Sidebar 

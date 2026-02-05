@@ -47,6 +47,16 @@ export interface ExpenseYearPoint {
   year: number;
   totalExpenses: number;
   pdf_page_url?: string;
+  /** Total Governmental Activities */
+  genGov?: number;
+  /** Metropolitan School Department */
+  schools?: number;
+  /** Emergency Communications District */
+  emergCommDist?: number;
+  /** Total Business-type Activities (MUD) */
+  mud?: number;
+  /** Total Primary Government + Component Units (comp if present, else schools for 2016–2024) */
+  totalPrimaryGovAndComponentUnits?: number;
 }
 
 export interface ExpensePieSlice {
@@ -97,36 +107,73 @@ function isBusinessTypeTotal(r: NormalizedTotalRow): boolean {
 function isComponentTotal(r: NormalizedTotalRow): boolean {
   return r.label_norm != null && COMPONENT_LABELS.includes(r.label_norm);
 }
+function isPrimaryGovernmentTotal(r: NormalizedTotalRow): boolean {
+  return r.label_norm === 'total_primary_government';
+}
+function isSchoolDepartmentTotal(r: NormalizedTotalRow): boolean {
+  return r.label_norm === 'metropolitan_school_department';
+}
+function isEmergencyCommunicationsTotal(r: NormalizedTotalRow): boolean {
+  return r.label_norm === 'emergency_communications_district';
+}
 
 /**
  * Build expense trend by year from stored total/subtotal rows (label_norm).
- * When includeBusinessType is false, Total Business-type Activities is excluded from the sum.
+ * Returns per-entity series (genGov, schools, emergCommDist, mud) and totalPrimaryGovAndComponentUnits.
+ * For 2016–2024 when no Total Component Units row exists, component total = Metropolitan School Department.
  */
 export function getExpenseTrendByYearFromTotals(
   totalsRows: NormalizedTotalRow[],
   yearMin: number,
   yearMax: number,
-  includeBusinessType: boolean
+  _includeBusinessType: boolean
 ): ExpenseYearPoint[] {
   const inRange = totalsRows.filter((r) => r.year >= yearMin && r.year <= yearMax);
-  const byYear = new Map<number, { gov: number; biz: number; comp: number; urls: string[] }>();
+  const byYear = new Map<
+    number,
+    { gov: number; biz: number; comp: number; primaryGov: number; schoolDept: number; ecd: number; urls: string[] }
+  >();
 
   for (const r of inRange) {
-    const cur = byYear.get(r.year) ?? { gov: 0, biz: 0, comp: 0, urls: [] };
+    const cur = byYear.get(r.year) ?? {
+      gov: 0,
+      biz: 0,
+      comp: 0,
+      primaryGov: 0,
+      schoolDept: 0,
+      ecd: 0,
+      urls: [],
+    };
     if (isGovernmentalTotal(r)) cur.gov += r.amount;
     else if (isBusinessTypeTotal(r)) cur.biz += r.amount;
     else if (isComponentTotal(r)) cur.comp += r.amount;
+    else if (isPrimaryGovernmentTotal(r)) cur.primaryGov += r.amount;
+    else if (isSchoolDepartmentTotal(r)) cur.schoolDept += r.amount;
+    else if (isEmergencyCommunicationsTotal(r)) cur.ecd += r.amount;
     if (r.pdf_page_url) cur.urls.push(r.pdf_page_url);
     byYear.set(r.year, cur);
   }
 
   return [...byYear.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([year, { gov, biz, comp, urls }]) => ({
-      year,
-      totalExpenses: gov + (includeBusinessType ? biz : 0) + comp,
-      pdf_page_url: urls.length ? urls.reduce((min, u) => (u < min ? u : min), urls[0]) : undefined,
-    }));
+    .map(([year, { gov, biz, comp, primaryGov, schoolDept, ecd, urls }]) => {
+      // Total Primary Government and Component Units: use comp when present, else schoolDept (2016–2024)
+      const componentTotal = comp > 0 ? comp : schoolDept;
+      const totalPrimaryGovAndComponentUnits = primaryGov + componentTotal;
+      return {
+        year,
+        totalExpenses: totalPrimaryGovAndComponentUnits,
+        // 2020 only reported Total Primary Government; use it for Gen Gov so the toggle shows the same value.
+        genGov: year === 2020 ? primaryGov : gov,
+        schools: schoolDept,
+        // Only include ECD for years when the entity reported (no row => 0 => omit).
+        emergCommDist: ecd > 0 ? ecd : undefined,
+        // MUD did not report for 2020; omit so chart shows gap and gray bridge instead.
+        mud: year === 2020 ? undefined : biz,
+        totalPrimaryGovAndComponentUnits,
+        pdf_page_url: urls.length ? urls.reduce((min, u) => (u < min ? u : min), urls[0]) : undefined,
+      };
+    });
 }
 
 export function getExpensePieForYear(

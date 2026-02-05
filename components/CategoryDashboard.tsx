@@ -572,6 +572,57 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     );
   }
 
+  /* County Expenditures: full-viewport layout, no scrolling */
+  if (selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures') {
+    return (
+      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
+          <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+          </button>
+          <div className="flex flex-col">
+            <h2 className="text-2xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
+              {currentCategoryLabel}
+            </h2>
+            <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">County Expenditures</p>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4 solvency-fullscreen-container">
+          <CountyExpenditures
+            fullScreen
+            onBack={() => setActiveInternalReportId(null)}
+            onOpenPiePage={(initialYear) => {
+              setExpensePieInitialYear(initialYear);
+              setActiveInternalReportId('county-expenditures-pie');
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  /* County Revenues: full-viewport layout, no scrolling */
+  if (selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues') {
+    return (
+      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
+          <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+          </button>
+          <div className="flex flex-col">
+            <h2 className="text-2xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
+              {currentCategoryLabel}
+            </h2>
+            <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">County Revenues</p>
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4 solvency-fullscreen-container">
+          <CountyRevenues fullScreen onBack={() => setActiveInternalReportId(null)} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
       <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
@@ -1235,24 +1286,12 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           </div>
         )}
 
-        {/* Internal report view: County Expenditures, Expense by entity pie, or County Revenues */}
-        {selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures' && (
-          <CountyExpenditures
-            onBack={() => setActiveInternalReportId(null)}
-            onOpenPiePage={(initialYear) => {
-              setExpensePieInitialYear(initialYear);
-              setActiveInternalReportId('county-expenditures-pie');
-            }}
-          />
-        )}
+        {/* Internal report view: Expense by entity pie (County Expenditures/Revenues use full-screen early return) */}
         {selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures-pie' && (
           <CountyExpendituresPiePage
             onBack={() => setActiveInternalReportId('county-expenditures')}
             initialYear={expensePieInitialYear}
           />
-        )}
-        {selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues' && (
-          <CountyRevenues onBack={() => setActiveInternalReportId(null)} />
         )}
 
         {/* Report cards (internal + iframe) when not showing an internal report */}

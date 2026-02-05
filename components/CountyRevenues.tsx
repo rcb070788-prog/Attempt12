@@ -11,7 +11,7 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { useExhibitBLines, useExhibitBRevenueTotals } from '../src/lib/useExhibitBLines';
+import { useExhibitBRevenueLines, useExhibitBRevenueTotals } from '../src/lib/useExhibitBLines';
 import {
   getRevenueYearMetricsFromTotals,
   getRevenuePieForYear,
@@ -64,10 +64,13 @@ const REVENUE_COLORS: Record<string, string> = {
 
 interface CountyRevenuesProps {
   onBack: () => void;
+  /** When true, fills parent (full-viewport) with flex layout; chart uses flex-1 */
+  fullScreen?: boolean;
 }
 
-export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
-  const { data: lines, loading, error } = useExhibitBLines();
+export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScreen = false }) => {
+  const { data: lines, loading, error } = useExhibitBRevenueLines();
+  const { data: revenueTotals, loading: totalsLoading, error: totalsError } = useExhibitBRevenueTotals();
   const [includeBusinessType, setIncludeBusinessType] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(2024);
   const [entityNorms, setEntityNorms] = useState<string[]>(['governmental_activities']);
@@ -86,6 +89,14 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
   const drawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
   const [tooltipOffsetX, setTooltipOffsetX] = useState(56);
   const [tabTop, setTabTop] = useState(50);
+  const [desktopTogglesOpen, setDesktopTogglesOpen] = useState(true);
+
+  // Mobile peeking right tab + pies drawer (fullScreen only)
+  const [isPiesDrawerOpen, setIsPiesDrawerOpen] = useState(false);
+  const [piesDrawerDragOffset, setPiesDrawerDragOffset] = useState(0);
+  const [piesDraggingDrawer, setPiesDraggingDrawer] = useState(false);
+  const piesDrawerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const piesTabTouchStartRef = useRef<{ x: number; y: number } | null>(null);
 
   const years = useMemo(() => {
     const y = [...new Set(lines.map((l) => l.year))].filter((yr) => yr >= 2000).sort((a, b) => a - b);
@@ -343,6 +354,56 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
     drawerTouchStartRef.current = null;
   };
 
+  const openPiesDrawer = () => setIsPiesDrawerOpen(true);
+  const handlePiesTabTouchStart = (e: React.TouchEvent) => {
+    piesTabTouchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+  };
+  const handlePiesTabTouchMove = (e: React.TouchEvent) => {
+    if (!piesTabTouchStartRef.current) return;
+    const touch = e.touches[0];
+    const deltaX = touch.clientX - piesTabTouchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - piesTabTouchStartRef.current.y);
+    if (deltaX < -50 && deltaY < 100) {
+      openPiesDrawer();
+      piesTabTouchStartRef.current = null;
+    }
+  };
+  const handlePiesTabTouchEnd = (e: React.TouchEvent) => {
+    if (!piesTabTouchStartRef.current) return;
+    const touch = e.changedTouches[0];
+    const deltaX = touch.clientX - piesTabTouchStartRef.current.x;
+    const deltaY = Math.abs(touch.clientY - piesTabTouchStartRef.current.y);
+    if (Math.abs(deltaX) < 10 && deltaY < 10) openPiesDrawer();
+    piesTabTouchStartRef.current = null;
+  };
+  const handlePiesDrawerTouchStart = (e: React.TouchEvent) => {
+    piesDrawerTouchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    setPiesDraggingDrawer(true);
+  };
+  const handlePiesDrawerTouchMove = (e: React.TouchEvent) => {
+    if (!piesDrawerTouchStartRef.current || !piesDraggingDrawer) return;
+    const deltaX = e.touches[0].clientX - piesDrawerTouchStartRef.current.x;
+    if (deltaX > 0) {
+      e.preventDefault();
+      setPiesDrawerDragOffset(deltaX);
+    }
+  };
+  const handlePiesDrawerTouchEnd = () => {
+    if (!piesDraggingDrawer) return;
+    if (piesDrawerDragOffset > 100) setIsPiesDrawerOpen(false);
+    setPiesDrawerDragOffset(0);
+    setPiesDraggingDrawer(false);
+    piesDrawerTouchStartRef.current = null;
+  };
+
+  useEffect(() => {
+    if (!isPiesDrawerOpen) {
+      setPiesDrawerDragOffset(0);
+      setPiesDraggingDrawer(false);
+      piesDrawerTouchStartRef.current = null;
+    }
+  }, [isPiesDrawerOpen]);
+
   const [toggles, setToggles] = useState({
     totalRevenue: true,
     taxesFees: true,
@@ -401,14 +462,22 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
   ];
 
   return (
-    <div className="space-y-8">
-      <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
-        <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
-      </button>
-      <div className="bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6">
-        <div className="hidden md:flex justify-between items-start mb-6">
+    <div
+      className={
+        fullScreen
+          ? 'flex-1 flex flex-col min-h-0 overflow-hidden bg-white p-4 md:p-6 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100'
+          : 'space-y-8'
+      }
+    >
+      {!fullScreen && (
+        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
+          <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+        </button>
+      )}
+      <div className={fullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6'}>
+        <div className={`hidden md:flex justify-between items-start ${fullScreen ? 'shrink-0 mb-4' : 'mb-6'}`}>
           <div>
-            <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">County Revenues</h3>
+            <h3 className={`font-black uppercase leading-none tracking-tighter ${fullScreen ? 'text-xl md:text-2xl' : 'text-3xl'}`}>County Revenues</h3>
             <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">Revenue trend — drag chart to select year range</p>
           </div>
           <div className="hidden md:flex px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
@@ -416,7 +485,16 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-4 items-center mb-4">
+        <div className={`flex flex-wrap gap-4 items-center ${fullScreen ? 'shrink-0 mb-4' : 'mb-4'}`}>
+          {fullScreen && (
+            <button
+              type="button"
+              onClick={() => setIsPiesDrawerOpen(true)}
+              className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-600 text-white text-sm font-black uppercase rounded-lg hover:bg-pink-700 transition-colors"
+            >
+              <i className="fa-solid fa-chart-pie"></i> View revenue breakdown
+            </button>
+          )}
           <label className="flex items-center gap-2">
             <span className="text-[10px] font-black uppercase text-gray-500">Pie year</span>
             <select
@@ -462,11 +540,54 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
         </div>
 
         <div
+          className={
+            fullScreen
+              ? 'flex-1 flex flex-col min-h-0'
+              : 'md:flex md:flex-col md:min-h-[420px]'
+          }
+        >
+        <div
           ref={chartRef}
-          className="relative h-[300px] md:h-[450px] w-full landscape:h-[70vh] mb-8"
+          className={
+            'relative w-full ' +
+            (fullScreen
+              ? 'flex-1 min-h-0 min-h-[180px]'
+              : 'h-[300px] landscape:h-[70vh] mb-8 md:flex-1 md:min-h-0 md:min-h-[180px]')
+          }
           onMouseDown={(e) => { if (!pendingYearRange && e.button === 0) handleChartPointerDown(e.clientX); }}
           onTouchStart={(e) => { if (!pendingYearRange && e.touches[0]) handleChartPointerDown(e.touches[0].clientX); }}
         >
+          {/* Mobile peeking left tab - anchored when fullScreen */}
+          {fullScreen ? (
+            <div className="md:hidden peeking-tab-left-anchored" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+                onTouchStart={handleTabTouchStart}
+                onTouchMove={handleTabTouchMove}
+                onTouchEnd={handleTabTouchEnd}
+                className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
+              >
+                <i className="fa-solid fa-sliders text-2xl"></i>
+              </button>
+            </div>
+          ) : null}
+          {/* Mobile peeking right tab - pies drawer when fullScreen */}
+          {fullScreen ? (
+            <div
+              className="md:hidden peeking-tab-right-anchored"
+              onTouchStart={handlePiesTabTouchStart}
+              onTouchMove={handlePiesTabTouchMove}
+              onTouchEnd={handlePiesTabTouchEnd}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setIsPiesDrawerOpen(true)}
+                className="bg-pink-600 text-white rounded-l-2xl shadow-2xl touch-none"
+              >
+                <i className="fa-solid fa-chart-pie text-xl"></i>
+              </button>
+            </div>
+          ) : null}
           {selectedYearRange && (
             <button
               type="button"
@@ -551,21 +672,27 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
                 fontSize={12}
                 fontWeight="900"
                 ticks={
-                  isRangeSelecting
-                    ? rangeStartYear === rangeEndYear
-                      ? [rangeStartYear]
-                      : [rangeStartYear, rangeEndYear]
-                    : displayedData.length >= 2
-                      ? (() => {
-                          const yrs = displayedData.map((d: any) => d.year);
-                          const n = yrs.length;
-                          if (n <= 3) return yrs;
-                          const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
-                          if (isMobile) return [yrs[0], yrs[Math.floor(n / 2)], yrs[n - 1]].filter((v: number, i: number, a: number[]) => a.indexOf(v) === i);
-                          const step = Math.max(1, Math.floor((n - 1) / 3));
-                          return yrs.filter((_: number, i: number) => i % step === 0 || i === n - 1);
-                        })()
-                      : [2005, 2010, 2015, 2020, 2025]
+                  (() => {
+                    const raw =
+                      isRangeSelecting
+                        ? rangeStartYear === rangeEndYear
+                          ? [rangeStartYear]
+                          : [rangeStartYear, rangeEndYear]
+                        : displayedData.length >= 2
+                          ? (() => {
+                              const yrs = displayedData.map((d: any) => d.year);
+                              const n = yrs.length;
+                              if (n <= 3) return yrs;
+                              const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
+                              if (isMobile) return [yrs[0], yrs[Math.floor(n / 2)], yrs[n - 1]].filter((v: number, i: number, a: number[]) => a.indexOf(v) === i);
+                              const step = Math.max(1, Math.floor((n - 1) / 3));
+                              return yrs.filter((_: number, i: number) => i % step === 0 || i === n - 1);
+                            })()
+                          : displayedData.length > 0
+                            ? [...new Set(displayedData.map((d: any) => d.year))].sort((a, b) => a - b)
+                            : [];
+                    return raw.filter((y: number) => y !== 2023);
+                  })()
                 }
                 tickFormatter={isRangeSelecting ? (v: number) => String(v).slice(-2) : undefined}
                 axisLine={false}
@@ -657,28 +784,99 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
             </LineChart>
           </ResponsiveContainer>
         </div>
-        <p className="text-[10px] text-gray-400 uppercase -mt-4">Click a point to open source PDF. Drag chart to select year range.</p>
 
-        {/* Mobile peeking tab */}
-        <div
-          className="md:hidden peeking-tab-left"
-          style={{
-            top: `${tabTop}%`,
-            opacity: tabTop < 0 ? 0 : 1,
-            pointerEvents: tabTop < 0 ? 'none' : 'auto',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <button
-            onClick={() => setIsDrawerOpen(!isDrawerOpen)}
-            onTouchStart={handleTabTouchStart}
-            onTouchMove={handleTabTouchMove}
-            onTouchEnd={handleTabTouchEnd}
-            className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
+        {/* Desktop only: collapsible bottom peeking panel */}
+        <div className="hidden md:block border-t border-gray-50 shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div
+            className="grid transition-[grid-template-rows] duration-300 ease-out"
+            style={{ gridTemplateRows: desktopTogglesOpen ? '1fr' : '0fr' }}
           >
-            <i className="fa-solid fa-sliders text-2xl"></i>
-          </button>
+            <div className="min-h-0 overflow-hidden">
+              <div className={`space-y-8 pt-6 px-4 ${fullScreen ? 'pb-2' : 'pb-4'}`}>
+                <div className={`space-y-4 ${fullScreen ? '' : 'mb-8'}`}>
+                  <div className={`grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] items-end gap-x-2 ${fullScreen ? 'gap-y-2' : 'gap-y-4'}`}>
+                    <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest pb-2">Toggle Comparison</div>
+                    {seriesKeys.map(({ key, label, color }) => (
+                      <div key={key} className="flex flex-col items-center gap-2">
+                        <button
+                          onClick={() => setToggles({ ...toggles, [key]: !toggles[key as keyof typeof toggles] })}
+                          className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key as keyof typeof toggles] ? '' : 'text-gray-400'}`}
+                          style={toggles[key as keyof typeof toggles] ? { color } : undefined}
+                        >
+                          <div
+                            className={`w-12 h-1.5 rounded-full transition-all ${toggles[key as keyof typeof toggles] ? '' : 'bg-gray-100'}`}
+                            style={toggles[key as keyof typeof toggles] ? { backgroundColor: color } : undefined}
+                          />
+                          {label}
+                        </button>
+                      </div>
+                    ))}
+                    <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+                    <div className="col-span-5 flex justify-center">
+                      <div
+                        onClick={() => setToggles({ ...toggles, trend: !toggles.trend })}
+                        className={`slider-oval ${toggles.trend ? 'slider-active slider-networth-on' : ''}`}
+                      >
+                        <div className="slider-circle"></div>
+                      </div>
+                    </div>
+                    <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+                    <div className="col-span-5 flex justify-center">
+                      <div
+                        onClick={() => setToggles({ ...toggles, inflationAdjusted: !toggles.inflationAdjusted })}
+                        className={`slider-oval ${toggles.inflationAdjusted ? 'slider-active slider-inf-on' : ''}`}
+                      >
+                        <div className="slider-circle"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-center h-12 border-t border-gray-100 bg-gray-50/50">
+            <button
+              type="button"
+              onClick={() => setDesktopTogglesOpen(!desktopTogglesOpen)}
+              aria-label={desktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              {desktopTogglesOpen ? (
+                <i className="fa-solid fa-chevron-down text-sm" />
+              ) : (
+                <>
+                  <i className="fa-solid fa-chevron-up text-sm" />
+                  <span>Chart controls</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
+
+        </div>
+
+        {/* Mobile peeking tab - fixed position when not fullScreen */}
+        {!fullScreen && (
+          <div
+            className="md:hidden peeking-tab-left"
+            style={{
+              top: `${tabTop}%`,
+              opacity: tabTop < 0 ? 0 : 1,
+              pointerEvents: tabTop < 0 ? 'none' : 'auto',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setIsDrawerOpen(!isDrawerOpen)}
+              onTouchStart={handleTabTouchStart}
+              onTouchMove={handleTabTouchMove}
+              onTouchEnd={handleTabTouchEnd}
+              className="bg-indigo-600 text-white p-4 rounded-r-3xl shadow-2xl border-2 border-white/20 touch-none"
+            >
+              <i className="fa-solid fa-sliders text-2xl"></i>
+            </button>
+          </div>
+        )}
 
         {/* Mobile drawer */}
         {isDrawerOpen && (
@@ -743,94 +941,142 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack }) => {
           </div>
         )}
 
-        {/* Desktop toggles */}
-        <div className="mt-8 space-y-8 border-t border-gray-50 pt-10">
-          <div className="hidden md:grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] gap-y-8 items-center px-4">
-            <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
-            {seriesKeys.map(({ key, label, color }) => (
-              <div key={key} className="text-center">
-                <button
-                  onClick={() => setToggles({ ...toggles, [key]: !toggles[key as keyof typeof toggles] })}
-                  className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key as keyof typeof toggles] ? '' : 'text-gray-400'}`}
-                  style={toggles[key as keyof typeof toggles] ? { color } : {}}
-                >
-                  <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key as keyof typeof toggles] ? '' : 'bg-gray-100'}`} style={toggles[key as keyof typeof toggles] ? { backgroundColor: color } : {}} />
-                  {label}
-                </button>
+        {/* Pie charts - in main content when not fullScreen, in right drawer when fullScreen */}
+        {!fullScreen && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
+              <div className="rounded-[2rem] border border-gray-100 p-4">
+                <h4 className="text-sm font-black uppercase text-gray-600 mb-4">Revenue by type ({selectedYear})</h4>
+                <div className="h-[260px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={revenuePie}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                        onClick={(entry) => openPdf(entry.pdf_page_url)}
+                      >
+                        {revenuePie.map((_, i) => (
+                          <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
-            ))}
-            <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-            <div className="col-span-5 flex justify-center">
-              <div
-                onClick={() => setToggles({ ...toggles, trend: !toggles.trend })}
-                className={`slider-oval ${toggles.trend ? 'slider-active slider-networth-on' : ''}`}
-              >
-                <div className="slider-circle"></div>
+              <div className="rounded-[2rem] border border-gray-100 p-4">
+                <h4 className="text-sm font-black uppercase text-gray-600 mb-4">Tax breakdown ({selectedYear})</h4>
+                <div className="h-[260px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={taxBreakdownPie}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={80}
+                        label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                        onClick={(entry) => openPdf(entry.pdf_page_url)}
+                      >
+                        {taxBreakdownPie.map((_, i) => (
+                          <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
-            <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-            <div className="col-span-5 flex justify-center">
-              <div
-                onClick={() => setToggles({ ...toggles, inflationAdjusted: !toggles.inflationAdjusted })}
-                className={`slider-oval ${toggles.inflationAdjusted ? 'slider-active slider-inf-on' : ''}`}
-              >
-                <div className="slider-circle"></div>
-              </div>
-            </div>
-          </div>
-        </div>
+            <p className="text-[10px] text-gray-400 uppercase">Click a slice to open source PDF</p>
+          </>
+        )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
-          <div className="rounded-[2rem] border border-gray-100 p-4">
-            <h4 className="text-sm font-black uppercase text-gray-600 mb-4">Revenue by type ({selectedYear})</h4>
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={revenuePie}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
-                    onClick={(entry) => openPdf(entry.pdf_page_url)}
-                  >
-                    {revenuePie.map((_, i) => (
-                      <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
+        {/* Mobile right drawer - pies (fullScreen only) */}
+        {fullScreen && isPiesDrawerOpen && (
+          <div className="fixed inset-0 flex justify-end z-[201]">
+            <div
+              className="mobile-drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setIsPiesDrawerOpen(false)}
+            />
+            <div
+              className="mobile-drawer-panel-right relative w-80 min-w-[280px] bg-white h-full shadow-2xl flex flex-col p-8 touch-pan-y overflow-y-auto"
+              style={{
+                transform: `translateX(${piesDrawerDragOffset}px)`,
+                transition: piesDraggingDrawer ? 'none' : 'transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+              }}
+              onTouchStart={handlePiesDrawerTouchStart}
+              onTouchMove={handlePiesDrawerTouchMove}
+              onTouchEnd={handlePiesDrawerTouchEnd}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setIsPiesDrawerOpen(false)}
+                className="self-end text-gray-300 hover:text-red-500 mb-6 transition-colors"
+              >
+                <i className="fa-solid fa-xmark text-2xl"></i>
+              </button>
+              <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Revenue breakdown</h3>
+              <div className="space-y-8 flex-1 overflow-y-auto custom-scrollbar">
+                <div className="rounded-[2rem] border border-gray-100 p-4">
+                  <h4 className="text-sm font-black uppercase text-gray-600 mb-4">Revenue by type ({selectedYear})</h4>
+                  <div className="h-[200px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={revenuePie}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={70}
+                          label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                          onClick={(entry) => openPdf(entry.pdf_page_url)}
+                        >
+                          {revenuePie.map((_, i) => (
+                            <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+                <div className="rounded-[2rem] border border-gray-100 p-4">
+                  <h4 className="text-sm font-black uppercase text-gray-600 mb-4">Tax breakdown ({selectedYear})</h4>
+                  <div className="h-[200px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={taxBreakdownPie}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={70}
+                          label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                          onClick={(entry) => openPdf(entry.pdf_page_url)}
+                        >
+                          {taxBreakdownPie.map((_, i) => (
+                            <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                          ))}
+                        </Pie>
+                        <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </div>
+              <p className="text-[10px] text-gray-400 uppercase mt-4">Click a slice to open source PDF</p>
             </div>
           </div>
-          <div className="rounded-[2rem] border border-gray-100 p-4">
-            <h4 className="text-sm font-black uppercase text-gray-600 mb-4">Tax breakdown ({selectedYear})</h4>
-            <div className="h-[260px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={taxBreakdownPie}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
-                    onClick={(entry) => openPdf(entry.pdf_page_url)}
-                  >
-                    {taxBreakdownPie.map((_, i) => (
-                      <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-        <p className="text-[10px] text-gray-400 uppercase">Click a slice to open source PDF</p>
+        )}
       </div>
     </div>
   );

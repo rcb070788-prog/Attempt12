@@ -148,6 +148,7 @@ function isComponentUnitRow(r: NormalizedTotalRow): boolean {
  * Build revenue year metrics from stored total rows (general + program).
  * When includeBusinessType is false, business-type total is excluded from totalRevenue.
  * Returns YearMetric[] with totalRevenue set; breakdown (taxesFees, etc.) set to 0 for chart compatibility.
+ * For 2020 only: program revenues reported as Total Primary Government (not Governmental Activities); count those in gov.
  */
 export function getRevenueYearMetricsFromTotals(
   totalsRows: NormalizedTotalRow[],
@@ -172,6 +173,7 @@ export function getRevenueYearMetricsFromTotals(
       if (r.label_norm === GOV_LABEL) cur.gov += r.amount;
       else if (r.label_norm === BIZ_LABEL) cur.biz += r.amount;
       else if (COMP_LABELS.includes(r.label_norm)) cur.comp += r.amount;
+      else if (r.label_norm === 'total_primary_government') cur.gov += r.amount; // 2020: only Primary Government + MSD reported
     }
     if (r.pdf_page_url && !cur.url) cur.url = r.pdf_page_url;
     byYear.set(r.year, cur);

@@ -106,14 +106,6 @@ export const DASHBOARDS: (DashboardConfig & { status?: string })[] = [
     description: 'A detailed breakdown of County spending across various public funds.',
     folderPath: '/dashboards/expenses/expensesbyfund/index.html',
     status: 'Official'
-  },
-  {
-    id: 'property-tax-revenue',
-    category: 'revenues',
-    title: 'Property Tax Collection',
-    description: 'Visualization of tax revenue trends.',
-    folderPath: '/dashboards/revenues/property-tax/index.html',
-    status: 'Planned'
   }
 ];
 

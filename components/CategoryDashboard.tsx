@@ -2,6 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { CATEGORIES, DASHBOARDS, DOCUMENT_SECTIONS, INTERNAL_REPORTS } from '../constants';
 import { formatCurrency, pctChangeOverRange, formatPctChange, recomputeTrendsForSlice } from '../utils/financeUtils';
+import { fetchAsHtmlBlobUrl } from '../utils/fileUtils';
 import { NetWorthChart } from './NetWorthChart';
 import CountyExpenditures from './CountyExpenditures';
 import CountyExpendituresPiePage from './CountyExpendituresPiePage';
@@ -76,6 +77,9 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     netWorthInf: false
   });
 
+  // Desktop collapsible drawer for Debt & Solvency Trend toggles (desktop only)
+  const [solvencyDesktopTogglesOpen, setSolvencyDesktopTogglesOpen] = useState(true);
+
   // Mobile peeking left tab + drawer for Debt & Solvency Trend
   const [solvencyDrawerOpen, setSolvencyDrawerOpen] = useState(false);
   const [solvencyDrawerDragOffset, setSolvencyDrawerDragOffset] = useState(0);
@@ -110,6 +114,34 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const [documentListError, setDocumentListError] = useState<string | null>(null);
   const [documentListItems, setDocumentListItems] = useState<{ kind: 'folder' | 'file'; name: string; path: string }[]>([]);
   const [selectedWageCsvPath, setSelectedWageCsvPath] = useState<string | null>(null);
+
+  const openCsvInNewTab = React.useCallback((bucketName: string, path: string, filename: string) => {
+    const base = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname || '/'}` : '/';
+    const url = `${base}?view=csv&bucket=${encodeURIComponent(bucketName)}&path=${encodeURIComponent(path)}&name=${encodeURIComponent(filename)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+  }, []);
+
+  const handleOpenDocument = async (item: { kind: 'folder' | 'file'; name: string; path: string }, bucketName: string) => {
+    if (!supabase) return;
+    const publicUrl = supabase.storage.from(bucketName).getPublicUrl(item.path).data.publicUrl;
+    const isCsv = item.name.toLowerCase().endsWith('.csv');
+    const isHtml = /\.(htm|html)$/i.test(item.name);
+    if (isCsv) {
+      openCsvInNewTab(bucketName, item.path, item.name);
+      return;
+    }
+    if (isHtml) {
+      try {
+        const blobUrl = await fetchAsHtmlBlobUrl(publicUrl);
+        window.open(blobUrl, '_blank', 'noopener,noreferrer');
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+      } catch (err) {
+        console.error('Failed to load document:', err);
+      }
+    } else {
+      window.open(publicUrl, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   React.useEffect(() => {
     setActiveInternalReportId(null);
@@ -160,14 +192,16 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           setDocumentListItems([]);
           return;
         }
+        const isPlaceholderName = (n: string) => /^\.?emptyfolderplaceholder$/i.test(n?.trim() ?? '');
         const items: { kind: 'folder' | 'file'; name: string; path: string }[] = [];
         const folderNames = new Set<string>();
         (data || []).forEach((item: { name: string }) => {
           const name = item.name;
           const relative = prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name;
+          if (isPlaceholderName(relative)) return;
           if (relative.includes('/')) {
             const segment = relative.split('/')[0];
-            if (segment && !folderNames.has(segment)) {
+            if (segment && !isPlaceholderName(segment) && !folderNames.has(segment)) {
               folderNames.add(segment);
               items.push({ kind: 'folder', name: segment, path: prefix + segment });
             }
@@ -599,9 +633,11 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">
             {currentTitle}
           </h2>
-          <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
-            {isRoot ? 'Select a document category' : isViewLevel ? 'Documents will appear here once uploaded to Supabase' : 'Select a report'}
-          </p>
+          {!isViewLevel && (
+            <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
+              {isRoot ? 'Select a document category' : 'Select a report'}
+            </p>
+          )}
           <button onClick={handleBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-yellow-600 transition-colors w-fit">
             <i className="fa-solid fa-arrow-left mr-2"></i> {backLabel}
           </button>
@@ -684,14 +720,16 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                             setDocumentListItems([]);
                             return;
                           }
+                          const isPlaceholderNameRetry = (n: string) => /^\.?emptyfolderplaceholder$/i.test(n?.trim() ?? '');
                           const items: { kind: 'folder' | 'file'; name: string; path: string }[] = [];
                           const folderNames = new Set<string>();
                           (data || []).forEach((item: { name: string }) => {
                             const name = item.name;
                             const relative = prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name;
+                            if (isPlaceholderNameRetry(relative)) return;
                             if (relative.includes('/')) {
                               const segment = relative.split('/')[0];
-                              if (segment && !folderNames.has(segment)) {
+                              if (segment && !isPlaceholderNameRetry(segment) && !folderNames.has(segment)) {
                                 folderNames.add(segment);
                                 items.push({ kind: 'folder', name: segment, path: prefix + segment });
                               }
@@ -762,14 +800,23 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                               ))}
                             </select>
                             {effectiveCsvPath && supabase && section?.bucketName && (
-                              <a
-                                href={supabase.storage.from(section.bucketName).getPublicUrl(effectiveCsvPath).data.publicUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="inline-flex items-center gap-2 mt-3 text-yellow-600 hover:text-yellow-700 font-bold text-sm"
-                              >
-                                <i className="fa-solid fa-download"></i> Open / download
-                              </a>
+                              <div className="flex flex-wrap items-center gap-3 mt-3">
+                                <button
+                                  type="button"
+                                  onClick={() => openCsvInNewTab(section.bucketName!, effectiveCsvPath, csvFiles.find(f => f.path === effectiveCsvPath)?.name ?? effectiveCsvPath.split('/').pop() ?? 'summary.csv')}
+                                  className="inline-flex items-center gap-2 text-yellow-600 hover:text-yellow-700 font-bold text-sm"
+                                >
+                                  <i className="fa-solid fa-table"></i> View
+                                </button>
+                                <a
+                                  href={supabase.storage.from(section.bucketName).getPublicUrl(effectiveCsvPath).data.publicUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 font-bold text-sm"
+                                >
+                                  <i className="fa-solid fa-download"></i> Download
+                                </a>
+                              </div>
                             )}
                           </div>
                         )}
@@ -827,23 +874,24 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                             </div>
                           </div>
                         ) : (
-                          <a
+                          <div
                             key={item.path}
-                            href={supabase?.storage.from(section!.bucketName!).getPublicUrl(item.path).data.publicUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group no-underline text-inherit"
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => handleOpenDocument(item, section!.bucketName!)}
+                            onKeyDown={(e) => e.key === 'Enter' && handleOpenDocument(item, section!.bucketName!)}
+                            className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
                           >
                             <div className="flex items-center gap-3">
                               <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-yellow-600 transition-colors">
-                                <i className={`fa-solid ${item.name.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf' : 'fa-file'}`}></i>
+                                <i className={`fa-solid ${item.name.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf' : item.name.toLowerCase().endsWith('.htm') || item.name.toLowerCase().endsWith('.html') ? 'fa-file-lines' : 'fa-file'}`}></i>
                               </div>
                               <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-yellow-600 tracking-tighter">{item.name}</h3>
                             </div>
                             <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:text-yellow-50 group-hover:text-yellow-600 transition-colors">
                               <i className="fa-solid fa-arrow-up-right-from-square"></i>
                             </div>
-                          </a>
+                          </div>
                         )
                       ))}
                     </div>
@@ -1286,41 +1334,68 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               </ResponsiveContainer>
             </div>
 
-            <div className={`hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 border-t border-gray-50 pt-10 ${expandedChart === 'solvency' ? 'shrink-0' : 'mb-12'}`}>
-              <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
-              {(['assets', 'liabs', 'netWorth'] as const).map(key => {
-                const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
-                const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
-                const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
-                return (
-                  <div key={key} className="text-center">
-                    <button 
-                      onClick={() => setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key] })} 
-                      className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${solvencyTrendToggles[key] ? colors[key] : strobeClass}`}
-                    >
-                      <div className={`w-12 h-1.5 rounded-full transition-all ${solvencyTrendToggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
-                      {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-                    </button>
+            {/* Desktop only: collapsible panel with toggle at top (same as County Expenditures) */}
+            <div className="hidden md:block border-t border-gray-50 shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-center h-12 border-b border-gray-100 bg-gray-50/50">
+                <button
+                  type="button"
+                  onClick={() => setSolvencyDesktopTogglesOpen(!solvencyDesktopTogglesOpen)}
+                  aria-label={solvencyDesktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
+                  className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
+                >
+                  {solvencyDesktopTogglesOpen ? (
+                    <i className="fa-solid fa-chevron-up text-xl strobe-chart-controls" />
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-chevron-down text-xl strobe-chart-controls" />
+                      <span>Chart controls</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <div
+                className="grid transition-[grid-template-rows] duration-300 ease-out"
+                style={{ gridTemplateRows: solvencyDesktopTogglesOpen ? '1fr' : '0fr' }}
+              >
+                <div className="min-h-0 overflow-hidden">
+                  <div className={`gap-y-8 items-center px-4 pt-6 ${expandedChart === 'solvency' ? 'pb-2' : 'pb-4 mb-12'}`}>
+                    <div className="grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center">
+                      <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
+                      {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+                        const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+                        const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                        const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+                        return (
+                          <div key={key} className="text-center">
+                            <button
+                              onClick={() => setSolvencyTrendToggles({ ...solvencyTrendToggles, [key]: !solvencyTrendToggles[key] })}
+                              className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${solvencyTrendToggles[key] ? colors[key] : strobeClass}`}
+                            >
+                              <div className={`w-12 h-1.5 rounded-full transition-all ${solvencyTrendToggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                              {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                      <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+                      {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                        const base = key.replace('Trend', '');
+                        return (
+                          <div key={key} className="flex justify-center">
+                            <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                          </div>
+                        );
+                      })}
+                      <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+                      {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                        <div key={key} className="flex justify-center">
+                          <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                );
-              })}
-              
-              <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-              {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
-                const base = key.replace('Trend', '');
-                return (
-                  <div key={key} className="flex justify-center">
-                    <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
-                  </div>
-                );
-              })}
-
-              <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-              {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
-                <div key={key} className="flex justify-center">
-                  <div onClick={() => setSolvencyTrendToggles({...solvencyTrendToggles, [key]: !solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] as any})} className={`slider-oval ${solvencyTrendToggles[key as keyof typeof solvencyTrendToggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
                 </div>
-              ))}
+              </div>
             </div>
 
             {/* MOBILE LEFT DRAWER - Chart Controls (z above fullscreen when open) */}

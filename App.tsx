@@ -75,6 +75,7 @@ import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { MainView } from './components/MainView';
 import { Footer } from './components/Footer';
+import CsvViewerPage from './components/CsvViewerPage';
 import './index.css';
 
 
@@ -304,6 +305,18 @@ export default function App() {
           allow="fullscreen"
         />
       </div>
+    );
+  }
+
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const viewCsv = searchParams.get('view') === 'csv' && searchParams.get('bucket') && searchParams.get('path') && searchParams.get('name');
+  if (viewCsv) {
+    return (
+      <CsvViewerPage
+        bucket={searchParams.get('bucket')!}
+        path={searchParams.get('path')!}
+        name={searchParams.get('name')!}
+      />
     );
   }
 

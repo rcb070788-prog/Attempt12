@@ -40,9 +40,8 @@ export const CATEGORIES = [
  * bucketPathPrefix: optional root path inside the bucket (e.g. "expense_reports_by_fund/") so object keys match existing labeling.
  */
 export const DOCUMENT_SECTIONS: { id: string; title: string; bucketName?: string; bucketPathPrefix?: string; children?: { id: string; title: string; folderPath?: string }[] }[] = [
-  // If your files are under path expense_reports_by_fund/Fund 101/... in a bucket (e.g. public), use bucketPathPrefix.
-  // If the bucket is named expense_reports_by_fund and keys are Fund 101/file.pdf, use bucketName: 'expense_reports_by_fund' and remove bucketPathPrefix.
-  { id: 'expense-reports-by-fund', title: 'Expense Reports by Fund', bucketName: 'public', bucketPathPrefix: 'expense_reports_by_fund/' },
+  // Bucket expense_reports_by_fund with folders like Fund 101, Fund 116, etc. (no path prefix).
+  { id: 'expense-reports-by-fund', title: 'Expense Reports by Fund', bucketName: 'expense_reports_by_fund' },
   {
     id: 'wage-reports',
     title: 'Wage Reports',
@@ -58,7 +57,7 @@ export const DOCUMENT_SECTIONS: { id: string; title: string; bucketName?: string
     bucketName: 'AFR_reports',
     bucketPathPrefix: 'originals/',
   },
-  { id: 'tax-rolls-by-assessment', title: 'Tax Rolls by Assessment' },
+  { id: 'tax-rolls-by-assessment', title: 'Tax Rolls by Assessment', bucketName: 'tax_rolls_by_assessment' },
 ];
 
 /**

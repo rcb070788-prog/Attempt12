@@ -33,6 +33,7 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
   fullScreen = false
 }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [desktopTogglesOpen, setDesktopTogglesOpen] = useState(true);
   const chartRef = useRef<HTMLDivElement>(null);
   const [tabTop, setTabTop] = useState(50); // percentage
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
@@ -681,42 +682,68 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
       {/* THE CONTROL PANEL (Strobing Legend & Toggles) */}
       <div className={`mt-8 space-y-8 ${fullScreen ? 'shrink-0 mt-4' : ''}`} onClick={(e) => e.stopPropagation()}>
         
-        {/* DESKTOP LAYOUT: Matching Debt & Solvency Trend Chart */}
-        <div className={`hidden md:grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center px-4 border-t border-gray-50 pt-10 ${fullScreen ? 'gap-y-4 pt-6' : 'mb-12'}`}>
-        <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest"></div>
-          {(['assets', 'liabs', 'netWorth'] as const).map(key => {
-            const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
-            const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
-            const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
-            return (
-              <div key={key} className="text-center">
-                <button 
-                  onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
-                  className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
-                >
-                  <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
-                  {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
-                </button>
+        {/* DESKTOP LAYOUT: Collapsible drawer (same as County Expenditures) */}
+        <div className="hidden md:block border-t border-gray-50 shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center h-12 border-b border-gray-100 bg-gray-50/50">
+            <button
+              type="button"
+              onClick={() => setDesktopTogglesOpen(!desktopTogglesOpen)}
+              aria-label={desktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              {desktopTogglesOpen ? (
+                <i className="fa-solid fa-chevron-up text-xl strobe-chart-controls" />
+              ) : (
+                <>
+                  <i className="fa-solid fa-chevron-down text-xl strobe-chart-controls" />
+                  <span>Chart controls</span>
+                </>
+              )}
+            </button>
+          </div>
+          <div
+            className="grid transition-[grid-template-rows] duration-300 ease-out"
+            style={{ gridTemplateRows: desktopTogglesOpen ? '1fr' : '0fr' }}
+          >
+            <div className="min-h-0 overflow-hidden">
+              <div className={`gap-y-8 items-center px-4 pt-6 ${fullScreen ? 'pb-2' : 'pb-4 mb-12'}`}>
+                <div className={`grid grid-cols-[200px_1fr_1fr_1fr] gap-y-8 items-center ${fullScreen ? 'gap-y-4 pt-0' : ''}`}>
+                  <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest"></div>
+                  {(['assets', 'liabs', 'netWorth'] as const).map(key => {
+                    const colors = { assets: 'text-[#4ade80]', liabs: 'text-[#f87171]', netWorth: 'text-[#3b82f6]' };
+                    const bgColors = { assets: 'bg-[#4ade80]', liabs: 'bg-[#f87171]', netWorth: 'bg-[#3b82f6]' };
+                    const strobeClass = key === 'assets' ? 'strobe-assets' : key === 'liabs' ? 'strobe-liabs' : 'strobe-networth';
+                    return (
+                      <div key={key} className="text-center">
+                        <button 
+                          onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })} 
+                          className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? colors[key] : strobeClass}`}
+                        >
+                          <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? bgColors[key] : 'bg-gray-100'}`} />
+                          {key === 'assets' ? 'Total Assets' : key === 'liabs' ? 'Total Debt' : 'Total Net Worth'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                  <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
+                  {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
+                    const base = key.replace('Trend', '');
+                    return (
+                      <div key={key} className="flex justify-center">
+                        <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
+                      </div>
+                    );
+                  })}
+                  <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
+                  {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
+                    <div key={key} className="flex justify-center">
+                      <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
+                    </div>
+                  ))}
+                </div>
               </div>
-            );
-          })}
-          
-          <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-          {['assetsTrend', 'liabsTrend', 'netWorthTrend'].map(key => {
-            const base = key.replace('Trend', '');
-            return (
-              <div key={key} className="flex justify-center">
-                <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? `slider-active slider-${base}-on` : ''}`}><div className="slider-circle"></div></div>
-              </div>
-            );
-          })}
-
-          <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-          {['assetsInf', 'liabsInf', 'netWorthInf'].map(key => (
-            <div key={key} className="flex justify-center">
-              <div onClick={() => setToggles({...toggles, [key]: !toggles[key as keyof typeof toggles] as any})} className={`slider-oval ${toggles[key as keyof typeof toggles] ? 'slider-active slider-inf-on' : ''}`}><div className="slider-circle"></div></div>
             </div>
-          ))}
+          </div>
         </div>
 
         {/* MOBILE LAYOUT: Hidden - toggles now in drawer */}

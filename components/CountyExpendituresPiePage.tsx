@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
-import { useExhibitBExpenseLines } from '../src/lib/useExhibitBLines';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useExhibitBExpenseLines, useExhibitBExpenseTotals } from '../src/lib/useExhibitBLines';
 import {
   getExpensePieByEntityForYear,
   COUNTY_EXPENSE_ENTITY_NORMS,
@@ -24,6 +24,7 @@ export const CountyExpendituresPiePage: React.FC<CountyExpendituresPiePageProps>
   initialYear,
 }) => {
   const { data: lines, loading, error } = useExhibitBExpenseLines();
+  const { data: totalsRows } = useExhibitBExpenseTotals();
   const [includeBusinessType, setIncludeBusinessType] = useState(false);
   const [selectedYear, setSelectedYear] = useState<number>(() => initialYear ?? 2024);
 
@@ -47,8 +48,8 @@ export const CountyExpendituresPiePage: React.FC<CountyExpendituresPiePageProps>
   );
 
   const pieData = useMemo(
-    () => getExpensePieByEntityForYear(lines, selectedYear, includeBusinessType, entityNorms),
-    [lines, selectedYear, includeBusinessType, entityNorms]
+    () => getExpensePieByEntityForYear(lines, selectedYear, includeBusinessType, entityNorms, totalsRows),
+    [lines, selectedYear, includeBusinessType, entityNorms, totalsRows]
   );
 
   if (loading) {
@@ -81,62 +82,65 @@ export const CountyExpendituresPiePage: React.FC<CountyExpendituresPiePageProps>
   }
 
   return (
-    <div className="space-y-8">
-      <button
-        onClick={onBack}
-        className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors"
-      >
-        <i className="fa-solid fa-arrow-left mr-2"></i> Back to County Expenditures
-      </button>
-      <div className="bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6">
-        <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">
-          Expense breakdown by entity
-        </h3>
-        <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">
-          Expenses by entity for the selected year
-        </p>
+    <div className="flex flex-col min-h-full">
+      <div className="shrink-0 space-y-4">
+        <button
+          onClick={onBack}
+          className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors md:hidden"
+        >
+          <i className="fa-solid fa-arrow-left mr-2"></i> Back to County Expenditures
+        </button>
+        <div className="bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100">
+          <h3 className="text-3xl font-black uppercase leading-none tracking-tighter">
+            Expense breakdown by entity
+          </h3>
+          <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">
+            Expenses by entity for the selected year
+          </p>
 
-        <div className="flex flex-wrap gap-4 items-center">
-          <label className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase text-gray-500">Year</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
-            >
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeBusinessType}
-              onChange={(e) => setIncludeBusinessType(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm font-bold uppercase text-gray-700">
-              Include Water & Sewer (Enterprise Fund)
-            </span>
-          </label>
+          <div className="flex flex-wrap gap-4 items-center mt-4">
+            <label className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase text-gray-500">Year</span>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
+              >
+                {years.map((y) => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeBusinessType}
+                onChange={(e) => setIncludeBusinessType(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm font-bold uppercase text-gray-700">
+                Include Water & Sewer (Enterprise Fund)
+              </span>
+            </label>
+          </div>
         </div>
+      </div>
 
-        <div className="mt-10 rounded-[2rem] border border-gray-100 p-4">
-          <h4 className="text-sm font-black uppercase text-gray-600 mb-4">
+      <div className="flex-1 min-h-0 flex items-center justify-center px-2">
+        <div className="flex-1 min-h-[320px] w-full max-w-2xl rounded-[2rem] border border-gray-100 bg-white p-4 flex flex-col">
+          <h4 className="text-sm font-black uppercase text-gray-600 mb-4 shrink-0">
             Expenses by entity ({selectedYear})
           </h4>
-          <div className="h-[320px] w-full max-w-lg">
+          <div className="h-[420px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ left: 100, right: 100, top: 24, bottom: 24 }}>
                 <Pie
                   data={pieData}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={100}
-                  label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                  outerRadius={120}
                   onClick={(entry) => openPdf(entry.pdf_page_url)}
                 >
                   {pieData.map((_, i) => (
@@ -144,11 +148,18 @@ export const CountyExpendituresPiePage: React.FC<CountyExpendituresPiePageProps>
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend
+                  formatter={(value, entry: { payload?: { value?: number } }) => (
+                    <span style={{ fontWeight: 'bold', fontSize: '16pt' }}>
+                      {value}: {formatCurrency(entry?.payload?.value ?? 0)}
+                    </span>
+                  )}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
+          <p className="text-[10px] text-gray-400 uppercase mt-2 shrink-0">Click a slice to open source PDF</p>
         </div>
-        <p className="text-[10px] text-gray-400 uppercase">Click a slice to open source PDF</p>
       </div>
     </div>
   );

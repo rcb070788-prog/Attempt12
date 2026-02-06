@@ -34,6 +34,7 @@ interface CategoryDashboardProps {
   setHoveredData: (val: any) => void;
   toggles: any;
   setToggles: (val: any) => void;
+  supabase: any;
 }
 
 const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
@@ -59,7 +60,8 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   hoveredData,
   setHoveredData,
   toggles,
-  setToggles
+  setToggles,
+  supabase
 }) => {
   const [showSolvencyDetail, setShowSolvencyDetail] = useState(false);
   const [solvencyTrendToggles, setSolvencyTrendToggles] = useState({
@@ -101,9 +103,100 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const [activeInternalReportId, setActiveInternalReportId] = useState<string | null>(null);
   const [expensePieInitialYear, setExpensePieInitialYear] = useState<number | undefined>(undefined);
   const [revenuePieInitialYear, setRevenuePieInitialYear] = useState<number | undefined>(undefined);
+
+  // Documents: storage bucket folder drill-down (path segments, e.g. ["Fund 101"])
+  const [documentStoragePathStack, setDocumentStoragePathStack] = useState<string[]>([]);
+  const [documentListLoading, setDocumentListLoading] = useState(false);
+  const [documentListError, setDocumentListError] = useState<string | null>(null);
+  const [documentListItems, setDocumentListItems] = useState<{ kind: 'folder' | 'file'; name: string; path: string }[]>([]);
+  const [selectedWageCsvPath, setSelectedWageCsvPath] = useState<string | null>(null);
+
   React.useEffect(() => {
     setActiveInternalReportId(null);
   }, [selectedCategory]);
+
+  // Reset storage path when user switches document section
+  React.useEffect(() => {
+    setDocumentStoragePathStack([]);
+  }, [documentsStack[0]]);
+
+  // Reset selected wage CSV when list or folder changes
+  React.useEffect(() => {
+    setSelectedWageCsvPath(null);
+  }, [documentsStack.join(','), documentListItems.length]);
+
+  // Fetch bucket list when at document view level for a section with bucketName
+  React.useEffect(() => {
+    const topId = documentsStack[0];
+    const section = DOCUMENT_SECTIONS.find(s => s.id === topId);
+    const isViewLevel = documentsStack.length >= 2 || (documentsStack.length === 1 && (!section || !section.children));
+    const bucketName = section?.bucketName;
+    if (selectedCategory !== 'documents' || !isViewLevel || !bucketName || !supabase) {
+      setDocumentListItems([]);
+      setDocumentListError(null);
+      return;
+    }
+    const basePrefix = section?.bucketPathPrefix ?? '';
+    let prefix: string;
+    if (section?.children && documentsStack.length >= 2) {
+      const childId = documentsStack[1];
+      const child = section.children.find(c => c.id === childId);
+      prefix = basePrefix + (child?.folderPath ? child.folderPath + '/' : '');
+    } else {
+      prefix = basePrefix + (documentStoragePathStack.length ? documentStoragePathStack.join('/') + '/' : '');
+    }
+    let cancelled = false;
+    setDocumentListLoading(true);
+    setDocumentListError(null);
+    supabase.storage.from(bucketName).list(prefix, { limit: 500 })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setDocumentListLoading(false);
+        if (import.meta.env.DEV && section?.id === 'expense-reports-by-fund') {
+          console.log('Expense Reports by Fund list', { bucketName, prefix, data, error });
+        }
+        if (error) {
+          setDocumentListError(error.message || 'Unable to load documents');
+          setDocumentListItems([]);
+          return;
+        }
+        const items: { kind: 'folder' | 'file'; name: string; path: string }[] = [];
+        const folderNames = new Set<string>();
+        (data || []).forEach((item: { name: string }) => {
+          const name = item.name;
+          const relative = prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name;
+          if (relative.includes('/')) {
+            const segment = relative.split('/')[0];
+            if (segment && !folderNames.has(segment)) {
+              folderNames.add(segment);
+              items.push({ kind: 'folder', name: segment, path: prefix + segment });
+            }
+          } else {
+            const hasExtension = /\.[a-zA-Z0-9]+$/.test(relative);
+            if (!hasExtension && relative && !folderNames.has(relative)) {
+              folderNames.add(relative);
+              items.push({ kind: 'folder', name: relative, path: prefix + relative });
+            } else if (relative) {
+              items.push({ kind: 'file', name: relative, path: prefix + relative });
+            }
+          }
+        });
+        // Sort: folders first then files, each group alphabetically
+        items.sort((a, b) => {
+          if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+        setDocumentListItems(items);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setDocumentListLoading(false);
+          setDocumentListError('Unable to load documents');
+          setDocumentListItems([]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [selectedCategory, documentsStack, documentStoragePathStack, supabase]);
 
   const solvencyDisplayedData = useMemo(() => {
     if (!chartData.length) return [];
@@ -445,16 +538,16 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   if (selectedCategory === 'solvency' && !showSolvencyDetail) {
     return (
       <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
-        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
-          <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
-            <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
-          </button>
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-2">
           <div className="flex flex-col">
             <h2 className="text-2xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
               {currentCategoryLabel}
             </h2>
             <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Select a report to view official records</p>
           </div>
+          <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
+          </button>
         </div>
         <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4">
           <NetWorthChart
@@ -502,16 +595,16 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
     return (
       <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
-        <button onClick={handleBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-yellow-600 transition-colors">
-          <i className="fa-solid fa-arrow-left mr-2"></i> {backLabel}
-        </button>
-        <div className="flex flex-col">
+        <div className="flex flex-col gap-2">
           <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">
             {currentTitle}
           </h2>
           <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
             {isRoot ? 'Select a document category' : isViewLevel ? 'Documents will appear here once uploaded to Supabase' : 'Select a report'}
           </p>
+          <button onClick={handleBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-yellow-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> {backLabel}
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 mt-8">
@@ -548,7 +641,218 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               </div>
             ))}
 
-          {isViewLevel && (
+          {isViewLevel && section?.bucketName && (
+            <>
+              {documentStoragePathStack.length > 0 && (
+                <button
+                  onClick={() => setDocumentStoragePathStack(prev => prev.slice(0, -1))}
+                  className="text-[10px] font-black uppercase text-gray-400 hover:text-yellow-600 transition-colors w-fit mb-2"
+                >
+                  <i className="fa-solid fa-arrow-left mr-2"></i> Back to {documentStoragePathStack.length === 1 ? 'list' : 'folder'}
+                </button>
+              )}
+              {documentListLoading && (
+                <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+                  <i className="fa-solid fa-spinner fa-spin text-yellow-500 text-4xl mb-4"></i>
+                  <p className="text-gray-400 font-black uppercase text-xs">Loading documents…</p>
+                </div>
+              )}
+              {!documentListLoading && documentListError && (
+                <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+                  <i className="fa-solid fa-triangle-exclamation text-amber-400 text-4xl mb-4"></i>
+                  <p className="text-gray-600 font-bold mb-4">{documentListError}</p>
+                  <button
+                    onClick={() => {
+                      setDocumentListError(null);
+                      const basePrefix = section?.bucketPathPrefix ?? '';
+                      let prefix: string;
+                      if (section?.children && documentsStack.length >= 2) {
+                        const child = section.children.find((c: { id: string; folderPath?: string }) => c.id === documentsStack[1]);
+                        prefix = basePrefix + (child?.folderPath ? child.folderPath + '/' : '');
+                      } else {
+                        prefix = basePrefix + (documentStoragePathStack.length ? documentStoragePathStack.join('/') + '/' : '');
+                      }
+                      setDocumentListLoading(true);
+                      supabase?.storage.from(section!.bucketName!).list(prefix, { limit: 500 })
+                        .then(({ data, error }) => {
+                          setDocumentListLoading(false);
+                          if (import.meta.env.DEV && section?.id === 'expense-reports-by-fund') {
+                            console.log('Expense Reports by Fund list (retry)', { prefix, data, error });
+                          }
+                          if (error) {
+                            setDocumentListError(error.message || 'Unable to load documents');
+                            setDocumentListItems([]);
+                            return;
+                          }
+                          const items: { kind: 'folder' | 'file'; name: string; path: string }[] = [];
+                          const folderNames = new Set<string>();
+                          (data || []).forEach((item: { name: string }) => {
+                            const name = item.name;
+                            const relative = prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name;
+                            if (relative.includes('/')) {
+                              const segment = relative.split('/')[0];
+                              if (segment && !folderNames.has(segment)) {
+                                folderNames.add(segment);
+                                items.push({ kind: 'folder', name: segment, path: prefix + segment });
+                              }
+                            } else {
+                              const hasExtension = /\.[a-zA-Z0-9]+$/.test(relative);
+                              if (!hasExtension && relative && !folderNames.has(relative)) {
+                                folderNames.add(relative);
+                                items.push({ kind: 'folder', name: relative, path: prefix + relative });
+                              } else if (relative) {
+                                items.push({ kind: 'file', name: relative, path: prefix + relative });
+                              }
+                            }
+                          });
+                          items.sort((a, b) => {
+                            if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
+                            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+                          });
+                          setDocumentListItems(items);
+                        })
+                        .catch(() => {
+                          setDocumentListLoading(false);
+                          setDocumentListError('Unable to load documents');
+                        });
+                    }}
+                    className="px-6 py-3 bg-yellow-500 text-white font-black uppercase text-[10px] rounded-xl hover:bg-yellow-600 transition-colors"
+                  >
+                    Retry
+                  </button>
+                </div>
+              )}
+              {!documentListLoading && !documentListError && documentListItems.length === 0 && (
+                <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+                  <i className="fa-solid fa-folder-open text-yellow-200 text-4xl mb-4"></i>
+                  <p className="text-gray-400 font-black uppercase text-xs">No documents in this folder.</p>
+                </div>
+              )}
+              {!documentListLoading && !documentListError && documentListItems.length > 0 && (
+                (() => {
+                  const isWageReportStyle = section?.id === 'wage-reports' && stack.length >= 2;
+                  const files = documentListItems.filter(i => i.kind === 'file');
+                  const csvFiles = files.filter(f => f.name.toLowerCase().endsWith('.csv'));
+                  const pdfFiles = files.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+                  const extractYear = (name: string): number | null => {
+                    const m = name.match(/\b(19[9][0-9]|20[0-2][0-9]|2030)\b/);
+                    return m ? parseInt(m[1], 10) : null;
+                  };
+                  const pdfsByYear = [...pdfFiles].sort((a, b) => {
+                    const yA = extractYear(a.name) ?? 0;
+                    const yB = extractYear(b.name) ?? 0;
+                    return yB - yA;
+                  });
+                  if (isWageReportStyle) {
+                    const effectiveCsvPath = (selectedWageCsvPath && csvFiles.some(c => c.path === selectedWageCsvPath))
+                      ? selectedWageCsvPath
+                      : (csvFiles[0]?.path ?? null);
+                    return (
+                      <div className="space-y-6">
+                        {csvFiles.length > 0 && (
+                          <div className="bg-white p-6 rounded-[2.5rem] border-2 border-gray-100">
+                            <label className="block text-[10px] font-black uppercase text-gray-500 tracking-widest mb-2">Summary (CSV)</label>
+                            <select
+                              value={effectiveCsvPath ?? ''}
+                              onChange={(e) => setSelectedWageCsvPath(e.target.value || null)}
+                              className="w-full max-w-md px-4 py-3 rounded-xl border-2 border-gray-200 text-gray-900 font-medium focus:border-yellow-500 focus:ring-0"
+                            >
+                              {csvFiles.map(f => (
+                                <option key={f.path} value={f.path}>{f.name}</option>
+                              ))}
+                            </select>
+                            {effectiveCsvPath && supabase && section?.bucketName && (
+                              <a
+                                href={supabase.storage.from(section.bucketName).getPublicUrl(effectiveCsvPath).data.publicUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 mt-3 text-yellow-600 hover:text-yellow-700 font-bold text-sm"
+                              >
+                                <i className="fa-solid fa-download"></i> Open / download
+                              </a>
+                            )}
+                          </div>
+                        )}
+                        {pdfsByYear.length > 0 && (
+                          <div className="space-y-2">
+                            <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Reports by year (PDF)</p>
+                            <div className="grid grid-cols-1 gap-4">
+                              {pdfsByYear.map(item => (
+                                <a
+                                  key={item.path}
+                                  href={supabase?.storage.from(section!.bucketName!).getPublicUrl(item.path).data.publicUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group no-underline text-inherit"
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-yellow-600 transition-colors">
+                                      <i className="fa-solid fa-file-pdf"></i>
+                                    </div>
+                                    <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-yellow-600 tracking-tighter">{item.name}</h3>
+                                  </div>
+                                  <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:text-yellow-50 group-hover:text-yellow-600 transition-colors">
+                                    <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                                  </div>
+                                </a>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        {csvFiles.length === 0 && pdfsByYear.length === 0 && (
+                          <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+                            <p className="text-gray-400 font-black uppercase text-xs">No CSV or PDF files in this folder.</p>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="grid grid-cols-1 gap-4">
+                      {documentListItems.map(item => (
+                        item.kind === 'folder' ? (
+                          <div
+                            key={item.path}
+                            onClick={() => setDocumentStoragePathStack(prev => [...prev, item.name])}
+                            className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-yellow-600 transition-colors">
+                                <i className="fa-solid fa-folder"></i>
+                              </div>
+                              <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-yellow-600 tracking-tighter">{item.name}</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:text-yellow-50 group-hover:text-yellow-600 transition-colors">
+                              <i className="fa-solid fa-chevron-right"></i>
+                            </div>
+                          </div>
+                        ) : (
+                          <a
+                            key={item.path}
+                            href={supabase?.storage.from(section!.bucketName!).getPublicUrl(item.path).data.publicUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-yellow-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group no-underline text-inherit"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-yellow-600 transition-colors">
+                                <i className={`fa-solid ${item.name.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf' : 'fa-file'}`}></i>
+                              </div>
+                              <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-yellow-600 tracking-tighter">{item.name}</h3>
+                            </div>
+                            <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:text-yellow-50 group-hover:text-yellow-600 transition-colors">
+                              <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                            </div>
+                          </a>
+                        )
+                      ))}
+                    </div>
+                  );
+                })()
+              )}
+            </>
+          )}
+          {isViewLevel && !section?.bucketName && (
             <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
               <i className="fa-solid fa-folder-open text-yellow-200 text-4xl mb-4"></i>
               <p className="text-gray-400 font-black uppercase text-xs">Documents will appear here once uploaded to Supabase.</p>
@@ -563,16 +867,16 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   if (selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures') {
     return (
       <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
-        <div className="flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
-          <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
-            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
-          </button>
+        <div className="flex shrink-0 px-4 md:px-6 py-3 flex-col gap-2">
           <div className="flex flex-col">
             <h2 className="text-xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
               {currentCategoryLabel}
             </h2>
             <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">County Expenditures</p>
           </div>
+          <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+          </button>
         </div>
         <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4 solvency-fullscreen-container">
           <CountyExpenditures
@@ -588,20 +892,39 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     );
   }
 
+  /* Expense Breakdown (County Expenditures pie): full-viewport layout */
+  if (selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures-pie') {
+    return (
+      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-2">
+          <button onClick={() => setActiveInternalReportId('county-expenditures')} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to County Expenditures
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto px-4 md:px-6 pb-4">
+          <CountyExpendituresPiePage
+            onBack={() => setActiveInternalReportId('county-expenditures')}
+            initialYear={expensePieInitialYear}
+          />
+        </div>
+      </div>
+    );
+  }
+
   /* County Revenues: full-viewport layout, no scrolling */
   if (selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues') {
     return (
       <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
-        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
-          <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
-            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
-          </button>
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-2">
           <div className="flex flex-col">
             <h2 className="text-2xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
               {currentCategoryLabel}
             </h2>
             <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">County Revenues</p>
           </div>
+          <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+          </button>
         </div>
         <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4 solvency-fullscreen-container">
           <CountyRevenues
@@ -617,17 +940,35 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     );
   }
 
+  /* Revenue Breakdown (County Revenues pie): full-viewport layout, no background image */
+  if (selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues-pie') {
+    return (
+      <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
+        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-2">
+          <button onClick={() => setActiveInternalReportId('county-revenues')} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to County Revenues
+          </button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-auto px-4 md:px-6 pb-4">
+          <CountyRevenuesPiePage
+            onBack={() => setActiveInternalReportId('county-revenues')}
+            initialYear={revenuePieInitialYear}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
-      <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
-        <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
-      </button>
-      
-      <div className="flex flex-col">
+      <div className="flex flex-col gap-2">
         <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">
           {currentCategoryLabel}
         </h2>
         <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">Select a report to view official records</p>
+        <button onClick={() => setSelectedCategory(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
+          <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-4 mt-8">
@@ -1275,22 +1616,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
               </table>
             </div>
           </div>
-        )}
-
-        {/* Internal report view: Expense by entity pie (County Expenditures/Revenues use full-screen early return) */}
-        {selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures-pie' && (
-          <CountyExpendituresPiePage
-            onBack={() => setActiveInternalReportId('county-expenditures')}
-            initialYear={expensePieInitialYear}
-          />
-        )}
-
-        {/* Internal report view: Revenue breakdown pie */}
-        {selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues-pie' && (
-          <CountyRevenuesPiePage
-            onBack={() => setActiveInternalReportId('county-revenues')}
-            initialYear={revenuePieInitialYear}
-          />
         )}
 
         {/* Report cards (internal + iframe) when not showing an internal report */}

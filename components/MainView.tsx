@@ -193,6 +193,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
         setHoveredData={setHoveredData}
         toggles={toggles}
         setToggles={setToggles}
+        supabase={supabase}
       />
 
       {currentPage === 'polls' && (

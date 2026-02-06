@@ -667,11 +667,6 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
           : 'space-y-8'
       }
     >
-      {!fullScreen && (
-        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
-          <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
-        </button>
-      )}
       <div
         ref={fullscreenContainerRef}
         className={
@@ -706,7 +701,11 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                   type="button"
                   onClick={() => {
                     const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
-                    exit?.().then(() => onBack());
+                    if (exit) {
+                      exit().then(() => onBack()).catch(() => onBack());
+                    } else {
+                      onBack();
+                    }
                   }}
                   className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors"
                 >
@@ -773,6 +772,46 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
             )}
           </div>
         </div>
+        {!fullScreen && (
+          <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mt-2 mb-4 w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+          </button>
+        )}
+        {/* Mobile close/expand when fullscreen - desktop has it in header */}
+        {(fullScreen || isNativeFullScreen) && (
+          <div className="md:hidden flex justify-end gap-2 shrink-0 mb-4">
+            {isNativeFullScreen ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+                  if (exit) {
+                    exit().then(() => onBack()).catch(() => onBack());
+                  } else {
+                    onBack();
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Close Chart
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const el = fullscreenContainerRef.current;
+                  const req = el?.requestFullscreen ?? (el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> })?.webkitRequestFullscreen;
+                  if (document.fullscreenEnabled && req) {
+                    req.call(el);
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-100 text-indigo-700 text-sm font-black uppercase rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-200"
+              >
+                <i className="fa-solid fa-expand mr-1.5"></i> Expand chart
+              </button>
+            )}
+          </div>
+        )}
         {onOpenPiePage && (
           <div className="flex justify-center md:hidden mb-4">
             <button
@@ -924,8 +963,8 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                 stroke="#475569"
                 fontSize={12}
                 fontWeight="900"
-                ticks={
-                  isRangeSelecting
+                ticks={(() => {
+                  const raw = isRangeSelecting
                     ? rangeStartYear === rangeEndYear
                       ? [rangeStartYear]
                       : [rangeStartYear, rangeEndYear]
@@ -939,8 +978,9 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                           const step = Math.max(1, Math.floor((n - 1) / 3));
                           return yrs.filter((_: number, i: number) => i % step === 0 || i === n - 1);
                         })()
-                      : [2005, 2010, 2015, 2020, 2025]
-                }
+                      : [2005, 2010, 2015, 2020, 2025];
+                  return raw.filter((y: number) => y !== 2023);
+                })()}
                 tickFormatter={isRangeSelecting ? (v: number) => String(v).slice(-2) : undefined}
                 axisLine={false}
                 tickLine={false}
@@ -1210,14 +1250,31 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
           )}
         </div>
 
-        {/* Desktop only: collapsible bottom peeking panel (net-worth-style grid) */}
+        {/* Desktop only: collapsible panel with toggle at top (net-worth-style grid) */}
         <div className="hidden md:block border-t border-gray-50 shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center h-12 border-b border-gray-100 bg-gray-50/50">
+            <button
+              type="button"
+              onClick={() => setDesktopTogglesOpen(!desktopTogglesOpen)}
+              aria-label={desktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              {desktopTogglesOpen ? (
+                <i className="fa-solid fa-chevron-up text-xl strobe-chart-controls" />
+              ) : (
+                <>
+                  <i className="fa-solid fa-chevron-down text-xl strobe-chart-controls" />
+                  <span>Chart controls</span>
+                </>
+              )}
+            </button>
+          </div>
           <div
             className="grid transition-[grid-template-rows] duration-300 ease-out"
             style={{ gridTemplateRows: desktopTogglesOpen ? '1fr' : '0fr' }}
           >
             <div className="min-h-0 overflow-hidden">
-              <div className={`gap-y-8 items-center px-4 pt-10 ${fullScreen ? 'pb-2' : 'pb-4'}`}>
+              <div className={`gap-y-8 items-center px-4 pt-6 ${fullScreen ? 'pb-2' : 'pb-4'}`}>
                 <div className="grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] gap-y-8 items-center">
                   <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
                   {expenseToggleKeys.map((key) => (
@@ -1272,23 +1329,6 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                 </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center justify-center h-12 border-t border-gray-100 bg-gray-50/50">
-            <button
-              type="button"
-              onClick={() => setDesktopTogglesOpen(!desktopTogglesOpen)}
-              aria-label={desktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
-            >
-              {desktopTogglesOpen ? (
-                <i className="fa-solid fa-chevron-down text-sm" />
-              ) : (
-                <>
-                  <i className="fa-solid fa-chevron-up text-sm" />
-                  <span>Chart controls</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
 

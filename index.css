@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* GLOBAL STYLES */
 .custom-scrollbar::-webkit-scrollbar { width: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
@@ -75,6 +79,15 @@
 .strobe-exp-schools { animation: strobe-exp-schools 2s infinite ease-in-out; }
 .strobe-exp-emergcommdist { animation: strobe-exp-emergcommdist 2s infinite ease-in-out; }
 .strobe-exp-mud { animation: strobe-exp-mud 2s infinite ease-in-out; }
+
+/* Chart controls toggle (County Expenditures / County Revenues) - strobing blue */
+@keyframes strobe-chart-controls {
+  0%, 100% { color: #3b82f6; }
+  25% { color: #1e3a8a; }
+  50% { color: #6b7280; }
+  75% { color: #1e3a8a; }
+}
+.strobe-chart-controls { animation: strobe-chart-controls 2s infinite ease-in-out; }
 
 /* THE PEEKING TABS */
 .peeking-tab-left { position: fixed; left: -10px; transform: translateY(-50%); z-index: 100; transition: left 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), top 0.1s ease-out; }

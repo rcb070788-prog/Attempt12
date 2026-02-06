@@ -426,10 +426,16 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
   }, [andBeyondStartYear, andBeyondValidStartYears]);
   const andBeyondEnabled = (fullScreen || isNativeFullScreen) && andBeyondValidStartYears.length >= 1;
 
+  /** Matches LineChart margin so overlay coordinates align with the drawn plot area. */
+  const CHART_MARGIN = { left: -12.5, right: 5 };
+
   const clientXToYear = (clientX: number): number | null => {
     const rect = chartRef.current?.getBoundingClientRect();
     if (!rect || !chartYears.length) return null;
-    const t = (clientX - rect.left) / rect.width;
+    const contentLeft = rect.left + CHART_MARGIN.left;
+    const contentWidth = rect.width - CHART_MARGIN.left - CHART_MARGIN.right;
+    if (contentWidth <= 0) return null;
+    const t = (clientX - contentLeft) / contentWidth;
     const index = Math.round(t * (chartYears.length - 1));
     const i = Math.max(0, Math.min(index, chartYears.length - 1));
     return chartYears[i];
@@ -438,10 +444,12 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
   const yearToClientX = (year: number): number => {
     const rect = chartRef.current?.getBoundingClientRect();
     if (!rect || chartYears.length < 2) return rect?.left ?? 0;
+    const contentLeft = rect.left + CHART_MARGIN.left;
+    const contentWidth = rect.width - CHART_MARGIN.left - CHART_MARGIN.right;
     const idx = chartYears.indexOf(year);
     const i = idx === -1 ? 0 : idx;
     const t = i / (chartYears.length - 1);
-    return rect.left + t * rect.width;
+    return contentLeft + t * contentWidth;
   };
 
   const isRangeSelecting = !!(dragBand || pendingYearRange);
@@ -863,11 +871,6 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
           : 'space-y-8'
       }
     >
-      {!fullScreen && (
-        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors">
-          <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
-        </button>
-      )}
       <div
         ref={fullscreenContainerRef}
         className={
@@ -902,7 +905,11 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                   type="button"
                   onClick={() => {
                     const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
-                    exit?.().then(() => onBack());
+                    if (exit) {
+                      exit().then(() => onBack()).catch(() => onBack());
+                    } else {
+                      onBack();
+                    }
                   }}
                   className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors"
                 >
@@ -969,6 +976,47 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
             )}
           </div>
         </div>
+
+        {!fullScreen && (
+          <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mt-2 mb-4 w-fit">
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+          </button>
+        )}
+        {/* Mobile close/expand when fullscreen - desktop has it in header */}
+        {(fullScreen || isNativeFullScreen) && (
+          <div className="md:hidden flex justify-end gap-2 shrink-0 mb-4">
+            {isNativeFullScreen ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+                  if (exit) {
+                    exit().then(() => onBack()).catch(() => onBack());
+                  } else {
+                    onBack();
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white text-sm font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors"
+              >
+                Close Chart
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  const el = fullscreenContainerRef.current;
+                  const req = el?.requestFullscreen ?? (el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> })?.webkitRequestFullscreen;
+                  if (document.fullscreenEnabled && req) {
+                    req.call(el);
+                  }
+                }}
+                className="px-4 py-2 bg-indigo-100 text-indigo-700 text-sm font-black uppercase rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-200"
+              >
+                <i className="fa-solid fa-expand mr-1.5"></i> Expand chart
+              </button>
+            )}
+          </div>
+        )}
 
         <div className={`flex flex-wrap gap-4 items-center ${fullScreen || isNativeFullScreen ? 'shrink-0 mb-4' : 'mb-4'}`}>
           <label className="flex items-center gap-2 cursor-pointer">
@@ -1148,11 +1196,17 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
               bandWidth = Math.max(0, x1 - x0);
               centerX = x0 + bandWidth / 2;
             } else if (dragBand) {
-              bandLeft = Math.min(dragBand.startX, dragBand.endX) - rect.left;
-              bandWidth = Math.abs(dragBand.endX - dragBand.startX);
-              centerX = bandLeft + bandWidth / 2;
+              const y1 = clientXToYear(Math.min(dragBand.startX, dragBand.endX));
+              const y2 = clientXToYear(Math.max(dragBand.startX, dragBand.endX));
+              if (y1 != null && y2 != null) {
+                bandLeft = yearToClientX(y1) - rect.left;
+                bandWidth = Math.max(0, yearToClientX(y2) - rect.left - bandLeft);
+                centerX = bandLeft + bandWidth / 2;
+              } else return null;
             } else return null;
             const edgeWidth = 12;
+            const selectButtonWidth = 80;
+            const selectLeft = Math.max(0, Math.min(rect.width - selectButtonWidth, centerX - selectButtonWidth / 2));
             return (
               <div
                 className="absolute inset-0 z-[5]"
@@ -1198,7 +1252,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                         }
                       }}
                       className="absolute top-2 px-4 py-2 bg-indigo-600 text-white text-sm font-black uppercase rounded-xl hover:bg-indigo-700 shadow-lg"
-                      style={{ left: centerX - 40 }}
+                      style={{ left: selectLeft }}
                     >
                       Select
                     </button>
@@ -1483,8 +1537,25 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
           )}
         </div>
 
-        {/* Desktop only: collapsible bottom peeking panel (mirrors County Expenditures) */}
+        {/* Desktop only: collapsible panel with toggle at top (mirrors County Expenditures) */}
         <div className="hidden md:block border-t border-gray-50 shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-center h-12 border-b border-gray-100 bg-gray-50/50">
+            <button
+              type="button"
+              onClick={() => setDesktopTogglesOpen(!desktopTogglesOpen)}
+              aria-label={desktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
+              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
+            >
+              {desktopTogglesOpen ? (
+                <i className="fa-solid fa-chevron-up text-xl strobe-chart-controls" />
+              ) : (
+                <>
+                  <i className="fa-solid fa-chevron-down text-xl strobe-chart-controls" />
+                  <span>Chart controls</span>
+                </>
+              )}
+            </button>
+          </div>
           <div
             className="grid transition-[grid-template-rows] duration-300 ease-out"
             style={{ gridTemplateRows: desktopTogglesOpen ? '1fr' : '0fr' }}
@@ -1543,23 +1614,6 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                 </div>
               </div>
             </div>
-          </div>
-          <div className="flex items-center justify-center h-12 border-t border-gray-100 bg-gray-50/50">
-            <button
-              type="button"
-              onClick={() => setDesktopTogglesOpen(!desktopTogglesOpen)}
-              aria-label={desktopTogglesOpen ? 'Close chart controls' : 'Open chart controls'}
-              className="flex items-center gap-2 px-4 py-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700 transition-colors"
-            >
-              {desktopTogglesOpen ? (
-                <i className="fa-solid fa-chevron-down text-sm" />
-              ) : (
-                <>
-                  <i className="fa-solid fa-chevron-up text-sm" />
-                  <span>Chart controls</span>
-                </>
-              )}
-            </button>
           </div>
         </div>
 

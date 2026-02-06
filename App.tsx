@@ -355,16 +355,15 @@ export default function App() {
   fetchContactSubmissions={fetchContactSubmissions}
 />
 
-      {/* Title bar: on desktop, initially visible then slides up after 10s; slides down when mouse in top 25% (or 2× bar height) */}
+      {/* Title bar: on desktop, fixed overlay—slides up/down like a drawer without moving the page */}
       {isDesktop ? (
         <div
-          className="shrink-0 overflow-hidden transition-[height] duration-300 ease-out z-50"
-          style={{ height: titleBarVisible ? titleBarHeight : 0 }}
+          className="fixed top-0 left-0 right-0 z-50 pointer-events-none"
           aria-hidden={!titleBarVisible}
         >
           <div
             ref={titleBarRef}
-            className="transition-transform duration-300 ease-out bg-white shadow-sm"
+            className="pointer-events-auto transition-transform duration-300 ease-out bg-white shadow-sm"
             style={{ transform: titleBarVisible ? 'translateY(0)' : 'translateY(-100%)' }}
           >
             <Navbar

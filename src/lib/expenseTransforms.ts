@@ -16,12 +16,16 @@ export const ENTITY_NORM_DISPLAY_NAMES: Record<string, string> = {
 };
 
 /** metropolitan_school_department and school_department are the same entity (labeled differently by year in source PDFs). */
+/** ECD in CSV/DB uses entity emergency_communications_district; map to component_unit for display. */
 function getExpenseEntityForGrouping(line: NormalizedLine): string {
   if (
     line.entity_norm === 'metropolitan_school_department' ||
     line.label_norm === 'metropolitan_school_department'
   ) {
     return 'school_department';
+  }
+  if (line.entity_norm === 'emergency_communications_district') {
+    return 'component_unit';
   }
   return line.entity_norm;
 }
@@ -115,6 +119,13 @@ function isSchoolDepartmentTotal(r: NormalizedTotalRow): boolean {
 }
 function isEmergencyCommunicationsTotal(r: NormalizedTotalRow): boolean {
   return r.label_norm === 'emergency_communications_district';
+}
+
+/** Entity norm for pie grouping from a totals row (MSD → school_department, ECD → component_unit). */
+function getExpenseEntityForTotalsRow(r: NormalizedTotalRow): string | null {
+  if (r.entity_norm === 'school_department' || isSchoolDepartmentTotal(r)) return 'school_department';
+  if (r.entity_norm === 'emergency_communications_district' || isEmergencyCommunicationsTotal(r)) return 'component_unit';
+  return null;
 }
 
 /**
@@ -216,11 +227,13 @@ export function getExpensePieForYear(
 }
 
 /** Pie slices by entity (Governmental, MSD, ECD, optional Water & Sewer) for a given year. */
+/** Pass totalsRows to include subtotal-only entities (MSD, ECD) which have no line_item rows in the CSV. */
 export function getExpensePieByEntityForYear(
   lines: NormalizedLine[],
   selectedYear: number,
   includeBusinessType: boolean,
-  entityNorms?: string[]
+  entityNorms?: string[],
+  totalsRows?: NormalizedTotalRow[]
 ): ExpensePieSlice[] {
   const base = entityNorms ?? [...COUNTY_EXPENSE_ENTITY_NORMS];
   let allowed = base.includes('business_type_activities')
@@ -243,6 +256,19 @@ export function getExpensePieByEntityForYear(
     cur.amount += line.amount;
     if (line.pdf_page_url) cur.urls.push(line.pdf_page_url);
     byEntity.set(key, cur);
+  }
+
+  if (totalsRows && (allowed.includes('school_department') || allowed.includes('component_unit'))) {
+    const totalsForYear = totalsRows.filter((r) => r.year === selectedYear);
+    for (const r of totalsForYear) {
+      const key = getExpenseEntityForTotalsRow(r);
+      if (key != null && allowed.includes(key)) {
+        const cur = byEntity.get(key) ?? { amount: 0, urls: [] };
+        cur.amount += r.amount;
+        if (r.pdf_page_url) cur.urls.push(r.pdf_page_url);
+        byEntity.set(key, cur);
+      }
+    }
   }
 
   const order = [...allowed].filter((e) => byEntity.has(e));

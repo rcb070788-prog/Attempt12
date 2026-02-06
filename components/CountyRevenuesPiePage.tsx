@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { useExhibitBRevenueLines } from '../src/lib/useExhibitBLines';
 import {
   getRevenuePieForYear,
@@ -21,8 +21,6 @@ interface CountyRevenuesPiePageProps {
   initialYear?: number;
 }
 
-const PLAY_INTERVAL_MS = 1200;
-
 export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
   onBack,
   initialYear,
@@ -31,9 +29,6 @@ export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
   const [chartType, setChartType] = useState<ChartType>('revenue');
   const [includeBusinessType, setIncludeBusinessType] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number>(() => initialYear ?? 2024);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const playPhaseRef = useRef<'leg1' | 'leg2' | null>(null);
 
   const years = useMemo(() => {
     const y = [...new Set(lines.map((l) => l.year))].filter((yr) => yr >= 2000).sort((a, b) => a - b);
@@ -82,52 +77,6 @@ export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
     },
     [advanceYear]
   );
-
-  const stopPlay = useCallback(() => {
-    if (playIntervalRef.current) {
-      clearInterval(playIntervalRef.current);
-      playIntervalRef.current = null;
-    }
-    playPhaseRef.current = null;
-    setIsPlaying(false);
-  }, []);
-
-  const startPlay = useCallback(() => {
-    stopPlay();
-    setIsPlaying(true);
-    playPhaseRef.current = 'leg1';
-
-    playIntervalRef.current = setInterval(() => {
-      setSelectedYear((prev) => {
-        const idx = years.indexOf(prev);
-        if (idx === -1) return prev;
-
-        if (playPhaseRef.current === 'leg1') {
-          if (idx >= years.length - 1) {
-            playPhaseRef.current = 'leg2';
-            return years[0]!;
-          }
-          return years[idx + 1]!;
-        }
-
-        if (playPhaseRef.current === 'leg2') {
-          if (idx >= years.length - 1) {
-            stopPlay();
-            return prev;
-          }
-          return years[idx + 1]!;
-        }
-
-        return prev;
-      });
-    }, PLAY_INTERVAL_MS);
-  }, [years, stopPlay]);
-
-  useEffect(() => {
-    return () => {
-      if (playIntervalRef.current) clearInterval(playIntervalRef.current);
-    };
-  }, []);
 
   if (loading) {
     return (
@@ -215,25 +164,6 @@ export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
               ))}
             </select>
           </label>
-          <button
-            type="button"
-            onClick={isPlaying ? stopPlay : startPlay}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase transition-all ${
-              isPlaying
-                ? 'bg-red-600 hover:bg-red-700 text-white'
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white'
-            }`}
-          >
-            {isPlaying ? (
-              <>
-                <i className="fa-solid fa-stop"></i> Stop
-              </>
-            ) : (
-              <>
-                <i className="fa-solid fa-play"></i> Play
-              </>
-            )}
-          </button>
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -255,17 +185,17 @@ export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
           <h4 className="text-sm font-black uppercase text-gray-600 mb-4">
             {chartType === 'revenue' ? 'Revenue by type' : 'Tax breakdown'} ({selectedYear})
           </h4>
-          <div className="h-[400px] w-full max-w-lg">
+          <div className="h-[500px] w-full max-w-xl">
             <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
+              <PieChart margin={{ left: 120, right: 24, top: 24, bottom: 24 }}>
                 <Pie
                   data={pieData}
                   dataKey="value"
                   nameKey="name"
-                  cx="50%"
+                  cx="58%"
                   cy="50%"
-                  outerRadius={140}
-                  label={({ name, value }) => `${name}: ${formatCurrency(value)}`}
+                  outerRadius={170}
+                  isAnimationActive={false}
                   onClick={(entry) => openPdf(entry.pdf_page_url)}
                 >
                   {pieData.map((_, i) => (
@@ -276,6 +206,7 @@ export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
                   ))}
                 </Pie>
                 <Tooltip formatter={(value: number) => formatCurrency(value)} />
+                <Legend />
               </PieChart>
             </ResponsiveContainer>
           </div>

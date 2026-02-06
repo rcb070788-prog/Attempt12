@@ -36,18 +36,28 @@ export const CATEGORIES = [
 /**
  * Document sections (folder structure) for the Documents dashboard.
  * IDs are used in documentsStack and for future Supabase section_id.
+ * When bucketName is set, the Documents view lists that Supabase Storage bucket (folders discovered at runtime).
+ * bucketPathPrefix: optional root path inside the bucket (e.g. "expense_reports_by_fund/") so object keys match existing labeling.
  */
-export const DOCUMENT_SECTIONS: { id: string; title: string; children?: { id: string; title: string }[] }[] = [
-  { id: 'expense-reports-by-fund', title: 'Expense Reports by Fund' },
+export const DOCUMENT_SECTIONS: { id: string; title: string; bucketName?: string; bucketPathPrefix?: string; children?: { id: string; title: string; folderPath?: string }[] }[] = [
+  // If your files are under path expense_reports_by_fund/Fund 101/... in a bucket (e.g. public), use bucketPathPrefix.
+  // If the bucket is named expense_reports_by_fund and keys are Fund 101/file.pdf, use bucketName: 'expense_reports_by_fund' and remove bucketPathPrefix.
+  { id: 'expense-reports-by-fund', title: 'Expense Reports by Fund', bucketName: 'public', bucketPathPrefix: 'expense_reports_by_fund/' },
   {
     id: 'wage-reports',
     title: 'Wage Reports',
+    bucketName: 'wage_reports',
     children: [
-      { id: 'county-wages', title: 'County Wages' },
-      { id: 'school-wages', title: 'School Wages' },
+      { id: 'county-wages', title: 'County Wages', folderPath: 'County Wages' },
+      { id: 'school-wages', title: 'School Wages', folderPath: 'School Wages' },
     ],
   },
-  { id: 'annual-financial-reports', title: 'Annual Financial Reports' },
+  {
+    id: 'annual-financial-reports',
+    title: 'Annual Financial Reports',
+    bucketName: 'AFR_reports',
+    bucketPathPrefix: 'originals/',
+  },
   { id: 'tax-rolls-by-assessment', title: 'Tax Rolls by Assessment' },
 ];
 

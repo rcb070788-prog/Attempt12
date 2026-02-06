@@ -17,6 +17,14 @@
   force = true
   conditions = {Host = ["www.concernedcitizens.netlify.app"]}
 
+# Canonical origin for custom domain: redirect www to apex (PWA and storage)
+[[redirects]]
+  from = "/*"
+  to = "https://concernedcitizensofmc.com/:splat"
+  status = 301
+  force = true
+  conditions = {Host = ["www.concernedcitizensofmc.com"]}
+
 # Don't cache index.html so new deploys are picked up quickly (especially on mobile)
 [[headers]]
   for = "/index.html"

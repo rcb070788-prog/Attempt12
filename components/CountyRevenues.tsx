@@ -11,19 +11,22 @@ import {
   Pie,
   Cell,
 } from 'recharts';
-import { useExhibitBRevenueLines, useExhibitBRevenueTotals } from '../src/lib/useExhibitBLines';
+import { useExhibitBRevenueLines } from '../src/lib/useExhibitBLines';
 import {
-  getRevenueYearMetricsFromTotals,
+  getRevenueByEntityByYear,
   getRevenuePieForYear,
   getTaxBreakdownPieForYear,
-  type YearMetric,
 } from '../src/lib/revenueTransforms';
+import { buildHierarchyTree, type HierarchyTreeNode, stripRedundantRoot, flattenSingleChildNodes, getHierarchyTreeLeafPaths } from '../src/lib/paths';
 import {
   formatCurrency,
   pctChangeOverRange,
   formatPctChange,
-  addRealToRevenueYearMetrics,
-  recomputeRevenueTrendsForSlice,
+  addRealToRevenueYearPoints,
+  recomputeRevenueEntityTrendsForSlice,
+  calculateTrendLine,
+  getValidAndBeyondStartYears,
+  extendTrendForward,
 } from '../utils/financeUtils';
 
 function openPdf(url: string | undefined) {
@@ -54,33 +57,204 @@ function ClickableDot<T extends Record<string, unknown>>(props: {
   );
 }
 
-const REVENUE_COLORS: Record<string, string> = {
-  totalRevenue: '#4f46e5',
-  taxesFees: '#059669',
-  grants: '#d97706',
-  chargesForServices: '#7c3aed',
-  other: '#64748b',
+const REVENUE_PIE_COLORS = ['#4f46e5', '#059669', '#d97706', '#7c3aed', '#64748b'];
+
+function RevenueHierarchyDropdown(props: {
+  tree: HierarchyTreeNode[];
+  selectedPaths: string[];
+  onTogglePath: (path: string) => void;
+  onClose: () => void;
+  onSelectAllUnder?: (paths: string[], add: boolean) => void;
+}) {
+  const { tree, selectedPaths, onTogglePath, onSelectAllUnder } = props;
+  const selectedSet = useMemo(() => new Set(selectedPaths), [selectedPaths]);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (key: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const renderNode = (node: HierarchyTreeNode, depth: number, expandKey: string) => {
+    const pl = 4 + depth * 12;
+    if (node.fullPath) {
+      const checked = selectedSet.has(node.fullPath);
+      return (
+        <label
+          key={node.fullPath}
+          className="flex cursor-pointer items-center gap-2 py-2 hover:bg-gray-50"
+          style={{ paddingLeft: pl }}
+        >
+          <input
+            type="checkbox"
+            checked={checked}
+            onChange={() => onTogglePath(node.fullPath!)}
+            className="rounded border-gray-300 text-indigo-600"
+          />
+          <span className="text-sm text-gray-800">{node.segment}</span>
+        </label>
+      );
+    }
+    const isExpanded = expanded.has(expandKey);
+    return (
+      <div key={expandKey}>
+        <button
+          type="button"
+          onClick={() => toggleExpand(expandKey)}
+          className="flex w-full items-center gap-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+          style={{ paddingLeft: pl }}
+        >
+          <i
+            className={`fa-solid fa-chevron-right text-[10px] text-gray-400 transition-transform ${
+              isExpanded ? 'rotate-90' : ''
+            }`}
+          />
+          {node.segment}
+        </button>
+        {isExpanded && (
+          <div className="border-l border-gray-100">
+            {node.children.map((child) =>
+              renderNode(
+                child,
+                depth + 1,
+                child.fullPath ?? `${expandKey} > ${child.segment}`
+              )
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div
+      className="absolute left-0 top-full z-50 mt-1 min-w-[280px] max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white py-2 shadow-xl"
+      onClick={(e) => e.stopPropagation()}
+    >
+      {tree.length === 0 ? (
+        <div className="px-4 py-3 text-sm text-gray-500">No categories</div>
+      ) : (
+        tree.map((root) => (
+          <div key={root.segment} className="py-0.5">
+            {root.children.length > 0 ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => toggleExpand(root.segment)}
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-bold uppercase text-gray-700 hover:bg-gray-50"
+                >
+                  <i
+                    className={`fa-solid fa-chevron-right text-[10px] text-gray-400 transition-transform ${
+                      expanded.has(root.segment) ? 'rotate-90' : ''
+                    }`}
+                  />
+                  {root.segment}
+                </button>
+                {expanded.has(root.segment) && (
+                  <div className="border-l border-gray-100 pl-2">
+                    {onSelectAllUnder && (() => {
+                      const leafPaths = getHierarchyTreeLeafPaths([root]);
+                      if (leafPaths.length === 0) return null;
+                      const allSelected = leafPaths.every((p) => selectedSet.has(p));
+                      return (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectAllUnder(leafPaths, !allSelected);
+                          }}
+                          className="text-xs text-indigo-600 hover:underline px-4 py-1.5 text-left w-full"
+                        >
+                          {allSelected ? 'Deselect all' : 'Select all'}
+                        </button>
+                      );
+                    })()}
+                    {root.children.map((child) =>
+                      renderNode(
+                        child,
+                        0,
+                        child.fullPath ?? `${root.segment} > ${child.segment}`
+                      )
+                    )}
+                  </div>
+                )}
+              </>
+            ) : (
+              root.fullPath && (
+                <label className="flex cursor-pointer items-center gap-2 px-4 py-2 hover:bg-gray-50">
+                  <input
+                    type="checkbox"
+                    checked={selectedSet.has(root.fullPath)}
+                    onChange={() => onTogglePath(root.fullPath!)}
+                    className="rounded border-gray-300 text-indigo-600"
+                  />
+                  <span className="text-sm text-gray-800">{root.segment}</span>
+                </label>
+              )
+            )}
+          </div>
+        ))
+      )}
+    </div>
+  );
+}
+
+const REVENUE_TOGGLE_KEYS = ['total', 'genGov', 'schools', 'emergCommDist', 'mud'] as const;
+const REVENUE_TOGGLE_LABELS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string> = {
+  total: 'Total',
+  genGov: 'Gen Gov',
+  schools: 'Schools',
+  emergCommDist: 'Emerg Comm Dist',
+  mud: 'MUD',
+};
+const REVENUE_TOGGLE_COLORS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string> = {
+  total: '#dc2626',
+  genGov: '#3b82f6',
+  schools: '#4ade80',
+  emergCommDist: '#f87171',
+  mud: '#fb923c',
+};
+const REVENUE_TOGGLE_DATA_KEYS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string> = {
+  total: 'totalPrimaryGovAndComponentUnits',
+  genGov: 'genGov',
+  schools: 'schools',
+  emergCommDist: 'emergCommDist',
+  mud: 'mud',
 };
 
 interface CountyRevenuesProps {
   onBack: () => void;
+  /** Opens the revenue breakdown pie page; optional initial year for the pie. */
+  onOpenPiePage?: (initialYear?: number) => void;
   /** When true, fills parent (full-viewport) with flex layout; chart uses flex-1 */
   fullScreen?: boolean;
 }
 
-export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScreen = false }) => {
+export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPiePage, fullScreen = false }) => {
   const { data: lines, loading, error } = useExhibitBRevenueLines();
-  const { data: revenueTotals, loading: totalsLoading, error: totalsError } = useExhibitBRevenueTotals();
-  const [includeBusinessType, setIncludeBusinessType] = useState(false);
+  const [includeBusinessType, setIncludeBusinessType] = useState(true);
   const [selectedYear, setSelectedYear] = useState<number>(2024);
-  const [entityNorms, setEntityNorms] = useState<string[]>(['governmental_activities']);
+  const [programRevenuesOn, setProgramRevenuesOn] = useState(true);
+  const [generalRevenuesOn, setGeneralRevenuesOn] = useState(true);
+  const [selectedProgramRevenuePaths, setSelectedProgramRevenuePaths] = useState<string[]>([]);
+  const [selectedGeneralRevenuePaths, setSelectedGeneralRevenuePaths] = useState<string[]>([]);
+  const [programDropdownOpen, setProgramDropdownOpen] = useState(false);
+  const [generalDropdownOpen, setGeneralDropdownOpen] = useState(false);
+  const programDropdownRef = useRef<HTMLDivElement>(null);
+  const generalDropdownRef = useRef<HTMLDivElement>(null);
 
   const chartRef = useRef<HTMLDivElement>(null);
   const [selectedYearRange, setSelectedYearRange] = useState<[number, number] | null>(null);
   const [pendingYearRange, setPendingYearRange] = useState<[number, number] | null>(null);
   const rangeDragStartX = useRef<number | null>(null);
+  const rangeDragCurrentX = useRef<number | null>(null);
   const edgeBeingDragged = useRef<'left' | 'right' | null>(null);
   const ignoreNextOverlayClick = useRef(false);
+  const lastDragEndTime = useRef<number>(0);
   const [dragBand, setDragBand] = useState<{ startX: number; endX: number } | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
@@ -90,6 +264,22 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
   const [tooltipOffsetX, setTooltipOffsetX] = useState(56);
   const [tabTop, setTabTop] = useState(50);
   const [desktopTogglesOpen, setDesktopTogglesOpen] = useState(true);
+  const [showMud2020Message, setShowMud2020Message] = useState(false);
+  const mud2020PopoverRef = useRef<HTMLDivElement>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  const [isNativeFullScreen, setIsNativeFullScreen] = useState(false);
+  const [andBeyondOpen, setAndBeyondOpen] = useState(false);
+  const [andBeyondOn, setAndBeyondOn] = useState(false);
+  const [andBeyondStartYear, setAndBeyondStartYear] = useState<number | null>(null);
+  const [andBeyondYearsForward, setAndBeyondYearsForward] = useState(10);
+
+  useEffect(() => {
+    const handler = () => {
+      setIsNativeFullScreen(document.fullscreenElement === fullscreenContainerRef.current);
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   // Mobile peeking right tab + pies drawer (fullScreen only)
   const [isPiesDrawerOpen, setIsPiesDrawerOpen] = useState(false);
@@ -108,39 +298,133 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
   const yearMin = effectiveYearMin;
   const yearMax = effectiveYearMax;
 
+  const programHierarchyTree = useMemo(() => {
+    const paths = lines
+      .filter((l) => l.category_norm === 'program_revenues' && l.row_kind === 'line_item')
+      .map((l) => l.hierarchy_path_canon)
+      .filter(Boolean);
+    const tree = buildHierarchyTree([...new Set(paths)]);
+    return flattenSingleChildNodes(stripRedundantRoot(tree, 'Program Revenues'));
+  }, [lines]);
+
+  const generalHierarchyTree = useMemo(() => {
+    const paths = lines
+      .filter((l) => l.category_norm === 'general_revenues' && l.row_kind === 'line_item')
+      .map((l) => l.hierarchy_path_canon)
+      .filter(Boolean);
+    const tree = buildHierarchyTree([...new Set(paths)]);
+    return flattenSingleChildNodes(stripRedundantRoot(tree, 'General Revenues'));
+  }, [lines]);
+
   React.useEffect(() => {
     if (years.length > 0 && (selectedYear < effectiveYearMin || selectedYear > effectiveYearMax)) {
       setSelectedYear(effectiveYearMax);
     }
   }, [years.length, effectiveYearMin, effectiveYearMax, selectedYear]);
 
-  const yearMetrics = useMemo(
-    () => getRevenueYearMetricsFromTotals(revenueTotals, yearMin, yearMax, includeBusinessType),
-    [revenueTotals, yearMin, yearMax, includeBusinessType]
+  const trendData = useMemo(
+    () =>
+      getRevenueByEntityByYear(
+        lines,
+        yearMin,
+        yearMax,
+        programRevenuesOn,
+        generalRevenuesOn,
+        includeBusinessType,
+        selectedProgramRevenuePaths.length > 0 ? selectedProgramRevenuePaths : null,
+        selectedGeneralRevenuePaths.length > 0 ? selectedGeneralRevenuePaths : null
+      ),
+    [
+      lines,
+      yearMin,
+      yearMax,
+      programRevenuesOn,
+      generalRevenuesOn,
+      includeBusinessType,
+      selectedProgramRevenuePaths,
+      selectedGeneralRevenuePaths,
+    ]
   );
 
-  const baseYear = yearMetrics.length ? yearMetrics[yearMetrics.length - 1].year : 2024;
-  const yearMetricsWithReal = useMemo(
-    () => addRealToRevenueYearMetrics(yearMetrics, baseYear),
-    [yearMetrics, baseYear]
-  );
+  const displayedRaw = useMemo(() => {
+    if (!trendData.length) return [];
+    if (!selectedYearRange) return trendData;
+    const [minY, maxY] = selectedYearRange;
+    const filtered = trendData.filter((d: any) => d.year >= minY && d.year <= maxY);
+    return filtered.length >= 2 ? filtered : trendData;
+  }, [trendData, selectedYearRange]);
+
+  const baseYear = displayedRaw.length ? displayedRaw[0].year : yearMin;
 
   const displayedData = useMemo(() => {
-    if (!yearMetricsWithReal.length) return [];
-    if (!selectedYearRange) {
-      return recomputeRevenueTrendsForSlice(yearMetricsWithReal);
+    if (!displayedRaw.length) return [];
+    const withReal = addRealToRevenueYearPoints(displayedRaw, baseYear);
+    return recomputeRevenueEntityTrendsForSlice(withReal);
+  }, [displayedRaw, baseYear]);
+
+  const chartData = useMemo(() => {
+    if (!displayedData.length) return [];
+    const row2019 = displayedData.find((d: any) => d.year === 2019);
+    const row2021 = displayedData.find((d: any) => d.year === 2021);
+    const mud2019 = row2019 != null && Number.isFinite(Number((row2019 as any).mud)) ? Number((row2019 as any).mud) : undefined;
+    const mud2021 = row2021 != null && Number.isFinite(Number((row2021 as any).mud)) ? Number((row2021 as any).mud) : undefined;
+    const mudReal2019 = row2019 != null && Number.isFinite(Number((row2019 as any).mudReal)) ? Number((row2019 as any).mudReal) : undefined;
+    const mudReal2021 = row2021 != null && Number.isFinite(Number((row2021 as any).mudReal)) ? Number((row2021 as any).mudReal) : undefined;
+    const hasBridge = mud2019 != null && mud2021 != null;
+    const interpolated = hasBridge ? (mud2019 + mud2021) / 2 : undefined;
+    const interpolatedReal = mudReal2019 != null && mudReal2021 != null ? (mudReal2019 + mudReal2021) / 2 : undefined;
+    let list = displayedData.map((d: any) => {
+      const year = d.year;
+      let mudBridge: number | undefined;
+      let mudBridgeReal: number | undefined;
+      if (year === 2019 && Number.isFinite(Number(d.mud))) {
+        mudBridge = Number(d.mud);
+        mudBridgeReal = Number.isFinite(Number(d.mudReal)) ? Number(d.mudReal) : undefined;
+      } else if (year === 2021 && Number.isFinite(Number(d.mud))) {
+        mudBridge = Number(d.mud);
+        mudBridgeReal = Number.isFinite(Number(d.mudReal)) ? Number(d.mudReal) : undefined;
+      } else if (year === 2020 && hasBridge) {
+        mudBridge = interpolated;
+        mudBridgeReal = interpolatedReal;
+      }
+      return { ...d, mudBridge, mudBridgeReal };
+    });
+    if (hasBridge) {
+      const mudForTrend = list.map((d: any) => {
+        const mudVal = d.year === 2020 ? interpolated : d.mud;
+        const mudRealVal = d.year === 2020 ? interpolatedReal : d.mudReal;
+        return { ...d, mud: mudVal, mudReal: mudRealVal };
+      });
+      let withMudTrend = calculateTrendLine(mudForTrend, 'mud');
+      withMudTrend = calculateTrendLine(withMudTrend, 'mudReal');
+      list = list.map((d: any, i: number) => ({
+        ...d,
+        mudTrend: withMudTrend[i]?.mudTrend,
+        mudRealTrend: withMudTrend[i]?.mudRealTrend,
+      }));
     }
-    const [minY, maxY] = selectedYearRange;
-    const filtered = yearMetricsWithReal.filter((d: any) => d.year >= minY && d.year <= maxY);
-    if (filtered.length < 2) return yearMetricsWithReal;
-    return recomputeRevenueTrendsForSlice(filtered);
-  }, [yearMetricsWithReal, selectedYearRange]);
+    return list;
+  }, [displayedData]);
 
   const baselineRow = displayedData.length ? displayedData[0] : null;
   const latestRow = displayedData.length ? displayedData[displayedData.length - 1] : null;
-  const chartYears = useMemo(() => yearMetricsWithReal.map((d: any) => d.year), [yearMetricsWithReal]);
+  const chartYears = useMemo(
+    () => (chartData.length ? chartData.map((d: any) => d.year) : displayedRaw.map((d: any) => d.year)),
+    [chartData, displayedRaw]
+  );
   const chartMinYear = chartYears[0] ?? 2005;
   const chartMaxYear = chartYears[chartYears.length - 1] ?? 2025;
+
+  const { latestYear: andBeyondLatestYear, validStartYears: andBeyondValidStartYears } = useMemo(
+    () => getValidAndBeyondStartYears(chartData),
+    [chartData]
+  );
+  const andBeyondStartYearClamped = useMemo(() => {
+    if (andBeyondStartYear == null || !andBeyondValidStartYears.length) return andBeyondValidStartYears[0] ?? null;
+    if (andBeyondValidStartYears.includes(andBeyondStartYear)) return andBeyondStartYear;
+    return andBeyondValidStartYears[andBeyondValidStartYears.length - 1] ?? null;
+  }, [andBeyondStartYear, andBeyondValidStartYears]);
+  const andBeyondEnabled = (fullScreen || isNativeFullScreen) && andBeyondValidStartYears.length >= 1;
 
   const clientXToYear = (clientX: number): number | null => {
     const rect = chartRef.current?.getBoundingClientRect();
@@ -181,6 +465,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
   const handleChartPointerDown = (clientX: number) => {
     if (pendingYearRange) return;
     rangeDragStartX.current = clientX;
+    rangeDragCurrentX.current = clientX;
     setDragBand({ startX: clientX, endX: clientX });
   };
 
@@ -202,6 +487,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
       return;
     }
     if (rangeDragStartX.current != null) {
+      rangeDragCurrentX.current = clientX;
       setDragBand((b) => (b ? { ...b, endX: clientX } : null));
     }
   };
@@ -213,17 +499,20 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
       return;
     }
     if (rangeDragStartX.current != null) {
+      const endX = clientX ?? rangeDragCurrentX.current ?? rangeDragStartX.current;
       const y1 = clientXToYear(rangeDragStartX.current);
-      const y2 = clientXToYear(clientX);
+      const y2 = endX != null ? clientXToYear(endX) : null;
       if (y1 != null && y2 != null) {
         const minY = Math.min(y1, y2);
         const maxY = Math.max(y1, y2);
-        if (maxY - minY >= 1) {
+        if (maxY >= minY) {
           ignoreNextOverlayClick.current = true;
+          lastDragEndTime.current = Date.now();
           setPendingYearRange([minY, maxY]);
         }
       }
       rangeDragStartX.current = null;
+      rangeDragCurrentX.current = null;
       setDragBand(null);
     }
   };
@@ -235,7 +524,8 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
     };
     const onUp = (e: MouseEvent | TouchEvent) => {
       const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
-      if (clientX != null) handleChartPointerUp(clientX);
+      const endX = clientX ?? rangeDragCurrentX.current ?? rangeDragStartX.current;
+      if (endX != null) handleChartPointerUp(endX);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -313,6 +603,37 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
     }
   }, [isDrawerOpen]);
 
+  useEffect(() => {
+    if (!showMud2020Message) return;
+    const close = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (mud2020PopoverRef.current?.contains(target)) return;
+      setShowMud2020Message(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+    };
+  }, [showMud2020Message]);
+
+  useEffect(() => {
+    const close = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (programDropdownRef.current?.contains(target)) return;
+      if (generalDropdownRef.current?.contains(target)) return;
+      setProgramDropdownOpen(false);
+      setGeneralDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    document.addEventListener('touchstart', close);
+    return () => {
+      document.removeEventListener('mousedown', close);
+      document.removeEventListener('touchstart', close);
+    };
+  }, []);
+
   const handleTabTouchStart = (e: React.TouchEvent) => {
     touchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
@@ -354,7 +675,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
     drawerTouchStartRef.current = null;
   };
 
-  const openPiesDrawer = () => setIsPiesDrawerOpen(true);
+  const openRevenueBreakdown = () => onOpenPiePage?.(selectedYear);
   const handlePiesTabTouchStart = (e: React.TouchEvent) => {
     piesTabTouchStartRef.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
@@ -364,7 +685,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
     const deltaX = touch.clientX - piesTabTouchStartRef.current.x;
     const deltaY = Math.abs(touch.clientY - piesTabTouchStartRef.current.y);
     if (deltaX < -50 && deltaY < 100) {
-      openPiesDrawer();
+      openRevenueBreakdown();
       piesTabTouchStartRef.current = null;
     }
   };
@@ -373,7 +694,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
     const touch = e.changedTouches[0];
     const deltaX = touch.clientX - piesTabTouchStartRef.current.x;
     const deltaY = Math.abs(touch.clientY - piesTabTouchStartRef.current.y);
-    if (Math.abs(deltaX) < 10 && deltaY < 10) openPiesDrawer();
+    if (Math.abs(deltaX) < 10 && deltaY < 10) openRevenueBreakdown();
     piesTabTouchStartRef.current = null;
   };
   const handlePiesDrawerTouchStart = (e: React.TouchEvent) => {
@@ -405,31 +726,112 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
   }, [isPiesDrawerOpen]);
 
   const [toggles, setToggles] = useState({
-    totalRevenue: true,
-    taxesFees: true,
-    grants: true,
-    chargesForServices: true,
-    other: true,
-    trend: false,
-    inflationAdjusted: false,
+    total: true,
+    genGov: false,
+    schools: false,
+    emergCommDist: false,
+    mud: false,
+    trendTotal: false,
+    trendGenGov: false,
+    trendSchools: false,
+    trendEmergCommDist: false,
+    trendMud: false,
+    inflationTotal: false,
+    inflationGenGov: false,
+    inflationSchools: false,
+    inflationEmergCommDist: false,
+    inflationMud: false,
   });
 
-  const revenuePie = useMemo(
-    () => getRevenuePieForYear(lines, selectedYear, includeBusinessType, entityNorms),
-    [lines, selectedYear, includeBusinessType, entityNorms]
-  );
-  const taxBreakdownPie = useMemo(
-    () => getTaxBreakdownPieForYear(lines, selectedYear, includeBusinessType, entityNorms, 10),
-    [lines, selectedYear, includeBusinessType, entityNorms]
-  );
-
-  const handleEntityToggle = (entity: string) => {
-    setEntityNorms((prev) =>
-      prev.includes(entity) ? prev.filter((e) => e !== entity) : [...prev, entity]
-    );
+  const toggleTrendKey: Record<(typeof REVENUE_TOGGLE_KEYS)[number], keyof typeof toggles> = {
+    total: 'trendTotal',
+    genGov: 'trendGenGov',
+    schools: 'trendSchools',
+    emergCommDist: 'trendEmergCommDist',
+    mud: 'trendMud',
+  };
+  const toggleInflationKey: Record<(typeof REVENUE_TOGGLE_KEYS)[number], keyof typeof toggles> = {
+    total: 'inflationTotal',
+    genGov: 'inflationGenGov',
+    schools: 'inflationSchools',
+    emergCommDist: 'inflationEmergCommDist',
+    mud: 'inflationMud',
   };
 
-  if (loading || totalsLoading) {
+  const selectedEntity = REVENUE_TOGGLE_KEYS.find((k) => toggles[k]) ?? 'total';
+
+  const AND_BEYOND_NOMINAL_KEY = 'andBeyondProjection';
+  const AND_BEYOND_REAL_KEY = 'andBeyondProjectionReal';
+
+  const chartDataWithExtension = useMemo(() => {
+    if (!andBeyondOn || !andBeyondEnabled || andBeyondStartYearClamped == null || andBeyondYearsForward < 1) return chartData;
+    const dataKey = REVENUE_TOGGLE_DATA_KEYS[selectedEntity];
+    const trendKey = `${dataKey}Trend`;
+    const realKey = `${dataKey}Real`;
+    const realTrendKey = `${dataKey}RealTrend`;
+    const nominal = extendTrendForward(chartData, dataKey, andBeyondStartYearClamped, andBeyondYearsForward);
+    const showReal = toggles[toggleInflationKey[selectedEntity]];
+    const real = showReal ? extendTrendForward(chartData, realKey, andBeyondStartYearClamped, andBeyondYearsForward) : null;
+    const base = chartData.map((d, i) => {
+      if (i !== chartData.length - 1) return d;
+      const out = { ...d } as any;
+      out[AND_BEYOND_NOMINAL_KEY] = nominal.lastValue;
+      if (showReal && real) out[AND_BEYOND_REAL_KEY] = real.lastValue;
+      return out;
+    });
+    const combined = nominal.extendedPoints.map((p, i) => {
+      const row: any = { year: (p as any).year, [AND_BEYOND_NOMINAL_KEY]: (p as any)[trendKey] };
+      if (showReal && real && real.extendedPoints[i]) row[AND_BEYOND_REAL_KEY] = (real.extendedPoints[i] as any)[realTrendKey];
+      return row;
+    });
+    return [...base, ...combined];
+  }, [
+    chartData,
+    andBeyondOn,
+    andBeyondEnabled,
+    andBeyondStartYearClamped,
+    andBeyondYearsForward,
+    selectedEntity,
+    toggles,
+    toggleInflationKey,
+  ]);
+
+  const handleSelectEntity = (key: (typeof REVENUE_TOGGLE_KEYS)[number]) => {
+    setToggles((prev) => {
+      const next = { ...prev };
+      REVENUE_TOGGLE_KEYS.forEach((k) => {
+        next[k] = k === key;
+        next[toggleTrendKey[k]] = false;
+        next[toggleInflationKey[k]] = false;
+      });
+      return next;
+    });
+  };
+
+  const revenuePie = useMemo(
+    () =>
+      getRevenuePieForYear(
+        lines,
+        selectedYear,
+        includeBusinessType,
+        undefined,
+        selectedProgramRevenuePaths.length > 0 ? selectedProgramRevenuePaths : null,
+        selectedGeneralRevenuePaths.length > 0 ? selectedGeneralRevenuePaths : null
+      ),
+    [
+      lines,
+      selectedYear,
+      includeBusinessType,
+      selectedProgramRevenuePaths,
+      selectedGeneralRevenuePaths,
+    ]
+  );
+  const taxBreakdownPie = useMemo(
+    () => getTaxBreakdownPieForYear(lines, selectedYear, includeBusinessType, undefined, 10),
+    [lines, selectedYear, includeBusinessType]
+  );
+
+  if (loading) {
     return (
       <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
         <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4">
@@ -440,7 +842,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
     );
   }
 
-  const loadError = error ?? totalsError;
+  const loadError = error;
   if (loadError) {
     return (
       <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
@@ -452,14 +854,6 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
       </div>
     );
   }
-
-  const seriesKeys = [
-    { key: 'totalRevenue', label: 'Total Revenue', color: REVENUE_COLORS.totalRevenue },
-    { key: 'taxesFees', label: 'Taxes & Fees', color: REVENUE_COLORS.taxesFees },
-    { key: 'grants', label: 'Grants', color: REVENUE_COLORS.grants },
-    { key: 'chargesForServices', label: 'Charges for Services', color: REVENUE_COLORS.chargesForServices },
-    { key: 'other', label: 'Other', color: REVENUE_COLORS.other },
-  ];
 
   return (
     <div
@@ -474,39 +868,205 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
           <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
         </button>
       )}
-      <div className={fullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6'}>
-        <div className={`hidden md:flex justify-between items-start ${fullScreen ? 'shrink-0 mb-4' : 'mb-6'}`}>
+      <div
+        ref={fullscreenContainerRef}
+        className={
+          isNativeFullScreen
+            ? 'bg-white text-gray-900 min-h-full w-full flex flex-col rounded-none p-4 md:p-6'
+            : fullScreen
+              ? 'flex-1 flex flex-col min-h-0 w-full'
+              : 'w-full'
+        }
+      >
+        <div className={fullScreen || isNativeFullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6'}>
+        <div className={`hidden md:flex justify-between items-center gap-4 ${fullScreen || isNativeFullScreen ? 'shrink-0 mb-4' : 'mb-6'}`}>
           <div>
-            <h3 className={`font-black uppercase leading-none tracking-tighter ${fullScreen ? 'text-xl md:text-2xl' : 'text-3xl'}`}>County Revenues</h3>
+            <h3 className={`font-black uppercase leading-none tracking-tighter ${fullScreen || isNativeFullScreen ? 'text-xl md:text-2xl' : 'text-3xl'}`}>County Revenues</h3>
             <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">Revenue trend — drag chart to select year range</p>
           </div>
-          <div className="hidden md:flex px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap">
-            Hover or Tap chart for values
+          <div className="flex-1 flex justify-center min-w-0">
+            {(fullScreen || isNativeFullScreen) && onOpenPiePage && (
+              <button
+                type="button"
+                onClick={() => onOpenPiePage(selectedYear)}
+                className="flex items-center gap-2 px-4 py-2 bg-pink-600 text-white text-sm font-black uppercase rounded-lg hover:bg-pink-700 transition-colors"
+              >
+                <i className="fa-solid fa-chart-pie"></i> View revenue breakdown
+              </button>
+            )}
+          </div>
+          <div className="hidden md:flex shrink-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              {isNativeFullScreen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+                    exit?.().then(() => onBack());
+                  }}
+                  className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Close Chart
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = fullscreenContainerRef.current;
+                    const req = el?.requestFullscreen ?? (el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> })?.webkitRequestFullscreen;
+                    if (document.fullscreenEnabled && req) {
+                      req.call(el);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-200"
+                >
+                  <i className="fa-solid fa-expand mr-1.5"></i> Expand chart
+                </button>
+              )}
+            </div>
+            {(fullScreen || isNativeFullScreen) && andBeyondValidStartYears.length >= 1 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAndBeyondOpen((o) => !o);
+                    if (andBeyondStartYear == null && andBeyondValidStartYears.length) setAndBeyondStartYear(andBeyondValidStartYears[andBeyondValidStartYears.length - 1]);
+                  }}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-colors border ${andBeyondOn ? 'bg-gray-200 text-gray-800 border-gray-300' : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'}`}
+                >
+                  And Beyond
+                </button>
+                {andBeyondOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" aria-hidden onClick={() => setAndBeyondOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
+                      <p className="text-[10px] font-black uppercase text-gray-500 mb-2">Start year (min 5 yrs before latest)</p>
+                      <select
+                        value={andBeyondStartYearClamped ?? ''}
+                        onChange={(e) => setAndBeyondStartYear(Number(e.target.value) || null)}
+                        className="mb-3 w-full rounded border border-gray-200 px-2 py-1.5 text-sm font-bold"
+                      >
+                        {andBeyondValidStartYears.map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] font-black uppercase text-gray-500 mb-2">Years to project (1–50)</p>
+                      <select
+                        value={andBeyondYearsForward}
+                        onChange={(e) => setAndBeyondYearsForward(Math.max(1, Math.min(50, Number(e.target.value) || 10)))}
+                        className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm font-bold"
+                      >
+                        {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => { setAndBeyondOn(true); setAndBeyondOpen(false); }} className="mt-2 w-full rounded bg-indigo-600 py-1.5 text-[10px] font-black uppercase text-white hover:bg-indigo-700">Apply</button>
+                      <button type="button" onClick={() => { setAndBeyondOn(false); setAndBeyondOpen(false); }} className="mt-2 w-full rounded border border-gray-300 bg-white py-1.5 text-[10px] font-black uppercase text-gray-600 hover:bg-gray-50">Turn off</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className={`flex flex-wrap gap-4 items-center ${fullScreen ? 'shrink-0 mb-4' : 'mb-4'}`}>
-          {fullScreen && (
-            <button
-              type="button"
-              onClick={() => setIsPiesDrawerOpen(true)}
-              className="hidden md:flex items-center gap-2 px-4 py-2 bg-pink-600 text-white text-sm font-black uppercase rounded-lg hover:bg-pink-700 transition-colors"
-            >
-              <i className="fa-solid fa-chart-pie"></i> View revenue breakdown
-            </button>
-          )}
-          <label className="flex items-center gap-2">
-            <span className="text-[10px] font-black uppercase text-gray-500">Pie year</span>
-            <select
-              value={selectedYear}
-              onChange={(e) => setSelectedYear(Number(e.target.value))}
-              className="border border-gray-200 rounded-lg px-3 py-2 text-sm font-bold"
-            >
-              {years.filter((y) => y >= yearMin && y <= yearMax).map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
+        <div className={`flex flex-wrap gap-4 items-center ${fullScreen || isNativeFullScreen ? 'shrink-0 mb-4' : 'mb-4'}`}>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={programRevenuesOn}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setProgramRevenuesOn(on);
+                if (!on) setSelectedProgramRevenuePaths([]);
+              }}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm font-bold uppercase text-gray-700">Program Revenues</span>
           </label>
+          {programRevenuesOn && (
+            <div className="relative" ref={programDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setProgramDropdownOpen((o) => !o);
+                  setGeneralDropdownOpen(false);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold uppercase text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+              >
+                Filter by category
+                {selectedProgramRevenuePaths.length > 0 && (
+                  <span className="text-indigo-400">({selectedProgramRevenuePaths.length})</span>
+                )}
+                <i className={`fa-solid fa-chevron-down text-[10px] transition-transform ${programDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {programDropdownOpen && (
+                <RevenueHierarchyDropdown
+                  tree={programHierarchyTree}
+                  selectedPaths={selectedProgramRevenuePaths}
+                  onTogglePath={(path) => {
+                    setSelectedProgramRevenuePaths((prev) =>
+                      prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
+                    );
+                  }}
+                  onClose={() => setProgramDropdownOpen(false)}
+                  onSelectAllUnder={(paths, add) =>
+                    setSelectedProgramRevenuePaths((prev) =>
+                      add ? [...new Set([...prev, ...paths])] : prev.filter((p) => !paths.includes(p))
+                    )
+                  }
+                />
+              )}
+            </div>
+          )}
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={generalRevenuesOn}
+              onChange={(e) => {
+                const on = e.target.checked;
+                setGeneralRevenuesOn(on);
+                if (!on) setSelectedGeneralRevenuePaths([]);
+              }}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm font-bold uppercase text-gray-700">General Revenues</span>
+          </label>
+          {generalRevenuesOn && (
+            <div className="relative" ref={generalDropdownRef}>
+              <button
+                type="button"
+                onClick={() => {
+                  setGeneralDropdownOpen((o) => !o);
+                  setProgramDropdownOpen(false);
+                }}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-bold uppercase text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 transition-colors"
+              >
+                Filter by category
+                {selectedGeneralRevenuePaths.length > 0 && (
+                  <span className="text-indigo-400">({selectedGeneralRevenuePaths.length})</span>
+                )}
+                <i className={`fa-solid fa-chevron-down text-[10px] transition-transform ${generalDropdownOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {generalDropdownOpen && (
+                <RevenueHierarchyDropdown
+                  tree={generalHierarchyTree}
+                  selectedPaths={selectedGeneralRevenuePaths}
+                  onTogglePath={(path) => {
+                    setSelectedGeneralRevenuePaths((prev) =>
+                      prev.includes(path) ? prev.filter((p) => p !== path) : [...prev, path]
+                    );
+                  }}
+                  onClose={() => setGeneralDropdownOpen(false)}
+                  onSelectAllUnder={(paths, add) =>
+                    setSelectedGeneralRevenuePaths((prev) =>
+                      add ? [...new Set([...prev, ...paths])] : prev.filter((p) => !paths.includes(p))
+                    )
+                  }
+                />
+              )}
+            </div>
+          )}
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
@@ -514,34 +1074,13 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
               onChange={(e) => setIncludeBusinessType(e.target.checked)}
               className="rounded border-gray-300"
             />
-            <span className="text-sm font-bold uppercase text-gray-700">Include Water & Sewer (Enterprise Fund)</span>
+            <span className="text-sm font-bold uppercase text-gray-700">Include Water &amp; Sewer</span>
           </label>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-black uppercase text-gray-500">Entities</span>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={entityNorms.includes('governmental_activities')}
-                onChange={() => handleEntityToggle('governmental_activities')}
-                className="rounded border-gray-300"
-              />
-              <span className="text-xs font-bold">Governmental</span>
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={entityNorms.includes('business_type_activities')}
-                onChange={() => handleEntityToggle('business_type_activities')}
-                className="rounded border-gray-300"
-              />
-              <span className="text-xs font-bold">Business-type</span>
-            </label>
-          </div>
         </div>
 
         <div
           className={
-            fullScreen
+            fullScreen || isNativeFullScreen
               ? 'flex-1 flex flex-col min-h-0'
               : 'md:flex md:flex-col md:min-h-[420px]'
           }
@@ -550,15 +1089,16 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
           ref={chartRef}
           className={
             'relative w-full ' +
-            (fullScreen
+            (fullScreen || isNativeFullScreen
               ? 'flex-1 min-h-0 min-h-[180px]'
               : 'h-[300px] landscape:h-[70vh] mb-8 md:flex-1 md:min-h-0 md:min-h-[180px]')
           }
+          style={{ touchAction: dragBand ? 'none' : undefined }}
           onMouseDown={(e) => { if (!pendingYearRange && e.button === 0) handleChartPointerDown(e.clientX); }}
           onTouchStart={(e) => { if (!pendingYearRange && e.touches[0]) handleChartPointerDown(e.touches[0].clientX); }}
         >
           {/* Mobile peeking left tab - anchored when fullScreen */}
-          {fullScreen ? (
+          {(fullScreen || isNativeFullScreen) ? (
             <div className="md:hidden peeking-tab-left-anchored" onClick={(e) => e.stopPropagation()}>
               <button
                 onClick={() => setIsDrawerOpen(!isDrawerOpen)}
@@ -571,8 +1111,8 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
               </button>
             </div>
           ) : null}
-          {/* Mobile peeking right tab - pies drawer when fullScreen */}
-          {fullScreen ? (
+          {/* Mobile peeking right tab - revenue breakdown page when fullScreen */}
+          {(fullScreen || isNativeFullScreen) && onOpenPiePage ? (
             <div
               className="md:hidden peeking-tab-right-anchored"
               onTouchStart={handlePiesTabTouchStart}
@@ -581,7 +1121,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => setIsPiesDrawerOpen(true)}
+                onClick={() => onOpenPiePage(selectedYear)}
                 className="bg-pink-600 text-white rounded-l-2xl shadow-2xl touch-none"
               >
                 <i className="fa-solid fa-chart-pie text-xl"></i>
@@ -618,6 +1158,10 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                 className="absolute inset-0 z-[5]"
                 style={{ pointerEvents: 'auto' }}
                 onClick={() => {
+                  if (Date.now() - lastDragEndTime.current < 400) {
+                    ignoreNextOverlayClick.current = false;
+                    return;
+                  }
                   if (ignoreNextOverlayClick.current) {
                     ignoreNextOverlayClick.current = false;
                     return;
@@ -664,7 +1208,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
             );
           })()}
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={displayedData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
+            <LineChart data={chartDataWithExtension} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis
                 dataKey="year"
@@ -678,9 +1222,9 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                         ? rangeStartYear === rangeEndYear
                           ? [rangeStartYear]
                           : [rangeStartYear, rangeEndYear]
-                        : displayedData.length >= 2
+                        : chartDataWithExtension.length >= 2
                           ? (() => {
-                              const yrs = displayedData.map((d: any) => d.year);
+                              const yrs = chartDataWithExtension.map((d: any) => d.year);
                               const n = yrs.length;
                               if (n <= 3) return yrs;
                               const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
@@ -688,8 +1232,8 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                               const step = Math.max(1, Math.floor((n - 1) / 3));
                               return yrs.filter((_: number, i: number) => i % step === 0 || i === n - 1);
                             })()
-                          : displayedData.length > 0
-                            ? [...new Set(displayedData.map((d: any) => d.year))].sort((a, b) => a - b)
+                          : chartDataWithExtension.length > 0
+                            ? [...new Set(chartDataWithExtension.map((d: any) => d.year))].sort((a, b) => a - b)
                             : [];
                     return raw.filter((y: number) => y !== 2023);
                   })()
@@ -711,38 +1255,76 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                 isAnimationActive={false}
                 cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
                 content={({ active, payload }) => {
-                  if (active && payload && payload.length && displayedData.length && baselineRow) {
-                    const data = payload[0].payload;
-                    const pctLabel = toggles.inflationAdjusted ? '% Change (Inflation-adjusted)' : '% Change';
-                    const valueKey = (k: string) => (toggles.inflationAdjusted ? `${k}Real` : k);
+                  if (active && payload && payload.length && chartDataWithExtension.length && baselineRow) {
+                    const data = payload[0].payload as any;
+                    const MUD_2020_MSG = '2020 not Reported due to COVID 19 and software upgrade';
+                    const dataKey = REVENUE_TOGGLE_DATA_KEYS[selectedEntity];
+                    const label = REVENUE_TOGGLE_LABELS[selectedEntity];
+                    const color = REVENUE_TOGGLE_COLORS[selectedEntity];
+                    const trendKey = toggleTrendKey[selectedEntity];
+                    const inflKey = toggleInflationKey[selectedEntity];
+                    const showReal = toggles[inflKey];
+                    if (selectedEntity === 'mud' && data.year === 2020) {
+                      return (
+                        <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
+                          <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">{data.year} Records</p>
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                              <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-gray-400" />
+                              {label}
+                            </span>
+                            <p className="text-xs text-gray-600 max-w-[200px] whitespace-normal break-words">{MUD_2020_MSG}</p>
+                          </div>
+                        </div>
+                      );
+                    }
+                    const nominalVal = Number(data[dataKey]);
+                    const realVal = showReal ? Number(data[`${dataKey}Real`]) : NaN;
+                    const hasNominal = Number.isFinite(nominalVal);
+                    const hasReal = Number.isFinite(realVal);
+                    if (!hasNominal && !hasReal) return null;
+                    const pctNominal =
+                      toggles[trendKey] && latestRow && hasNominal
+                        ? pctChangeOverRange(Number(baselineRow[dataKey]), Number(latestRow[dataKey]))
+                        : null;
+                    const pctReal =
+                      toggles[trendKey] && latestRow && hasReal
+                        ? pctChangeOverRange(Number(baselineRow[`${dataKey}Real`]), Number(latestRow[`${dataKey}Real`]))
+                        : null;
+                    const fmtNominal = formatPctChange(pctNominal);
+                    const fmtReal = formatPctChange(pctReal);
                     return (
                       <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
                         <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">{data.year} Records</p>
                         <div className="space-y-2">
-                          {seriesKeys.map(({ key, label, color }) => {
-                            if (!toggles[key as keyof typeof toggles]) return null;
-                            const valKey = valueKey(key);
-                            const val = Number((data as any)[valKey]);
-                            const pct =
-                              toggles.trend && displayedData.length >= 2 && latestRow
-                                ? pctChangeOverRange(Number(baselineRow[valKey]), Number(latestRow[valKey]))
-                                : null;
-                            const fmt = formatPctChange(pct);
-                            return (
-                              <div key={key}>
-                                <div className="flex justify-between items-center gap-6">
-                                  <span className="text-[10px] font-black uppercase text-gray-400">{label}</span>
-                                  <span className="text-sm font-black" style={{ color }}>{formatCurrency(val)}</span>
-                                </div>
-                                {toggles.trend && pct !== null && (
-                                  <div className="flex justify-between items-center gap-6 pl-3">
-                                    <span className="text-[10px] font-black uppercase text-gray-400">{pctLabel}</span>
-                                    <span className={`text-sm font-black ${fmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>{fmt.text}</span>
-                                  </div>
-                                )}
+                          {hasNominal && (
+                            <>
+                              <div className="flex justify-between items-center gap-6">
+                                <span className="text-[10px] font-black uppercase text-gray-400">{label}</span>
+                                <span className="text-sm font-black" style={{ color }}>{formatCurrency(nominalVal)}</span>
                               </div>
-                            );
-                          })}
+                              {toggles[trendKey] && pctNominal !== null && (
+                                <div className="flex justify-between items-center gap-6 pl-3">
+                                  <span className="text-[10px] font-black uppercase text-gray-400">% Change</span>
+                                  <span className={`text-sm font-black ${fmtNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>{fmtNominal.text}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
+                          {hasReal && (
+                            <>
+                              <div className="flex justify-between items-center gap-6">
+                                <span className="text-[10px] font-black uppercase text-gray-400">{label} (inflation adj.)</span>
+                                <span className="text-sm font-black" style={{ color, opacity: 0.9 }}>{formatCurrency(realVal)}</span>
+                              </div>
+                              {toggles[trendKey] && pctReal !== null && (
+                                <div className="flex justify-between items-center gap-6 pl-3">
+                                  <span className="text-[10px] font-black uppercase text-gray-400">% Change (real)</span>
+                                  <span className={`text-sm font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>{fmtReal.text}</span>
+                                </div>
+                              )}
+                            </>
+                          )}
                         </div>
                       </div>
                     );
@@ -750,27 +1332,44 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                   return null;
                 }}
               />
-              {seriesKeys.map(({ key, label, color }) => {
-                const valKey = toggles.inflationAdjusted ? `${key}Real` : key;
-                const trendKey = toggles.inflationAdjusted ? `${key}RealTrend` : `${key}Trend`;
-                const urlKey = key === 'totalRevenue' ? 'pdf_page_url_totalRevenue' : `pdf_page_url_${key}` as keyof YearMetric;
+              {(() => {
+                const INFLATION_LINE_COLOR = '#fb923c';
+                const dataKey = REVENUE_TOGGLE_DATA_KEYS[selectedEntity];
+                const label = REVENUE_TOGGLE_LABELS[selectedEntity];
+                const color = REVENUE_TOGGLE_COLORS[selectedEntity];
+                const trendKey = toggleTrendKey[selectedEntity];
+                const inflKey = toggleInflationKey[selectedEntity];
+                const showReal = toggles[inflKey];
+                const connectNulls = selectedEntity === 'emergCommDist' || selectedEntity === 'mud' ? false : undefined;
                 return (
-                  <React.Fragment key={key}>
-                    {toggles[key as keyof typeof toggles] && (
+                  <>
+                    <Line
+                      type="monotone"
+                      dataKey={dataKey}
+                      name={label}
+                      stroke={color}
+                      strokeWidth={selectedEntity === 'total' ? 5 : 3}
+                      dot={(p) => <ClickableDot {...p} getUrl={(d: any) => d.pdf_page_url} />}
+                      connectNulls={connectNulls}
+                    />
+                    {showReal && (
                       <Line
                         type="monotone"
-                        dataKey={valKey}
-                        name={label}
-                        stroke={color}
-                        strokeWidth={key === 'totalRevenue' ? 5 : 3}
-                        dot={(p) => <ClickableDot {...p} getUrl={(d: any) => d[urlKey]} />}
+                        dataKey={`${dataKey}Real`}
+                        name={`${label} (inflation adj.)`}
+                        stroke={INFLATION_LINE_COLOR}
+                        strokeWidth={selectedEntity === 'total' ? 5 : 3}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        opacity={0.85}
+                        connectNulls={connectNulls}
                       />
                     )}
-                    {toggles.trend && toggles[key as keyof typeof toggles] && (
+                    {toggles[trendKey] && (
                       <Line
                         type="monotone"
-                        dataKey={trendKey}
-                        name={toggles.inflationAdjusted ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'}
+                        dataKey={`${dataKey}Trend`}
+                        name={`${label} trend`}
                         stroke={color}
                         strokeWidth={2}
                         strokeDasharray="5 5"
@@ -778,57 +1377,168 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                         opacity={0.4}
                       />
                     )}
-                  </React.Fragment>
+                    {toggles[trendKey] && showReal && (
+                      <Line
+                        type="monotone"
+                        dataKey={`${dataKey}RealTrend`}
+                        name={`${label} trend (inflation adj.)`}
+                        stroke={INFLATION_LINE_COLOR}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        opacity={0.35}
+                      />
+                    )}
+                    {andBeyondOn && andBeyondEnabled && andBeyondStartYearClamped != null && andBeyondYearsForward > 0 && (
+                      <>
+                        <Line
+                          type="monotone"
+                          dataKey={AND_BEYOND_NOMINAL_KEY}
+                          name="Trend projection"
+                          stroke="#6b7280"
+                          strokeWidth={2}
+                          dot={false}
+                          connectNulls
+                        />
+                        {toggles[inflKey] && (
+                          <Line
+                            type="monotone"
+                            dataKey={AND_BEYOND_REAL_KEY}
+                            name="Trend projection (inflation adj.)"
+                            stroke={INFLATION_LINE_COLOR}
+                            strokeWidth={2}
+                            strokeDasharray="5 5"
+                            dot={false}
+                            opacity={0.85}
+                            connectNulls
+                          />
+                        )}
+                      </>
+                    )}
+                    {selectedEntity === 'mud' && (
+                      <>
+                        <Line
+                          type="monotone"
+                          dataKey="mudBridge"
+                          name="MUD (2020 bridge)"
+                          stroke="#9ca3af"
+                          strokeWidth={4}
+                          connectNulls={false}
+                          dot={(props) => {
+                            const { cx, cy, payload } = props;
+                            if (payload?.year === 2020 && cx != null && cy != null) {
+                              return (
+                                <circle
+                                  cx={cx}
+                                  cy={cy}
+                                  r={6}
+                                  fill="#9ca3af"
+                                  className="cursor-pointer"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setShowMud2020Message((v) => !v);
+                                  }}
+                                />
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        {showReal && (
+                          <Line
+                            type="monotone"
+                            dataKey="mudBridgeReal"
+                            name="MUD (2020 bridge, inflation adj.)"
+                            stroke={INFLATION_LINE_COLOR}
+                            strokeWidth={4}
+                            strokeDasharray="5 5"
+                            opacity={0.85}
+                            connectNulls={false}
+                            dot={false}
+                          />
+                        )}
+                      </>
+                    )}
+                  </>
                 );
-              })}
+              })()}
             </LineChart>
           </ResponsiveContainer>
+          {showMud2020Message && (
+            <div
+              ref={mud2020PopoverRef}
+              className="absolute top-4 left-1/2 -translate-x-1/2 z-10 bg-white p-4 rounded-xl shadow-xl border border-gray-200 max-w-[240px]"
+            >
+              <p className="text-xs text-gray-700 whitespace-normal break-words">
+                2020 not Reported due to COVID 19 and software upgrade
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowMud2020Message(false)}
+                className="mt-2 text-[10px] font-black uppercase text-indigo-600 hover:text-indigo-700"
+              >
+                Close
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Desktop only: collapsible bottom peeking panel */}
+        {/* Desktop only: collapsible bottom peeking panel (mirrors County Expenditures) */}
         <div className="hidden md:block border-t border-gray-50 shrink-0 overflow-hidden" onClick={(e) => e.stopPropagation()}>
           <div
             className="grid transition-[grid-template-rows] duration-300 ease-out"
             style={{ gridTemplateRows: desktopTogglesOpen ? '1fr' : '0fr' }}
           >
             <div className="min-h-0 overflow-hidden">
-              <div className={`space-y-8 pt-6 px-4 ${fullScreen ? 'pb-2' : 'pb-4'}`}>
-                <div className={`space-y-4 ${fullScreen ? '' : 'mb-8'}`}>
-                  <div className={`grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] items-end gap-x-2 ${fullScreen ? 'gap-y-2' : 'gap-y-4'}`}>
+              <div className={`space-y-8 pt-6 px-4 ${fullScreen || isNativeFullScreen ? 'pb-2' : 'pb-4'}`}>
+                <div className={`space-y-4 ${fullScreen || isNativeFullScreen ? '' : 'mb-8'}`}>
+                  <div className={`grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] items-end gap-x-2 ${fullScreen || isNativeFullScreen ? 'gap-y-2' : 'gap-y-4'}`}>
                     <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest pb-2">Toggle Comparison</div>
-                    {seriesKeys.map(({ key, label, color }) => (
-                      <div key={key} className="flex flex-col items-center gap-2">
+                    {REVENUE_TOGGLE_KEYS.map((key) => (
+                      <div key={key} className="text-center">
                         <button
-                          onClick={() => setToggles({ ...toggles, [key]: !toggles[key as keyof typeof toggles] })}
-                          className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key as keyof typeof toggles] ? '' : 'text-gray-400'}`}
-                          style={toggles[key as keyof typeof toggles] ? { color } : undefined}
+                          onClick={() => handleSelectEntity(key)}
+                          className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? '' : 'text-gray-400'}`}
+                          style={toggles[key] ? { color: REVENUE_TOGGLE_COLORS[key] } : undefined}
                         >
                           <div
-                            className={`w-12 h-1.5 rounded-full transition-all ${toggles[key as keyof typeof toggles] ? '' : 'bg-gray-100'}`}
-                            style={toggles[key as keyof typeof toggles] ? { backgroundColor: color } : undefined}
+                            className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? '' : 'bg-gray-100'}`}
+                            style={toggles[key] ? { backgroundColor: REVENUE_TOGGLE_COLORS[key] } : undefined}
                           />
-                          {label}
+                          {REVENUE_TOGGLE_LABELS[key]}
                         </button>
                       </div>
                     ))}
                     <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-                    <div className="col-span-5 flex justify-center">
-                      <div
-                        onClick={() => setToggles({ ...toggles, trend: !toggles.trend })}
-                        className={`slider-oval ${toggles.trend ? 'slider-active slider-networth-on' : ''}`}
-                      >
-                        <div className="slider-circle"></div>
-                      </div>
-                    </div>
+                    {REVENUE_TOGGLE_KEYS.map((key) => {
+                      const isEnabled = key === selectedEntity;
+                      return (
+                        <div key={key} className="flex justify-center">
+                          <div
+                            onClick={isEnabled ? () => setToggles({ ...toggles, [toggleTrendKey[key]]: !toggles[toggleTrendKey[key]] }) : undefined}
+                            className={`slider-oval ${toggles[toggleTrendKey[key]] ? 'slider-active slider-netWorth-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                            title="Trend"
+                          >
+                            <div className="slider-circle"></div>
+                          </div>
+                        </div>
+                      );
+                    })}
                     <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-                    <div className="col-span-5 flex justify-center">
-                      <div
-                        onClick={() => setToggles({ ...toggles, inflationAdjusted: !toggles.inflationAdjusted })}
-                        className={`slider-oval ${toggles.inflationAdjusted ? 'slider-active slider-inf-on' : ''}`}
-                      >
-                        <div className="slider-circle"></div>
-                      </div>
-                    </div>
+                    {REVENUE_TOGGLE_KEYS.map((key) => {
+                      const isEnabled = key === selectedEntity;
+                      return (
+                        <div key={key} className="flex justify-center">
+                          <div
+                            title="Inflation Adjusted"
+                            onClick={isEnabled ? () => setToggles({ ...toggles, [toggleInflationKey[key]]: !toggles[toggleInflationKey[key]] }) : undefined}
+                            className={`slider-oval ${toggles[toggleInflationKey[key]] ? 'slider-active slider-inf-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                          >
+                            <div className="slider-circle"></div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -856,7 +1566,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
         </div>
 
         {/* Mobile peeking tab - fixed position when not fullScreen */}
-        {!fullScreen && (
+        {!(fullScreen || isNativeFullScreen) && (
           <div
             className="md:hidden peeking-tab-left"
             style={{
@@ -903,16 +1613,16 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-8">
                 <div>
                   <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest mb-4">Toggle Comparison</div>
-                  <div className="grid grid-cols-1 gap-4">
-                    {seriesKeys.map(({ key, label, color }) => (
+                  <div className="grid grid-cols-1 gap-6">
+                    {REVENUE_TOGGLE_KEYS.map((key) => (
                       <div key={key} className="text-center">
                         <button
-                          onClick={() => setToggles({ ...toggles, [key]: !toggles[key as keyof typeof toggles] })}
-                          className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key as keyof typeof toggles] ? '' : 'text-gray-400'}`}
-                          style={toggles[key as keyof typeof toggles] ? { color } : {}}
+                          onClick={() => handleSelectEntity(key)}
+                          className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? '' : 'text-gray-400'}`}
+                          style={toggles[key] ? { color: REVENUE_TOGGLE_COLORS[key] } : {}}
                         >
-                          <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key as keyof typeof toggles] ? '' : 'bg-gray-100'}`} style={toggles[key as keyof typeof toggles] ? { backgroundColor: color } : {}} />
-                          {label}
+                          <div className={`w-12 h-1.5 rounded-full transition-all ${toggles[key] ? '' : 'bg-gray-100'}`} style={toggles[key] ? { backgroundColor: REVENUE_TOGGLE_COLORS[key] } : {}} />
+                          {REVENUE_TOGGLE_LABELS[key]}
                         </button>
                       </div>
                     ))}
@@ -920,20 +1630,40 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                 </div>
                 <div>
                   <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Trend Toggle</div>
-                  <div
-                    onClick={() => setToggles({ ...toggles, trend: !toggles.trend })}
-                    className={`slider-oval ${toggles.trend ? 'slider-active slider-networth-on' : ''}`}
-                  >
-                    <div className="slider-circle"></div>
+                  <div className="grid grid-cols-5 gap-4 items-center">
+                    {REVENUE_TOGGLE_KEYS.map((key) => {
+                      const isEnabled = key === selectedEntity;
+                      return (
+                        <div key={key} className="flex flex-col items-center gap-2">
+                          <div
+                            onClick={isEnabled ? () => setToggles({ ...toggles, [toggleTrendKey[key]]: !toggles[toggleTrendKey[key]] }) : undefined}
+                            className={`slider-oval ${toggles[toggleTrendKey[key]] ? 'slider-active slider-netWorth-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                          >
+                            <div className="slider-circle"></div>
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-gray-400">{REVENUE_TOGGLE_LABELS[key]}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <div>
                   <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Inflation Adjusted</div>
-                  <div
-                    onClick={() => setToggles({ ...toggles, inflationAdjusted: !toggles.inflationAdjusted })}
-                    className={`slider-oval ${toggles.inflationAdjusted ? 'slider-active slider-inf-on' : ''}`}
-                  >
-                    <div className="slider-circle"></div>
+                  <div className="grid grid-cols-5 gap-4 items-center">
+                    {REVENUE_TOGGLE_KEYS.map((key) => {
+                      const isEnabled = key === selectedEntity;
+                      return (
+                        <div key={key} className="flex flex-col items-center gap-2">
+                          <div
+                            onClick={isEnabled ? () => setToggles({ ...toggles, [toggleInflationKey[key]]: !toggles[toggleInflationKey[key]] }) : undefined}
+                            className={`slider-oval ${toggles[toggleInflationKey[key]] ? 'slider-active slider-inf-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                          >
+                            <div className="slider-circle"></div>
+                          </div>
+                          <span className="text-[10px] font-black uppercase text-gray-400">{REVENUE_TOGGLE_LABELS[key]}</span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -942,7 +1672,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
         )}
 
         {/* Pie charts - in main content when not fullScreen, in right drawer when fullScreen */}
-        {!fullScreen && (
+        {!(fullScreen || isNativeFullScreen) && (
           <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10">
               <div className="rounded-[2rem] border border-gray-100 p-4">
@@ -961,7 +1691,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                         onClick={(entry) => openPdf(entry.pdf_page_url)}
                       >
                         {revenuePie.map((_, i) => (
-                          <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                          <Cell key={i} fill={REVENUE_PIE_COLORS[i % REVENUE_PIE_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => formatCurrency(value)} />
@@ -985,7 +1715,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                         onClick={(entry) => openPdf(entry.pdf_page_url)}
                       >
                         {taxBreakdownPie.map((_, i) => (
-                          <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                          <Cell key={i} fill={REVENUE_PIE_COLORS[i % REVENUE_PIE_COLORS.length]} />
                         ))}
                       </Pie>
                       <Tooltip formatter={(value: number) => formatCurrency(value)} />
@@ -999,7 +1729,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
         )}
 
         {/* Mobile right drawer - pies (fullScreen only) */}
-        {fullScreen && isPiesDrawerOpen && (
+        {(fullScreen || isNativeFullScreen) && isPiesDrawerOpen && (
           <div className="fixed inset-0 flex justify-end z-[201]">
             <div
               className="mobile-drawer-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -1040,7 +1770,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                           onClick={(entry) => openPdf(entry.pdf_page_url)}
                         >
                           {revenuePie.map((_, i) => (
-                            <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                            <Cell key={i} fill={REVENUE_PIE_COLORS[i % REVENUE_PIE_COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip formatter={(value: number) => formatCurrency(value)} />
@@ -1064,7 +1794,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
                           onClick={(entry) => openPdf(entry.pdf_page_url)}
                         >
                           {taxBreakdownPie.map((_, i) => (
-                            <Cell key={i} fill={Object.values(REVENUE_COLORS)[i % 5]} />
+                            <Cell key={i} fill={REVENUE_PIE_COLORS[i % REVENUE_PIE_COLORS.length]} />
                           ))}
                         </Pie>
                         <Tooltip formatter={(value: number) => formatCurrency(value)} />
@@ -1077,6 +1807,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, fullScre
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

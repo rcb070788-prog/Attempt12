@@ -150,8 +150,8 @@ export const MainView: React.FC<MainViewProps> = (props) => {
   return (
     <main className={`flex-grow overflow-y-auto container mx-auto px-0 md:px-4 py-0 md:py-8 custom-scrollbar ${selectedCategory ? 'landscape:p-0' : ''}`}>
       {currentPage === 'home' && !selectedCategory && (
-        <div className="max-w-4xl mx-auto space-y-12 py-10 px-4 md:px-0">
-          <div className="hide-on-landscape">
+        <div className="space-y-12 py-10">
+          <div className="hide-on-landscape max-w-4xl mx-auto px-4 md:px-0 -mt-[0.25in]">
             <h1 className="text-4xl md:text-6xl font-black text-gray-900 uppercase tracking-tighter text-center flex justify-center items-center md:items-baseline">
               <span className="flex flex-col md:flex-row items-center md:items-baseline gap-[calc(0.5rem+0.25em)] ml-0 md:ml-[0.5em]">
                 <span className="inline-block w-[6ch]">Moore</span>
@@ -163,7 +163,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
               </span>
             </h1>
           </div>
-          <div className="hide-on-landscape">
+          <div className="hide-on-landscape w-full px-4 md:pl-[0.25in] md:pr-[0.25in]">
             <CategoryLinks setSelectedCategory={setSelectedCategory} />
           </div>
         </div>

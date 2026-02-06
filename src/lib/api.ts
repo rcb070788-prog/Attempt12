@@ -1,4 +1,4 @@
-import { supabase } from './supabaseClient';
+import { supabase } from '../../supabaseClient';
 import type {
   NormalizedLine,
   ExhibitBLineRow,
@@ -42,6 +42,7 @@ const EXHIBIT_B_LINE_COLS = 'line_id,doc_id,display_order,doc_display_order,year
  * pdf_page_url is built as storage_url + #page=N for click-to-source.
  */
 export async function fetchExhibitBLines(): Promise<NormalizedLine[]> {
+  if (!supabase) return [];
   const { data: lines, error: linesError } = await supabase
     .from('exhibit_b_lines')
     .select(EXHIBIT_B_LINE_COLS)
@@ -100,6 +101,7 @@ const EXHIBIT_B_REVENUE_COLS =
  * Maps CSV columns to NormalizedLine in code: section→category_norm, entity→entity_norm, hierarchy_path→hierarchy_path_canon.
  */
 export async function fetchExhibitBRevenueLines(): Promise<NormalizedLine[]> {
+  if (!supabase) return [];
   const { data: lines, error: linesError } = await supabase
     .from('exhibit_b_revenues')
     .select(EXHIBIT_B_REVENUE_COLS)
@@ -157,6 +159,7 @@ export async function fetchExhibitBRevenueLines(): Promise<NormalizedLine[]> {
  * Maps to NormalizedTotalRow; derives hierarchy_path_norm and label_norm in code for matching.
  */
 async function fetchExhibitBRevenueTotalsFromTable(): Promise<NormalizedTotalRow[]> {
+  if (!supabase) return [];
   const { data: lines, error: linesError } = await supabase
     .from('exhibit_b_revenues')
     .select(EXHIBIT_B_REVENUE_COLS)
@@ -216,6 +219,7 @@ const EXHIBIT_B_EXPENSE_COLS =
  * Maps CSV columns to NormalizedLine: section→category_norm ('expenses'), entity→entity_norm.
  */
 export async function fetchExhibitBExpenseLines(): Promise<NormalizedLine[]> {
+  if (!supabase) return [];
   const { data: lines, error: linesError } = await supabase
     .from('exhibit_b_expenses')
     .select(EXHIBIT_B_EXPENSE_COLS)

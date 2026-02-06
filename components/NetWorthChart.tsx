@@ -520,15 +520,15 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
               }}
             />
             {toggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={4} dot={false} />}
-            {toggles.assetsTrend && <Line type="monotone" dataKey={toggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend'} name={toggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#4ade80" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+            {toggles.assetsTrend && <Line type="monotone" dataKey={toggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend'} name={toggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={toggles.assetsInf ? '#fb923c' : '#4ade80'} strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
             {toggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
             
             {toggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={4} dot={false} />}
-            {toggles.liabsTrend && <Line type="monotone" dataKey={toggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend'} name={toggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#f87171" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+            {toggles.liabsTrend && <Line type="monotone" dataKey={toggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend'} name={toggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={toggles.liabsInf ? '#fb923c' : '#f87171'} strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
             {toggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
             
             {toggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={5} dot={false} />}
-            {toggles.netWorthTrend && <Line type="monotone" dataKey={toggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend'} name={toggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#3b82f6" strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
+            {toggles.netWorthTrend && <Line type="monotone" dataKey={toggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend'} name={toggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={toggles.netWorthInf ? '#fb923c' : '#3b82f6'} strokeWidth={2} strokeDasharray="5 5" dot={false} opacity={0.4} />}
             {toggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
           </LineChart>
         </ResponsiveContainer>

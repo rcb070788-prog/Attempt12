@@ -54,6 +54,20 @@ export interface YearMetric {
   pdf_page_url_other?: string;
 }
 
+/** Per-year, per-entity revenue for County Revenues chart (mirrors expense entities). */
+export interface RevenueByEntityYearPoint {
+  year: number;
+  /** Total = genGov + schools + (emergCommDist ?? 0) + (mud ?? 0) */
+  totalPrimaryGovAndComponentUnits: number;
+  genGov: number;
+  schools: number;
+  /** Only set for years when ECD actually reported; undefined otherwise. */
+  emergCommDist: number | undefined;
+  /** Only set for years when MUD reported; undefined for 2020 (COVID/software upgrade). */
+  mud: number | undefined;
+  pdf_page_url?: string;
+}
+
 export interface RevenuePieSlice {
   name: string;
   value: number;
@@ -123,6 +137,114 @@ export function getRevenueYearMetrics(
   }
 
   return result.sort((a, b) => a.year - b.year);
+}
+
+/** Normalize entity for grouping: metropolitan_school_department -> school_department. */
+function revenueEntityForGrouping(line: NormalizedLine): string {
+  if (
+    line.entity_norm === 'metropolitan_school_department' ||
+    line.label_norm === 'metropolitan_school_department'
+  ) {
+    return 'school_department';
+  }
+  return line.entity_norm;
+}
+
+/**
+ * Build per-year, per-entity revenue for the County Revenues chart.
+ * Respects Program/General toggles, Include Water & Sewer, and entity mapping.
+ * Optional path filters restrict to selected hierarchy_path_canon values per category.
+ * 2016+: ECD has no rows so schools = MSD only; 2020: business-type may not report.
+ */
+export function getRevenueByEntityByYear(
+  lines: NormalizedLine[],
+  yearMin: number,
+  yearMax: number,
+  programOn: boolean,
+  generalOn: boolean,
+  includeBusinessType: boolean,
+  selectedProgramRevenuePaths?: string[] | null,
+  selectedGeneralRevenuePaths?: string[] | null
+): RevenueByEntityYearPoint[] {
+  const categories: string[] = [];
+  if (programOn) categories.push('program_revenues');
+  if (generalOn) categories.push('general_revenues');
+  if (categories.length === 0) {
+    return [];
+  }
+
+  let revenueLines = lines.filter(
+    (l) =>
+      l.row_kind === 'line_item' &&
+      categories.includes(l.category_norm) &&
+      l.year >= yearMin &&
+      l.year <= yearMax
+  );
+
+  const programSet =
+    selectedProgramRevenuePaths != null && selectedProgramRevenuePaths.length > 0
+      ? new Set(selectedProgramRevenuePaths)
+      : null;
+  const generalSet =
+    selectedGeneralRevenuePaths != null && selectedGeneralRevenuePaths.length > 0
+      ? new Set(selectedGeneralRevenuePaths)
+      : null;
+  if (programSet != null || generalSet != null) {
+    revenueLines = revenueLines.filter((l) => {
+      if (l.category_norm === 'program_revenues') {
+        return programSet == null || programSet.has(l.hierarchy_path_canon);
+      }
+      if (l.category_norm === 'general_revenues') {
+        return generalSet == null || generalSet.has(l.hierarchy_path_canon);
+      }
+      return true;
+    });
+  }
+
+  const byYear = new Map<
+    number,
+    { genGov: number; schools: number; emergCommDist: number; mud: number; urls: string[] }
+  >();
+
+  for (const line of revenueLines) {
+    const entity = revenueEntityForGrouping(line);
+    const cur = byYear.get(line.year) ?? {
+      genGov: 0,
+      schools: 0,
+      emergCommDist: 0,
+      mud: 0,
+      urls: [] as string[],
+    };
+
+    if (entity === 'governmental_activities') {
+      cur.genGov += line.amount;
+    } else if (entity === 'school_department') {
+      cur.schools += line.amount;
+    } else if (entity === 'emergency_communications_district') {
+      cur.emergCommDist += line.amount;
+    } else if (entity === 'business_type_activities') {
+      cur.mud += line.amount;
+    }
+    if (line.pdf_page_url) cur.urls.push(line.pdf_page_url);
+    byYear.set(line.year, cur);
+  }
+
+  return [...byYear.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([year, { genGov, schools, emergCommDist, mud, urls }]) => {
+      const mudVal = includeBusinessType ? (year === 2020 ? undefined : mud) : undefined;
+      const ecdVal = emergCommDist > 0 ? emergCommDist : undefined;
+      const totalPrimaryGovAndComponentUnits = genGov + schools + (ecdVal ?? 0) + (mudVal ?? 0);
+      return {
+        year,
+        totalPrimaryGovAndComponentUnits,
+        genGov,
+        schools,
+        emergCommDist: ecdVal,
+        mud: mudVal,
+        pdf_page_url: urls.length ? urls.reduce((min, u) => (u < min ? u : min), urls[0]) : undefined,
+      };
+    });
 }
 
 const REVENUE_GENERAL_TOTAL_PATH = 'general_revenues_total_general_revenues';
@@ -196,14 +318,35 @@ export function getRevenuePieForYear(
   lines: NormalizedLine[],
   selectedYear: number,
   includeBusinessType: boolean,
-  entityNorms?: string[]
+  entityNorms?: string[],
+  selectedProgramRevenuePaths?: string[] | null,
+  selectedGeneralRevenuePaths?: string[] | null
 ): RevenuePieSlice[] {
   const filtered = filterByEntity(lines, includeBusinessType, entityNorms);
-  const forYear = filtered.filter(
+  let forYear = filtered.filter(
     (l) =>
       (l.category_norm === 'general_revenues' || l.category_norm === 'program_revenues') &&
       l.year === selectedYear
   );
+  const programSet =
+    selectedProgramRevenuePaths != null && selectedProgramRevenuePaths.length > 0
+      ? new Set(selectedProgramRevenuePaths)
+      : null;
+  const generalSet =
+    selectedGeneralRevenuePaths != null && selectedGeneralRevenuePaths.length > 0
+      ? new Set(selectedGeneralRevenuePaths)
+      : null;
+  if (programSet != null || generalSet != null) {
+    forYear = forYear.filter((l) => {
+      if (l.category_norm === 'program_revenues') {
+        return programSet == null || programSet.has(l.hierarchy_path_canon);
+      }
+      if (l.category_norm === 'general_revenues') {
+        return generalSet == null || generalSet.has(l.hierarchy_path_canon);
+      }
+      return true;
+    });
+  }
 
   const taxRows = forYear.filter(isTaxesFees);
   const chargeRows = forYear.filter(isChargesForServices);

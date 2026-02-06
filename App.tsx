@@ -60,7 +60,7 @@
 // - useActions.ts: Updated status logic to ensure the "Robot Janitor" knows exactly when a suggestion was closed.
 // - Supabase SQL: Implemented a Trigger and Function to automatically timestamp closed items and move them to the archive after 30 days.
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, supabaseAnonKey, isAuthStoragePersistent } from './supabaseClient';
 // New Modular Imports
 import { formatDate } from './utils/formatUtils';
@@ -90,6 +90,13 @@ export default function App() {
   const showToast = (message: string, type: 'success' | 'error' = 'success') => { setToast({ message, type }); setTimeout(() => setToast(null), 3000); };
   const [dismissStorageBanner, setDismissStorageBanner] = useState(false);
   const [showHomescreenBanner, setShowHomescreenBanner] = useState(false);
+
+  // Title bar auto-hide (desktop only): initially down, slides up after 10s; slides down when mouse in top 25%
+  const [titleBarVisible, setTitleBarVisible] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(false);
+  const [titleBarHeight, setTitleBarHeight] = useState(56);
+  const titleBarRef = useRef<HTMLDivElement>(null);
+  const hideAfterLeaveRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 3. NAVIGATION (Now it has access to 'user' and 'selectedPoll')
   const {
@@ -227,6 +234,65 @@ export default function App() {
     return () => window.removeEventListener('resize', update);
   }, []);
 
+  // Desktop detection for title bar auto-hide (min-width 768px)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 768px)');
+    const update = () => setIsDesktop(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    return () => mq.removeEventListener('change', update);
+  }, []);
+
+  // Measure title bar height for reveal zone (at least 2× bar height or top 25%)
+  useEffect(() => {
+    if (!titleBarRef.current || !isDesktop) return;
+    const ro = new ResizeObserver(() => {
+      if (titleBarRef.current) {
+        const h = titleBarRef.current.offsetHeight;
+        if (h > 0) setTitleBarHeight(h);
+      }
+    });
+    ro.observe(titleBarRef.current);
+    const h = titleBarRef.current.offsetHeight;
+    if (h > 0) setTitleBarHeight(h);
+    return () => ro.disconnect();
+  }, [isDesktop, titleBarVisible]);
+
+  // After 10s on desktop, slide title bar up
+  useEffect(() => {
+    if (!isDesktop) return;
+    const t = setTimeout(() => setTitleBarVisible(false), 10000);
+    return () => clearTimeout(t);
+  }, [isDesktop]);
+
+  // Mouse in top zone (max of 2× bar height and 25% of viewport) → show bar; leave zone → hide after delay
+  useEffect(() => {
+    if (!isDesktop) return;
+    const LEAVE_DELAY_MS = 800;
+    const onMove = (e: MouseEvent) => {
+      const h = window.innerHeight;
+      const zone = Math.max(2 * titleBarHeight, h * 0.25);
+      if (e.clientY < zone) {
+        if (hideAfterLeaveRef.current) {
+          clearTimeout(hideAfterLeaveRef.current);
+          hideAfterLeaveRef.current = null;
+        }
+        setTitleBarVisible(true);
+      } else {
+        if (hideAfterLeaveRef.current) return;
+        hideAfterLeaveRef.current = setTimeout(() => {
+          hideAfterLeaveRef.current = null;
+          setTitleBarVisible(false);
+        }, LEAVE_DELAY_MS);
+      }
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      if (hideAfterLeaveRef.current) clearTimeout(hideAfterLeaveRef.current);
+    };
+  }, [isDesktop, titleBarHeight]);
+
   if (activeDashboard) {
     return (
       <div className="fixed inset-0 z-[100] bg-white flex flex-col overflow-hidden h-[100dvh]">
@@ -242,7 +308,7 @@ export default function App() {
   }
 
   return (
-    <div className="h-screen bg-gray-50 flex flex-col font-sans overflow-hidden relative">
+    <div className="h-screen bg-gray-50 md:bg-[url('/homescreen.png')] md:bg-cover md:bg-[center_35%] md:bg-no-repeat flex flex-col font-sans overflow-hidden relative">
       {toast && <Toast message={toast.message} type={toast.type} />}
 
       {user && !isAuthStoragePersistent && !dismissStorageBanner && (
@@ -289,12 +355,34 @@ export default function App() {
   fetchContactSubmissions={fetchContactSubmissions}
 />
 
-      <Navbar 
-        setCurrentPage={setCurrentPage}
-        setSelectedCategory={setSelectedCategory}
-        setIsMenuOpen={setIsMenuOpen}
-        showMenuSparkle={currentPage === 'home' && !selectedCategory}
-      />
+      {/* Title bar: on desktop, initially visible then slides up after 10s; slides down when mouse in top 25% (or 2× bar height) */}
+      {isDesktop ? (
+        <div
+          className="shrink-0 overflow-hidden transition-[height] duration-300 ease-out z-50"
+          style={{ height: titleBarVisible ? titleBarHeight : 0 }}
+          aria-hidden={!titleBarVisible}
+        >
+          <div
+            ref={titleBarRef}
+            className="transition-transform duration-300 ease-out bg-white shadow-sm"
+            style={{ transform: titleBarVisible ? 'translateY(0)' : 'translateY(-100%)' }}
+          >
+            <Navbar
+              setCurrentPage={setCurrentPage}
+              setSelectedCategory={setSelectedCategory}
+              setIsMenuOpen={setIsMenuOpen}
+              showMenuSparkle={currentPage === 'home' && !selectedCategory}
+            />
+          </div>
+        </div>
+      ) : (
+        <Navbar
+          setCurrentPage={setCurrentPage}
+          setSelectedCategory={setSelectedCategory}
+          setIsMenuOpen={setIsMenuOpen}
+          showMenuSparkle={currentPage === 'home' && !selectedCategory}
+        />
+      )}
 
       <Sidebar 
         isMenuOpen={isMenuOpen}

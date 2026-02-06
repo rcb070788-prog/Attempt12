@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { CATEGORIES } from '../constants';
 
 interface CategoryLinksProps {
@@ -6,7 +6,7 @@ interface CategoryLinksProps {
 }
 
 const CARD_CLASS =
-  'bg-white p-10 rounded-[3rem] shadow-sm border-2 border-transparent hover:border-indigo-600 hover:shadow-2xl transition-all cursor-pointer group';
+  'bg-white/70 p-5 rounded-[3rem] shadow-sm border-2 border-transparent hover:bg-white hover:border-indigo-600 hover:shadow-2xl transition-all cursor-pointer group';
 
 function Card({
   id,
@@ -15,6 +15,7 @@ function Card({
   color,
   subtitle,
   onClick,
+  className = '',
 }: {
   id: string;
   label: string;
@@ -22,9 +23,10 @@ function Card({
   color: string;
   subtitle: string;
   onClick: () => void;
+  className?: string;
 }) {
   return (
-    <div onClick={onClick} className={`${CARD_CLASS} flex-1 min-w-0`}>
+    <div onClick={onClick} className={`${CARD_CLASS} ${className}`.trim()}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-6">
           <div
@@ -48,12 +50,26 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
   const revenues = CATEGORIES.find(c => c.id === 'revenues')!;
   const documents = CATEGORIES.find(c => c.id === 'documents')!;
 
-  const allCards = [
+  const leftCards = [
     { ...expenses, subtitle: 'View Operational Logs' as const },
     { ...revenues, subtitle: 'View Operational Logs' as const },
     { id: 'solvency', label: 'County Net Worth', icon: 'fa-chart-line', color: 'bg-blue-500', subtitle: 'View Financial Trends' as const },
-    { ...documents, subtitle: 'View Documents' as const },
   ];
+  const documentsCard = { ...documents, subtitle: 'View Documents' as const };
+
+  const leftColRef = useRef<HTMLDivElement>(null);
+  const [leftColWidth, setLeftColWidth] = useState<number | null>(null);
+
+  useEffect(() => {
+    const el = leftColRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) setLeftColWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -80,19 +96,33 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
         />
       </div>
 
-      {/* Desktop: 2x2 grid */}
-      <div className="hidden md:grid md:grid-cols-2 gap-6">
-        {allCards.map(card => (
+      {/* Desktop: left column (Expenses, Revenues, County Net Worth), right column (Documents) */}
+      <div className="hidden md:flex md:justify-between md:items-start md:gap-8">
+        <div ref={leftColRef} className="flex flex-col gap-6">
+          {leftCards.map(card => (
+            <Card
+              key={card.id}
+              id={card.id}
+              label={card.label}
+              icon={card.icon}
+              color={card.color}
+              subtitle={card.subtitle}
+              onClick={() => setSelectedCategory(card.id)}
+            />
+          ))}
+        </div>
+        <div className="min-w-0" style={leftColWidth != null ? { width: leftColWidth } : undefined}>
           <Card
-            key={card.id}
-            id={card.id}
-            label={card.label}
-            icon={card.icon}
-            color={card.color}
-            subtitle={card.subtitle}
-            onClick={() => setSelectedCategory(card.id)}
+            key={documentsCard.id}
+            id={documentsCard.id}
+            label={documentsCard.label}
+            icon={documentsCard.icon}
+            color={documentsCard.color}
+            subtitle={documentsCard.subtitle}
+            onClick={() => setSelectedCategory(documentsCard.id)}
+            className="w-full"
           />
-        ))}
+        </div>
       </div>
     </div>
   );

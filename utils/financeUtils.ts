@@ -17,6 +17,14 @@ export const getRealValue = (amount: number, year: number, baseYear: number) => 
   return (amount / currentCPI) * baseCPI;
 };
 
+/** Value if base-year amount had only grown at CPI rate since base year. */
+export function getInflationOnlyValue(baseYearAmount: number, year: number, baseYear: number): number {
+  const currentCPI = CPI_ANNUAL_AVG[year];
+  const baseCPI = CPI_ANNUAL_AVG[baseYear];
+  if (!currentCPI || !baseCPI) return baseYearAmount;
+  return baseYearAmount * (currentCPI / baseCPI);
+}
+
 export const calculateTrendLine = (data: any[], key: string) => {
   const n = data.length;
   if (n < 2) return data;
@@ -114,6 +122,46 @@ export function recomputeRevenueTrendsForSlice(data: any[]): any[] {
   return list;
 }
 
+/** Entity keys for revenue-by-entity chart (mirrors expense chart). */
+const REVENUE_ENTITY_KEYS = [
+  'totalPrimaryGovAndComponentUnits',
+  'genGov',
+  'schools',
+  'emergCommDist',
+  'mud',
+] as const;
+
+/** Add inflation-only (*Real) values to revenue-by-entity year points: what each value would be if it had only grown at CPI since base year. */
+export function addRealToRevenueYearPoints<T extends { year: number; totalPrimaryGovAndComponentUnits: number }>(
+  rows: T[],
+  baseYear: number
+): T[] {
+  const baseRow = rows.find((r) => (r as any).year === baseYear) ?? rows[0];
+  if (!baseRow) return rows;
+  return rows.map((row) => {
+    const year = Number((row as any).year);
+    const out = { ...row } as any;
+    for (const key of REVENUE_ENTITY_KEYS) {
+      const baseVal = Number((baseRow as any)[key]);
+      const rowVal = Number((row as any)[key]);
+      if (Number.isFinite(baseVal) && Number.isFinite(rowVal))
+        out[`${key}Real`] = getInflationOnlyValue(baseVal, year, baseYear);
+    }
+    return out as T;
+  });
+}
+
+/** Recompute trend and *RealTrend for revenue-by-entity keys on a slice. Input must already have *Real. */
+export function recomputeRevenueEntityTrendsForSlice(data: any[]): any[] {
+  if (data.length < 2) return data;
+  let list = [...data];
+  for (const key of REVENUE_ENTITY_KEYS) {
+    list = calculateTrendLine(list, key);
+    list = calculateTrendLine(list, `${key}Real`);
+  }
+  return list;
+}
+
 const EXPENSE_METRIC_KEYS = [
   'totalExpenses',
   'totalPrimaryGovAndComponentUnits',
@@ -123,16 +171,19 @@ const EXPENSE_METRIC_KEYS = [
   'mud',
 ] as const;
 
-/** Add inflation-adjusted (*Real) values to expense year points. Base year for CPI. */
+/** Add inflation-only (*Real) values to expense year points: what each value would be if it had only grown at CPI since base year. */
 export function addRealToExpenseYearPoints<T extends { year: number; totalExpenses: number }>(rows: T[], baseYear: number): T[] {
+  const baseRow = rows.find((r) => (r as any).year === baseYear) ?? rows[0];
+  if (!baseRow) return rows;
   return rows.map((row) => {
     const year = Number((row as any).year);
     const out = { ...row } as any;
-    out.totalExpensesReal = getRealValue(row.totalExpenses, row.year, baseYear);
+    const baseExpenses = Number((baseRow as any).totalExpenses);
+    if (Number.isFinite(baseExpenses)) out.totalExpensesReal = getInflationOnlyValue(baseExpenses, year, baseYear);
     for (const key of EXPENSE_METRIC_KEYS) {
       if (key === 'totalExpenses') continue;
-      const val = Number((row as any)[key]);
-      if (Number.isFinite(val)) out[`${key}Real`] = getRealValue(val, year, baseYear);
+      const baseVal = Number((baseRow as any)[key]);
+      if (Number.isFinite(baseVal)) out[`${key}Real`] = getInflationOnlyValue(baseVal, year, baseYear);
     }
     return out as T;
   });
@@ -153,4 +204,55 @@ export function recomputeExpenseTrendsForSlice(data: any[]): any[] {
     list = calculateTrendLine(list, `${key}Real`);
   }
   return list;
+}
+
+/** Valid start years for "And Beyond" projection: start year must be <= latestYear - 5. */
+export function getValidAndBeyondStartYears(chartData: { year: number }[]): { latestYear: number; validStartYears: number[] } {
+  if (!chartData.length) return { latestYear: 0, validStartYears: [] };
+  const years = chartData.map((d) => d.year);
+  const latestYear = Math.max(...years);
+  const chartMinYear = Math.min(...years);
+  const maxStartYear = latestYear - 5;
+  if (maxStartYear < chartMinYear) return { latestYear, validStartYears: [] };
+  const validStartYears: number[] = [];
+  for (let y = chartMinYear; y <= maxStartYear; y++) validStartYears.push(y);
+  return { latestYear, validStartYears };
+}
+
+/**
+ * Fit linear trend on data from startYear through latest year, then return slope (per calendar year),
+ * last trend value, and synthetic points for future years. Used for "And Beyond" projection.
+ * @param data - Array of { year, [valueKey], ... }; will be filtered to startYear <= year <= maxYear
+ * @param valueKey - Key used to fit the trend (e.g. 'totalPrimaryGovAndComponentUnits')
+ * @param startYear - First year to include in the fit
+ * @param numYearsForward - Number of years to project beyond the latest year in data
+ * @returns extendedPoints: array of { year, [valueKeyTrend]: value }; slopePerYear and lastValue for callers that need them
+ */
+export function extendTrendForward(
+  data: any[],
+  valueKey: string,
+  startYear: number,
+  numYearsForward: number
+): { slopePerYear: number; lastValue: number; extendedPoints: any[] } {
+  const trendKey = `${valueKey}Trend`;
+  const slice = data.filter((d) => {
+    const y = Number(d.year);
+    return Number.isFinite(y) && y >= startYear;
+  }).sort((a, b) => Number(a.year) - Number(b.year));
+  const maxYear = slice.length ? Math.max(...slice.map((d) => Number(d.year))) : 0;
+  const fromStart = slice.filter((d) => Number(d.year) <= maxYear);
+  if (fromStart.length < 2 || numYearsForward < 1) {
+    return { slopePerYear: 0, lastValue: 0, extendedPoints: [] };
+  }
+  const withTrend = calculateTrendLine(fromStart, valueKey);
+  const firstVal = Number((withTrend[0] as any)[trendKey]);
+  const lastVal = Number((withTrend[withTrend.length - 1] as any)[trendKey]);
+  const n = withTrend.length;
+  const slopePerYear = n > 1 ? (lastVal - firstVal) / (n - 1) : 0;
+  const extendedPoints: any[] = [];
+  for (let k = 1; k <= numYearsForward; k++) {
+    const year = maxYear + k;
+    extendedPoints.push({ year, [trendKey]: lastVal + k * slopePerYear });
+  }
+  return { slopePerYear, lastValue: lastVal, extendedPoints };
 }

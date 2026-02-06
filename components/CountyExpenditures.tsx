@@ -16,6 +16,8 @@ import {
   formatPctChange,
   addRealToExpenseYearPoints,
   recomputeExpenseTrendsForSlice,
+  getValidAndBeyondStartYears,
+  extendTrendForward,
 } from '../utils/financeUtils';
 
 /** Format number for PDF search: comma-separated; negative as (234,567). */
@@ -87,6 +89,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   const ignoreNextOverlayClick = useRef(false);
   const [dragBand, setDragBand] = useState<{ startX: number; endX: number } | null>(null);
   const rangeDragStartX = useRef<number | null>(null);
+  const rangeDragCurrentX = useRef<number | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
@@ -102,6 +105,20 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   const [tabTop, setTabTop] = useState(50);
   const [showMud2020Message, setShowMud2020Message] = useState(false);
   const mud2020PopoverRef = useRef<HTMLDivElement>(null);
+  const fullscreenContainerRef = useRef<HTMLDivElement>(null);
+  const [isNativeFullScreen, setIsNativeFullScreen] = useState(false);
+  const [andBeyondOpen, setAndBeyondOpen] = useState(false);
+  const [andBeyondStartYear, setAndBeyondStartYear] = useState<number | null>(null);
+  const [andBeyondYearsForward, setAndBeyondYearsForward] = useState(10);
+  const [andBeyondOn, setAndBeyondOn] = useState(false);
+
+  useEffect(() => {
+    const handler = () => {
+      setIsNativeFullScreen(document.fullscreenElement === fullscreenContainerRef.current);
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   const chartYears = useMemo(() => {
     const y = [...new Set(expenseTotals.map((r) => r.year))].sort((a, b) => a - b);
@@ -164,16 +181,30 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   }, [displayedData]);
 
   const chartDataYears = chartData.length ? chartData.map((d: any) => d.year) : (trendData.length ? trendData.map((d) => d.year) : []);
+  const chartDataYearsRef = useRef<number[]>([]);
+  chartDataYearsRef.current = chartDataYears;
   const chartMinYear = chartDataYears[0] ?? 2005;
   const chartMaxYear = chartDataYears[chartDataYears.length - 1] ?? 2025;
 
+  const { latestYear: andBeyondLatestYear, validStartYears: andBeyondValidStartYears } = useMemo(
+    () => getValidAndBeyondStartYears(chartData),
+    [chartData]
+  );
+  const andBeyondStartYearClamped = useMemo(() => {
+    if (andBeyondStartYear == null || !andBeyondValidStartYears.length) return andBeyondValidStartYears[0] ?? null;
+    if (andBeyondValidStartYears.includes(andBeyondStartYear)) return andBeyondStartYear;
+    return andBeyondValidStartYears[andBeyondValidStartYears.length - 1] ?? null;
+  }, [andBeyondStartYear, andBeyondValidStartYears]);
+  const andBeyondEnabled = (fullScreen || isNativeFullScreen) && andBeyondValidStartYears.length >= 1;
+
   const clientXToYear = (clientX: number): number | null => {
     const rect = chartRef.current?.getBoundingClientRect();
-    if (!rect || !chartDataYears.length) return null;
+    const years = chartDataYearsRef.current;
+    if (!rect || !years.length) return null;
     const t = (clientX - rect.left) / rect.width;
-    const index = Math.round(t * (chartDataYears.length - 1));
-    const i = Math.max(0, Math.min(index, chartDataYears.length - 1));
-    return chartDataYears[i];
+    const index = Math.round(t * (years.length - 1));
+    const i = Math.max(0, Math.min(index, years.length - 1));
+    return years[i];
   };
 
   const yearToClientX = (year: number): number => {
@@ -206,6 +237,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   const handleChartPointerDown = (clientX: number) => {
     if (pendingYearRange) return;
     rangeDragStartX.current = clientX;
+    rangeDragCurrentX.current = clientX;
     setDragBand({ startX: clientX, endX: clientX });
   };
 
@@ -227,6 +259,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
       return;
     }
     if (rangeDragStartX.current != null) {
+      rangeDragCurrentX.current = clientX;
       setDragBand((b) => (b ? { ...b, endX: clientX } : null));
     }
   };
@@ -238,17 +271,19 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
       return;
     }
     if (rangeDragStartX.current != null) {
+      const endX = clientX ?? rangeDragCurrentX.current ?? rangeDragStartX.current;
       const y1 = clientXToYear(rangeDragStartX.current);
-      const y2 = clientXToYear(clientX);
+      const y2 = endX != null ? clientXToYear(endX) : null;
       if (y1 != null && y2 != null) {
         const minY = Math.min(y1, y2);
         const maxY = Math.max(y1, y2);
-        if (maxY - minY >= 1) {
+        if (maxY >= minY) {
           ignoreNextOverlayClick.current = true;
           setPendingYearRange([minY, maxY]);
         }
       }
       rangeDragStartX.current = null;
+      rangeDragCurrentX.current = null;
       setDragBand(null);
     }
   };
@@ -262,15 +297,21 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
       const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
       if (clientX != null) handleChartPointerUp(clientX);
     };
+    const onTouchCancel = () => {
+      const endX = rangeDragCurrentX.current ?? rangeDragStartX.current;
+      if (endX != null) handleChartPointerUp(endX);
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchmove', onMove, { passive: true });
     window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onTouchCancel);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onTouchCancel);
     };
   }, [pendingYearRange]);
 
@@ -477,6 +518,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
     emergCommDist: '#f87171',
     mud: '#fb923c',
   };
+  const INFLATION_LINE_COLOR = '#fb923c';
   const expenseToggleDataKeys: Record<(typeof expenseToggleKeys)[number], string> = {
     total: 'totalPrimaryGovAndComponentUnits',
     genGov: 'genGov',
@@ -519,11 +561,72 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
     emergCommDist: 'inflationEmergCommDist',
     mud: 'inflationMud',
   };
+  const expenseStrobeClass: Record<(typeof expenseToggleKeys)[number], string> = {
+    total: 'strobe-exp-total',
+    genGov: 'strobe-exp-gengov',
+    schools: 'strobe-exp-schools',
+    emergCommDist: 'strobe-exp-emergcommdist',
+    mud: 'strobe-exp-mud',
+  };
+
+  const selectedEntity = expenseToggleKeys.find((k) => toggles[k]) ?? 'total';
+
+  const AND_BEYOND_NOMINAL_KEY = 'andBeyondProjection';
+  const AND_BEYOND_REAL_KEY = 'andBeyondProjectionReal';
+
+  const chartDataWithExtension = useMemo(() => {
+    if (!andBeyondOn || !andBeyondEnabled || andBeyondStartYearClamped == null || andBeyondYearsForward < 1) return chartData;
+    const dataKey = expenseToggleDataKeys[selectedEntity];
+    const trendKey = expenseToggleTrendKeys[selectedEntity];
+    const realKey = expenseToggleRealKeys[selectedEntity];
+    const realTrendKey = expenseToggleRealTrendKeys[selectedEntity];
+    const nominal = extendTrendForward(chartData, dataKey, andBeyondStartYearClamped, andBeyondYearsForward);
+    const showReal = toggles[toggleInflationKey[selectedEntity]];
+    const real = showReal ? extendTrendForward(chartData, realKey, andBeyondStartYearClamped, andBeyondYearsForward) : null;
+    const base = chartData.map((d, i) => {
+      if (i !== chartData.length - 1) return d;
+      const out = { ...d } as any;
+      out[AND_BEYOND_NOMINAL_KEY] = nominal.lastValue;
+      if (showReal && real) out[AND_BEYOND_REAL_KEY] = real.lastValue;
+      return out;
+    });
+    const combined = nominal.extendedPoints.map((p, i) => {
+      const row: any = { year: (p as any).year, [AND_BEYOND_NOMINAL_KEY]: (p as any)[trendKey] };
+      if (showReal && real && real.extendedPoints[i]) row[AND_BEYOND_REAL_KEY] = (real.extendedPoints[i] as any)[realTrendKey];
+      return row;
+    });
+    return [...base, ...combined];
+  }, [
+    chartData,
+    andBeyondOn,
+    andBeyondEnabled,
+    andBeyondStartYearClamped,
+    andBeyondYearsForward,
+    selectedEntity,
+    toggles,
+    expenseToggleDataKeys,
+    expenseToggleTrendKeys,
+    expenseToggleRealKeys,
+    expenseToggleRealTrendKeys,
+    toggleInflationKey,
+  ]);
+
+  const handleSelectEntity = (key: (typeof expenseToggleKeys)[number]) => {
+    setToggles((prev) => {
+      const next = { ...prev };
+      expenseToggleKeys.forEach((k) => {
+        next[k] = k === key;
+        next[toggleTrendKey[k]] = false;
+        next[toggleInflationKey[k]] = false;
+      });
+      return next;
+    });
+  };
 
   if (loading || totalsLoading) {
     return (
-      <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4">
+      <div className={fullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden bg-white p-4 md:p-8 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 flex flex-col justify-center' : 'bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm'}>
+        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4 w-fit">
           <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
         </button>
         <p className="text-gray-500 font-bold uppercase text-sm">Loading exhibit data…</p>
@@ -534,12 +637,24 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   const loadError = error ?? totalsError;
   if (loadError) {
     return (
-      <div className="bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm">
-        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4">
+      <div className={fullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden bg-white p-4 md:p-8 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 flex flex-col justify-center' : 'bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm'}>
+        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4 w-fit">
           <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
         </button>
         <p className="text-red-600 font-bold uppercase text-sm">Unable to load exhibit data.</p>
         <p className="text-gray-500 text-xs mt-2">{loadError.message}</p>
+      </div>
+    );
+  }
+
+  if (expenseTotals.length === 0) {
+    return (
+      <div className={fullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden bg-white p-4 md:p-8 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 flex flex-col justify-center' : 'bg-white p-8 rounded-[2.5rem] border border-gray-100 shadow-sm'}>
+        <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4 w-fit">
+          <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
+        </button>
+        <p className="text-gray-600 font-bold uppercase text-sm">No expense data available.</p>
+        <p className="text-gray-500 text-xs mt-2">The exhibit_b_expenses table may need to be populated.</p>
       </div>
     );
   }
@@ -557,10 +672,20 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
           <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
         </button>
       )}
-      <div className={fullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6'}>
-        <div className={`hidden md:flex justify-between items-center gap-4 ${fullScreen ? 'shrink-0 mb-4' : 'mb-6'}`}>
+      <div
+        ref={fullscreenContainerRef}
+        className={
+          isNativeFullScreen
+            ? 'bg-white text-gray-900 min-h-full w-full flex flex-col rounded-none p-4 md:p-6'
+            : fullScreen
+              ? 'flex-1 flex flex-col min-h-0 w-full'
+              : 'w-full'
+        }
+      >
+        <div className={fullScreen || isNativeFullScreen ? 'flex-1 flex flex-col min-h-0 overflow-hidden' : 'bg-white p-6 md:p-10 rounded-[3rem] shadow-xl text-gray-900 border border-gray-100 space-y-6'}>
+        <div className={`hidden md:flex justify-between items-center gap-4 ${fullScreen || isNativeFullScreen ? 'shrink-0 mb-4' : 'mb-6'}`}>
           <div className="shrink-0">
-            <h3 className={`font-black uppercase leading-none tracking-tighter ${fullScreen ? 'text-xl md:text-2xl' : 'text-3xl'}`}>County Expenditures</h3>
+            <h3 className={`font-black uppercase leading-none tracking-tighter ${fullScreen || isNativeFullScreen ? 'text-xl md:text-2xl' : 'text-3xl'}`}>County Expenditures</h3>
             <p className="text-indigo-600 text-[11px] font-black uppercase mt-2 tracking-widest">Expense trend — drag chart to select year range</p>
           </div>
           {onOpenPiePage && (
@@ -574,8 +699,78 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
               </button>
             </div>
           )}
-          <div className="hidden md:flex px-3 py-1 bg-indigo-50 rounded-full border border-indigo-100 text-[10px] font-black uppercase text-indigo-300 animate-pulse text-center whitespace-nowrap shrink-0">
-            Hover or Tap chart for values
+          <div className="hidden md:flex shrink-0 flex-col items-end gap-1">
+            <div className="flex items-center gap-2">
+              {isNativeFullScreen ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const exit = document.exitFullscreen ?? (document as Document & { webkitExitFullscreen?: () => Promise<void> }).webkitExitFullscreen;
+                    exit?.().then(() => onBack());
+                  }}
+                  className="px-3 py-1.5 bg-indigo-600 text-white text-[10px] font-black uppercase rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Close Chart
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const el = fullscreenContainerRef.current;
+                    const req = el?.requestFullscreen ?? (el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> })?.webkitRequestFullscreen;
+                    if (document.fullscreenEnabled && req) {
+                      req.call(el);
+                    }
+                  }}
+                  className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase rounded-lg hover:bg-indigo-200 transition-colors border border-indigo-200"
+                >
+                  <i className="fa-solid fa-expand mr-1.5"></i> Expand chart
+                </button>
+              )}
+            </div>
+            {(fullScreen || isNativeFullScreen) && andBeyondValidStartYears.length >= 1 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAndBeyondOpen((o) => !o);
+                    if (andBeyondStartYear == null && andBeyondValidStartYears.length) setAndBeyondStartYear(andBeyondValidStartYears[andBeyondValidStartYears.length - 1]);
+                  }}
+                  className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg transition-colors border ${andBeyondOn ? 'bg-gray-200 text-gray-800 border-gray-300' : 'bg-gray-100 text-gray-600 border-gray-200 hover:bg-gray-200'}`}
+                >
+                  And Beyond
+                </button>
+                {andBeyondOpen && (
+                  <>
+                    <div className="fixed inset-0 z-10" aria-hidden onClick={() => setAndBeyondOpen(false)} />
+                    <div className="absolute right-0 top-full z-20 mt-1 w-56 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
+                      <p className="text-[10px] font-black uppercase text-gray-500 mb-2">Start year (min 5 yrs before latest)</p>
+                      <select
+                        value={andBeyondStartYearClamped ?? ''}
+                        onChange={(e) => setAndBeyondStartYear(Number(e.target.value) || null)}
+                        className="mb-3 w-full rounded border border-gray-200 px-2 py-1.5 text-sm font-bold"
+                      >
+                        {andBeyondValidStartYears.map((y) => (
+                          <option key={y} value={y}>{y}</option>
+                        ))}
+                      </select>
+                      <p className="text-[10px] font-black uppercase text-gray-500 mb-2">Years to project (1–50)</p>
+                      <select
+                        value={andBeyondYearsForward}
+                        onChange={(e) => setAndBeyondYearsForward(Math.max(1, Math.min(50, Number(e.target.value) || 10)))}
+                        className="w-full rounded border border-gray-200 px-2 py-1.5 text-sm font-bold"
+                      >
+                        {Array.from({ length: 50 }, (_, i) => i + 1).map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => { setAndBeyondOn(true); setAndBeyondOpen(false); }} className="mt-2 w-full rounded bg-indigo-600 py-1.5 text-[10px] font-black uppercase text-white hover:bg-indigo-700">Apply</button>
+                      <button type="button" onClick={() => { setAndBeyondOn(false); setAndBeyondOpen(false); }} className="mt-2 w-full rounded border border-gray-300 bg-white py-1.5 text-[10px] font-black uppercase text-gray-600 hover:bg-gray-50">Turn off</button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
         {onOpenPiePage && (
@@ -592,7 +787,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
 
         <div
           className={
-            fullScreen
+            fullScreen || isNativeFullScreen
               ? 'flex-1 flex flex-col min-h-0'
               : 'md:flex md:flex-col md:min-h-[420px]'
           }
@@ -601,15 +796,16 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
           ref={chartRef}
           className={
             'relative w-full ' +
-            (fullScreen
+            (fullScreen || isNativeFullScreen
               ? 'flex-1 min-h-0 min-h-[180px]'
               : 'h-[300px] landscape:h-[70vh] mb-8 md:flex-1 md:min-h-0 md:min-h-[180px]')
           }
+          style={{ touchAction: dragBand ? 'none' : undefined }}
           onMouseDown={(e) => { if (!pendingYearRange && e.button === 0) handleChartPointerDown(e.clientX); }}
           onTouchStart={(e) => { if (!pendingYearRange && e.touches[0]) handleChartPointerDown(e.touches[0].clientX); }}
         >
-          {/* Mobile peeking left tab - anchored when fullScreen */}
-          {fullScreen ? (
+          {/* Mobile peeking left tab - anchored when fullScreen or native fullscreen */}
+          {(fullScreen || isNativeFullScreen) ? (
             <div
               className="md:hidden peeking-tab-left-anchored"
               onClick={(e) => e.stopPropagation()}
@@ -625,8 +821,8 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
               </button>
             </div>
           ) : null}
-          {/* Mobile peeking right tab - anchored when fullScreen (only when pie link available) */}
-          {fullScreen && onOpenPiePage ? (
+          {/* Mobile peeking right tab - anchored when fullScreen or native fullscreen (only when pie link available) */}
+          {(fullScreen || isNativeFullScreen) && onOpenPiePage ? (
             <div
               className="md:hidden peeking-tab-right-anchored"
               onClick={(e) => e.stopPropagation()}
@@ -720,8 +916,8 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
               </div>
             );
           })()}
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={chartData} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
+          <ResponsiveContainer width="100%" height="100%" minHeight={180}>
+            <LineChart data={chartDataWithExtension} margin={{ top: 10, right: 5, left: -12.5, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
               <XAxis
                 dataKey="year"
@@ -733,9 +929,9 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                     ? rangeStartYear === rangeEndYear
                       ? [rangeStartYear]
                       : [rangeStartYear, rangeEndYear]
-                    : chartData.length >= 2
+                    : chartDataWithExtension.length >= 2
                       ? (() => {
-                          const yrs = chartData.map((d: any) => d.year);
+                          const yrs = chartDataWithExtension.map((d: any) => d.year);
                           const n = yrs.length;
                           if (n <= 3) return yrs;
                           const isMobile = typeof window !== 'undefined' && window.matchMedia('(max-width: 767px)').matches;
@@ -762,7 +958,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                 isAnimationActive={false}
                 cursor={{ stroke: '#cbd5e1', strokeWidth: 1 }}
                 content={({ active, payload }) => {
-                  if (active && payload && payload.length && chartData.length && baselineRow) {
+                  if (active && payload && payload.length && chartDataWithExtension.length && baselineRow) {
                     const data = payload[0].payload as any;
                     const MUD_2020_MSG = '2020 not Reported due to COVID 19 and software upgrade';
                     return (
@@ -773,8 +969,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                             if (!toggles[key]) return null;
                             const inflKey = toggleInflationKey[key];
                             const trendKey = toggleTrendKey[key];
-                            const isInfl = toggles[inflKey];
-                            const valKey = isInfl ? expenseToggleRealKeys[key] : expenseToggleDataKeys[key];
+                            const showReal = toggles[inflKey];
                             if (key === 'mud' && data.year === 2020) {
                               return (
                                 <div key={key} className="flex flex-col gap-1">
@@ -786,37 +981,69 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                                 </div>
                               );
                             }
-                            const val = Number(data[valKey]);
-                            if (!Number.isFinite(val)) return null;
-                            const pct =
-                              toggles[trendKey] && latestRow
-                                ? pctChangeOverRange(Number(baselineRow[valKey]), Number(latestRow[valKey]))
+                            const nominalVal = Number(data[expenseToggleDataKeys[key]]);
+                            const realVal = showReal ? Number(data[expenseToggleRealKeys[key]]) : NaN;
+                            const hasNominal = Number.isFinite(nominalVal);
+                            const hasReal = Number.isFinite(realVal);
+                            if (!hasNominal && !hasReal) return null;
+                            const pctNominal =
+                              toggles[trendKey] && latestRow && hasNominal
+                                ? pctChangeOverRange(Number(baselineRow[expenseToggleDataKeys[key]]), Number(latestRow[expenseToggleDataKeys[key]]))
                                 : null;
-                            const fmt = formatPctChange(pct);
+                            const pctReal =
+                              toggles[trendKey] && latestRow && hasReal
+                                ? pctChangeOverRange(Number(baselineRow[expenseToggleRealKeys[key]]), Number(latestRow[expenseToggleRealKeys[key]]))
+                                : null;
+                            const fmtNominal = formatPctChange(pctNominal);
+                            const fmtReal = formatPctChange(pctReal);
                             return (
                               <div key={key} className="flex flex-col gap-0.5">
-                                <div className="flex justify-between items-center gap-6">
-                                  <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
-                                    <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: expenseToggleColors[key] }} />
-                                    {expenseToggleLabels[key]}
-                                  </span>
-                                  <span
-                                    role="button"
-                                    tabIndex={0}
-                                    className="text-sm font-black cursor-pointer underline decoration-dotted hover:decoration-solid"
-                                    style={{ color: expenseToggleColors[key] }}
-                                    onClick={(e) => { e.stopPropagation(); openPdf(data.pdf_page_url, val); }}
-                                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPdf(data.pdf_page_url, val); } }}
-                                  >
-                                    {formatCurrency(val)}
-                                  </span>
-                                </div>
-                                {toggles[trendKey] && pct !== null && (
-                                  <div className="flex justify-end">
-                                    <span className={`text-[10px] font-black ${fmt.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                      {fmt.text} {isInfl ? '(real)' : ''}
-                                    </span>
-                                  </div>
+                                {hasNominal && (
+                                  <>
+                                    <div className="flex justify-between items-center gap-6">
+                                      <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: expenseToggleColors[key] }} />
+                                        {expenseToggleLabels[key]}
+                                      </span>
+                                      <span
+                                        role="button"
+                                        tabIndex={0}
+                                        className="text-sm font-black cursor-pointer underline decoration-dotted hover:decoration-solid"
+                                        style={{ color: expenseToggleColors[key] }}
+                                        onClick={(e) => { e.stopPropagation(); openPdf(data.pdf_page_url, nominalVal); }}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPdf(data.pdf_page_url, nominalVal); } }}
+                                      >
+                                        {formatCurrency(nominalVal)}
+                                      </span>
+                                    </div>
+                                    {toggles[trendKey] && pctNominal !== null && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-[10px] font-black ${fmtNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                          {fmtNominal.text}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                                {hasReal && (
+                                  <>
+                                    <div className="flex justify-between items-center gap-6">
+                                      <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                        <span className="inline-block w-2 h-2 rounded-full shrink-0 border border-current" style={{ backgroundColor: expenseToggleColors[key], opacity: 0.85 }} />
+                                        {expenseToggleLabels[key]} (inflation adj.)
+                                      </span>
+                                      <span className="text-sm font-black" style={{ color: expenseToggleColors[key], opacity: 0.9 }}>
+                                        {formatCurrency(realVal)}
+                                      </span>
+                                    </div>
+                                    {toggles[trendKey] && pctReal !== null && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-[10px] font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                          {fmtReal.text} (real)
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             );
@@ -831,71 +1058,137 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
               {expenseToggleKeys.map((key) => {
                 if (!toggles[key]) return null;
                 const inflKey = toggleInflationKey[key];
-                const dataKey = toggles[inflKey] ? expenseToggleRealKeys[key] : expenseToggleDataKeys[key];
                 const color = expenseToggleColors[key];
                 return (
-                  <Line
-                    key={key}
-                    type="monotone"
-                    dataKey={dataKey}
-                    name={expenseToggleLabels[key]}
-                    stroke={color}
-                    strokeWidth={key === 'total' ? 5 : 4}
-                    dot={key === 'total' ? (p) => <ClickableDot {...p} inflationTotal={toggles.inflationTotal} /> : false}
-                    connectNulls={key === 'emergCommDist' ? false : undefined}
-                  />
+                  <React.Fragment key={key}>
+                    <Line
+                      type="monotone"
+                      dataKey={expenseToggleDataKeys[key]}
+                      name={expenseToggleLabels[key]}
+                      stroke={color}
+                      strokeWidth={key === 'total' ? 5 : 4}
+                      dot={key === 'total' ? (p) => <ClickableDot {...p} inflationTotal={false} /> : false}
+                      connectNulls={key === 'emergCommDist' ? false : undefined}
+                    />
+                    {toggles[inflKey] && (
+                      <Line
+                        type="monotone"
+                        dataKey={expenseToggleRealKeys[key]}
+                        name={`${expenseToggleLabels[key]} (inflation adj.)`}
+                        stroke={INFLATION_LINE_COLOR}
+                        strokeWidth={key === 'total' ? 5 : 4}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        opacity={0.85}
+                        connectNulls={key === 'emergCommDist' ? false : undefined}
+                      />
+                    )}
+                  </React.Fragment>
                 );
               })}
               {toggles.mud && (
-                <Line
-                  type="monotone"
-                  dataKey={toggles.inflationMud ? 'mudBridgeReal' : 'mudBridge'}
-                  name="MUD (2020 bridge)"
-                  stroke="#9ca3af"
-                  strokeWidth={4}
-                  connectNulls={false}
-                  dot={(props) => {
-                    const { cx, cy, payload } = props;
-                    if (payload?.year === 2020 && cx != null && cy != null) {
-                      return (
-                        <circle
-                          cx={cx}
-                          cy={cy}
-                          r={6}
-                          fill="#9ca3af"
-                          className="cursor-pointer"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setShowMud2020Message((v) => !v);
-                          }}
-                        />
-                      );
-                    }
-                    return null;
-                  }}
-                />
+                <>
+                  <Line
+                    type="monotone"
+                    dataKey="mudBridge"
+                    name="MUD (2020 bridge)"
+                    stroke="#9ca3af"
+                    strokeWidth={4}
+                    connectNulls={false}
+                    dot={(props) => {
+                      const { cx, cy, payload } = props;
+                      if (payload?.year === 2020 && cx != null && cy != null) {
+                        return (
+                          <circle
+                            cx={cx}
+                            cy={cy}
+                            r={6}
+                            fill="#9ca3af"
+                            className="cursor-pointer"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowMud2020Message((v) => !v);
+                            }}
+                          />
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  {toggles.inflationMud && (
+                    <Line
+                      type="monotone"
+                      dataKey="mudBridgeReal"
+                      name="MUD (2020 bridge, inflation adj.)"
+                      stroke={INFLATION_LINE_COLOR}
+                      strokeWidth={4}
+                      strokeDasharray="5 5"
+                      opacity={0.85}
+                      connectNulls={false}
+                      dot={false}
+                    />
+                  )}
+                </>
               )}
               {expenseToggleKeys.map((key) => {
                 if (!toggles[key]) return null;
                 const trendKey = toggleTrendKey[key];
                 if (!toggles[trendKey]) return null;
                 const inflKey = toggleInflationKey[key];
-                const trendDataKey = toggles[inflKey] ? expenseToggleRealTrendKeys[key] : expenseToggleTrendKeys[key];
                 const color = expenseToggleColors[key];
                 return (
-                  <Line
-                    key={`${key}-trend`}
-                    type="monotone"
-                    dataKey={trendDataKey}
-                    name={`${expenseToggleLabels[key]} trend`}
-                    stroke={color}
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    dot={false}
-                    opacity={0.4}
-                  />
+                  <React.Fragment key={`${key}-trend`}>
+                    <Line
+                      type="monotone"
+                      dataKey={expenseToggleTrendKeys[key]}
+                      name={`${expenseToggleLabels[key]} trend`}
+                      stroke={color}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                      opacity={0.4}
+                    />
+                    {toggles[inflKey] && (
+                      <Line
+                        type="monotone"
+                        dataKey={expenseToggleRealTrendKeys[key]}
+                        name={`${expenseToggleLabels[key]} trend (inflation adj.)`}
+                        stroke={INFLATION_LINE_COLOR}
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        opacity={0.35}
+                      />
+                    )}
+                  </React.Fragment>
                 );
               })}
+              {andBeyondOn && andBeyondEnabled && andBeyondStartYearClamped != null && andBeyondYearsForward > 0 && (
+                <>
+                  <Line
+                    type="monotone"
+                    dataKey={AND_BEYOND_NOMINAL_KEY}
+                    name="Trend projection"
+                    stroke="#6b7280"
+                    strokeWidth={2}
+                    dot={false}
+                    connectNulls
+                  />
+                  {toggles[toggleInflationKey[selectedEntity]] && (
+                    <Line
+                      type="monotone"
+                      dataKey={AND_BEYOND_REAL_KEY}
+                      name="Trend projection (inflation adj.)"
+                      stroke={INFLATION_LINE_COLOR}
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      dot={false}
+                      opacity={0.85}
+                      connectNulls
+                    />
+                  )}
+                </>
+              )}
             </LineChart>
           </ResponsiveContainer>
           {showMud2020Message && (
@@ -930,8 +1223,8 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                   {expenseToggleKeys.map((key) => (
                     <div key={key} className="text-center">
                       <button
-                        onClick={() => setToggles({ ...toggles, [key]: !toggles[key] })}
-                        className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? '' : 'text-gray-400'}`}
+                        onClick={() => handleSelectEntity(key)}
+                        className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? '' : expenseStrobeClass[key]}`}
                         style={toggles[key] ? { color: expenseToggleColors[key] } : undefined}
                       >
                         <div
@@ -943,29 +1236,39 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                     </div>
                   ))}
                   <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Trend Toggle</div>
-                  {expenseToggleKeys.map((key) => (
-                    <div key={key} className="flex justify-center">
-                      <div
-                        onClick={() => setToggles({ ...toggles, [toggleTrendKey[key]]: !toggles[toggleTrendKey[key]] })}
-                        className={`slider-oval ${toggles[toggleTrendKey[key]] ? 'slider-active slider-liabs-on' : ''}`}
-                        title="Trend"
-                      >
-                        <div className="slider-circle"></div>
+                  {expenseToggleKeys.map((key) => {
+                    const isEnabled = key === selectedEntity;
+                    return (
+                      <div key={key} className="flex justify-center">
+                        <div
+                          role="button"
+                          aria-disabled={!isEnabled}
+                          title="Trend"
+                          onClick={isEnabled ? () => setToggles({ ...toggles, [toggleTrendKey[key]]: !toggles[toggleTrendKey[key]] }) : undefined}
+                          className={`slider-oval ${toggles[toggleTrendKey[key]] ? 'slider-active slider-liabs-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                        >
+                          <div className="slider-circle"></div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   <div className="text-[18px] font-black uppercase text-indigo-400 pr-4">Inflation Adjusted</div>
-                  {expenseToggleKeys.map((key) => (
-                    <div key={key} className="flex justify-center">
-                      <div
-                        onClick={() => setToggles({ ...toggles, [toggleInflationKey[key]]: !toggles[toggleInflationKey[key]] })}
-                        className={`slider-oval ${toggles[toggleInflationKey[key]] ? 'slider-active slider-inf-on' : ''}`}
-                        title="Inflation Adjusted"
-                      >
-                        <div className="slider-circle"></div>
+                  {expenseToggleKeys.map((key) => {
+                    const isEnabled = key === selectedEntity;
+                    return (
+                      <div key={key} className="flex justify-center">
+                        <div
+                          role="button"
+                          aria-disabled={!isEnabled}
+                          title="Inflation Adjusted"
+                          onClick={isEnabled ? () => setToggles({ ...toggles, [toggleInflationKey[key]]: !toggles[toggleInflationKey[key]] }) : undefined}
+                          className={`slider-oval ${toggles[toggleInflationKey[key]] ? 'slider-active slider-inf-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                        >
+                          <div className="slider-circle"></div>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -1072,9 +1375,9 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setToggles({ ...toggles, [key]: !toggles[key] });
+                              handleSelectEntity(key);
                             }}
-                            className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? '' : 'text-gray-400'}`}
+                            className={`text-[13px] font-black uppercase transition-all flex flex-col items-center gap-2 mx-auto ${toggles[key] ? '' : expenseStrobeClass[key]}`}
                             style={toggles[key] ? { color: expenseToggleColors[key] } : undefined}
                           >
                             <div
@@ -1090,43 +1393,53 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                   <div>
                     <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Trend Toggle</div>
                     <div className="grid grid-cols-5 gap-4 items-center">
-                      {expenseToggleKeys.map((key) => (
-                        <div key={key} className="flex flex-col items-center gap-2">
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setToggles({ ...toggles, [toggleTrendKey[key]]: !toggles[toggleTrendKey[key]] });
-                            }}
-                            className={`slider-oval ${toggles[toggleTrendKey[key]] ? 'slider-active slider-liabs-on' : ''}`}
-                          >
-                            <div className="slider-circle"></div>
+                      {expenseToggleKeys.map((key) => {
+                        const isEnabled = key === selectedEntity;
+                        return (
+                          <div key={key} className="flex flex-col items-center gap-2">
+                            <div
+                              role="button"
+                              aria-disabled={!isEnabled}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isEnabled) setToggles({ ...toggles, [toggleTrendKey[key]]: !toggles[toggleTrendKey[key]] });
+                              }}
+                              className={`slider-oval ${toggles[toggleTrendKey[key]] ? 'slider-active slider-liabs-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                              <div className="slider-circle"></div>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase ${isEnabled ? 'text-gray-400' : 'text-gray-300'}`}>
+                              {expenseToggleLabels[key]}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-black uppercase text-gray-400">
-                            {expenseToggleLabels[key]}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                   <div>
                     <div className="text-[18px] font-black uppercase text-indigo-400 mb-4">Inflation Adjusted</div>
                     <div className="grid grid-cols-5 gap-4 items-center">
-                      {expenseToggleKeys.map((key) => (
-                        <div key={key} className="flex flex-col items-center gap-2">
-                          <div
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setToggles({ ...toggles, [toggleInflationKey[key]]: !toggles[toggleInflationKey[key]] });
-                            }}
-                            className={`slider-oval ${toggles[toggleInflationKey[key]] ? 'slider-active slider-inf-on' : ''}`}
-                          >
-                            <div className="slider-circle"></div>
+                      {expenseToggleKeys.map((key) => {
+                        const isEnabled = key === selectedEntity;
+                        return (
+                          <div key={key} className="flex flex-col items-center gap-2">
+                            <div
+                              role="button"
+                              aria-disabled={!isEnabled}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isEnabled) setToggles({ ...toggles, [toggleInflationKey[key]]: !toggles[toggleInflationKey[key]] });
+                              }}
+                              className={`slider-oval ${toggles[toggleInflationKey[key]] ? 'slider-active slider-inf-on' : ''} ${!isEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                              <div className="slider-circle"></div>
+                            </div>
+                            <span className={`text-[10px] font-black uppercase ${isEnabled ? 'text-gray-400' : 'text-gray-300'}`}>
+                              {expenseToggleLabels[key]}
+                            </span>
                           </div>
-                          <span className="text-[10px] font-black uppercase text-gray-400">
-                            {expenseToggleLabels[key]}
-                          </span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -1181,6 +1494,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
             </div>
           </div>
         )}
+        </div>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import { NetWorthChart } from './NetWorthChart';
 import CountyExpenditures from './CountyExpenditures';
 import CountyExpendituresPiePage from './CountyExpendituresPiePage';
 import CountyRevenues from './CountyRevenues';
+import CountyRevenuesPiePage from './CountyRevenuesPiePage';
 
 // These are the "Remote Controls" coming from the main App
 interface CategoryDashboardProps {
@@ -99,6 +100,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
   const [activeInternalReportId, setActiveInternalReportId] = useState<string | null>(null);
   const [expensePieInitialYear, setExpensePieInitialYear] = useState<number | undefined>(undefined);
+  const [revenuePieInitialYear, setRevenuePieInitialYear] = useState<number | undefined>(undefined);
   React.useEffect(() => {
     setActiveInternalReportId(null);
   }, [selectedCategory]);
@@ -157,9 +159,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
 
   const handleSolvencyChartPointerDown = (clientX: number) => {
     if (solvencyPendingYearRange) return;
-    // #region agent log
-    if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerDown',message:'pointer down',data:{clientX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     solvencyRangeDragStartX.current = clientX;
     solvencyRangeDragCurrentX.current = clientX;
     setSolvencyDragBand({ startX: clientX, endX: clientX });
@@ -195,12 +194,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       solvencyEdgeBeingDragged.current = null;
       return;
     }
-    const hasStartX = solvencyRangeDragStartX.current != null;
-    if (!hasStartX) {
-      // #region agent log
-      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up no startX',data:{clientX,hasStartX},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
-    }
     if (solvencyRangeDragStartX.current != null) {
       const y1 = solvencyClientXToYear(solvencyRangeDragStartX.current);
       const y2 = solvencyClientXToYear(clientX);
@@ -208,9 +201,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       const maxY = y1 != null && y2 != null ? Math.max(y1, y2) : null;
       const rangeOk = minY != null && maxY != null && maxY - minY >= 1;
       const didSetPending = rangeOk;
-      // #region agent log
-      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:handleSolvencyChartPointerUp',message:'pointer up',data:{clientX,y1,y2,minY,maxY,rangeOk,didSetPending,hasRect:!!solvencyChartContainerRef.current?.getBoundingClientRect()},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
-      // #endregion
       if (y1 != null && y2 != null) {
         const minY_ = Math.min(y1, y2);
         const maxY_ = Math.max(y1, y2);
@@ -232,9 +222,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
     };
     const onUp = (e: MouseEvent | TouchEvent) => {
       const clientX = 'changedTouches' in e ? e.changedTouches[0]?.clientX : e.clientX;
-      // #region agent log
-      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:onUp',message:'window up',data:{clientX,hasChangedTouches:'changedTouches' in e && (e as TouchEvent).changedTouches?.length,willCallHandler:clientX!=null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
-      // #endregion
       if (clientX != null) handleSolvencyChartPointerUp(clientX);
     };
     window.addEventListener('mousemove', onMove);
@@ -576,12 +563,12 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   if (selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures') {
     return (
       <div className="fixed inset-0 z-10 bg-gray-50 flex flex-col overflow-hidden animate-slide-up pt-14 md:pt-0">
-        <div className="hidden md:flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
+        <div className="flex shrink-0 px-4 md:px-6 py-3 flex-col gap-1">
           <button onClick={() => setActiveInternalReportId(null)} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors w-fit">
             <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
           </button>
           <div className="flex flex-col">
-            <h2 className="text-2xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
+            <h2 className="text-xl md:text-3xl font-black uppercase text-gray-900 leading-tight">
               {currentCategoryLabel}
             </h2>
             <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">County Expenditures</p>
@@ -617,7 +604,14 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           </div>
         </div>
         <div className="flex-1 min-h-0 flex flex-col px-4 md:px-6 pb-4 solvency-fullscreen-container">
-          <CountyRevenues fullScreen onBack={() => setActiveInternalReportId(null)} />
+          <CountyRevenues
+            fullScreen
+            onBack={() => setActiveInternalReportId(null)}
+            onOpenPiePage={(initialYear) => {
+              setRevenuePieInitialYear(initialYear);
+              setActiveInternalReportId('county-revenues-pie');
+            }}
+          />
         </div>
       </div>
     );
@@ -763,9 +757,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                     style={{ pointerEvents: 'auto' }}
                     onClick={() => {
                       const ignore = solvencyIgnoreNextOverlayClick.current;
-                      // #region agent log
-                      if (import.meta.env.DEV) fetch('http://127.0.0.1:7242/ingest/9a15263f-f76f-4fdb-8775-bbd6066a831f',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'CategoryDashboard.tsx:overlayClick',message:'overlay click',data:{ignore,hadPending:!!solvencyPendingYearRange},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
-                      // #endregion
                       if (ignore) {
                         solvencyIgnoreNextOverlayClick.current = false;
                         return;
@@ -916,13 +907,13 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                     {selectedParents.length === 0 ? (
                       <React.Fragment>
                         {solvencyTrendToggles.assets && <Line type="monotone" dataKey="totalAssets" stroke="#4ade80" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend'} name={solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.assetsInf ? 'totalAssetsRealTrend' : 'totalAssetsTrend'} name={solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={solvencyTrendToggles.assetsInf ? '#fb923c' : '#4ade80'} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                         {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey="totalAssetsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                         {solvencyTrendToggles.liabs && <Line type="monotone" dataKey="totalLiabs" stroke="#f87171" strokeWidth={3} dot={false} />}
-                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend'} name={solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.liabsInf ? 'totalLiabsRealTrend' : 'totalLiabsTrend'} name={solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={solvencyTrendToggles.liabsInf ? '#fb923c' : '#f87171'} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                         {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey="totalLiabsReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                         {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey="totalNetWorth" stroke="#3b82f6" strokeWidth={4} dot={false} />}
-                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={solvencyTrendToggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend'} name={solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#3b82f6" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                        {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={solvencyTrendToggles.netWorthInf ? 'totalNetWorthRealTrend' : 'totalNetWorthTrend'} name={solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={solvencyTrendToggles.netWorthInf ? '#fb923c' : '#3b82f6'} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                         {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey="totalNetWorthReal" stroke="#fb923c" strokeWidth={3} dot={false} />}
                       </React.Fragment>
                     ) : (
@@ -933,17 +924,17 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                           <React.Fragment key={sel}>
                             {/* Net Worth Logic */}
                             {solvencyTrendToggles.netWorth && <Line type="monotone" dataKey={`${kb}NetWorth`} name={`${sel} Net Worth`} stroke={color} strokeWidth={4} dot={false} />}
-                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={solvencyTrendToggles.netWorthInf ? `${kb}NetWorthRealTrend` : `${kb}NetWorthTrend`} name={solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.netWorthTrend && <Line type="monotone" dataKey={solvencyTrendToggles.netWorthInf ? `${kb}NetWorthRealTrend` : `${kb}NetWorthTrend`} name={solvencyTrendToggles.netWorthInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={solvencyTrendToggles.netWorthInf ? '#fb923c' : color} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {solvencyTrendToggles.netWorthInf && <Line type="monotone" dataKey={`${kb}NetWorthReal`} stroke="#fb923c" strokeWidth={3} dot={false} />}
                             
                             {/* Assets Logic */}
                             {solvencyTrendToggles.assets && <Line type="monotone" dataKey={`${kb}Assets`} stroke="#4ade80" strokeWidth={2} dot={false} />}
-                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.assetsInf ? `${kb}AssetsRealTrend` : `${kb}AssetsTrend`} name={solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#4ade80" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.assetsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.assetsInf ? `${kb}AssetsRealTrend` : `${kb}AssetsTrend`} name={solvencyTrendToggles.assetsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={solvencyTrendToggles.assetsInf ? '#fb923c' : '#4ade80'} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {solvencyTrendToggles.assetsInf && <Line type="monotone" dataKey={`${kb}AssetsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
 
                             {/* Liabilities Logic */}
                             {solvencyTrendToggles.liabs && <Line type="monotone" dataKey={`${kb}Liabs`} stroke="#f87171" strokeWidth={2} dot={false} />}
-                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.liabsInf ? `${kb}LiabsRealTrend` : `${kb}LiabsTrend`} name={solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke="#f87171" strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
+                            {solvencyTrendToggles.liabsTrend && <Line type="monotone" dataKey={solvencyTrendToggles.liabsInf ? `${kb}LiabsRealTrend` : `${kb}LiabsTrend`} name={solvencyTrendToggles.liabsInf ? 'Trend (Inflation-Adjusted)' : 'Nominal trend'} stroke={solvencyTrendToggles.liabsInf ? '#fb923c' : '#f87171'} strokeWidth={1} strokeDasharray="5 5" dot={false} opacity={0.5} />}
                             {solvencyTrendToggles.liabsInf && <Line type="monotone" dataKey={`${kb}LiabsReal`} stroke="#fb923c" strokeWidth={2} dot={false} />}
                           </React.Fragment>
                         );
@@ -1294,10 +1285,19 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
           />
         )}
 
+        {/* Internal report view: Revenue breakdown pie */}
+        {selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues-pie' && (
+          <CountyRevenuesPiePage
+            onBack={() => setActiveInternalReportId('county-revenues')}
+            initialYear={revenuePieInitialYear}
+          />
+        )}
+
         {/* Report cards (internal + iframe) when not showing an internal report */}
         {!(selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures') &&
          !(selectedCategory === 'expenses' && activeInternalReportId === 'county-expenditures-pie') &&
-         !(selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues') && (
+         !(selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues') &&
+         !(selectedCategory === 'revenues' && activeInternalReportId === 'county-revenues-pie') && (
           <>
             {INTERNAL_REPORTS.filter(r => r.category === selectedCategory).map(report => (
               <div

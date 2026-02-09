@@ -91,10 +91,40 @@ export default function SignupPage({
       if (error) throw error;
       showToast("Verification Successful! Check email.");
       setCurrentPage('login');
-    } catch (err: any) { 
-      showToast(err.message, "error"); 
-    } finally { 
-      setIsVerifying(false); 
+    } catch (err: any) {
+      const msg = err?.message ?? '';
+      const isAlreadyExists =
+        /already\s+(registered|exists)/i.test(msg) ||
+        /that\s+email/i.test(msg) ||
+        /user\s+already\s+registered/i.test(msg);
+      if (isAlreadyExists) {
+        try {
+          const email = fd.get('email') as string;
+          const recoverRes = await fetch('/.netlify/functions/recover-ghost-profile', {
+            method: 'POST',
+            body: JSON.stringify({ email, lastName, voterId, dob }),
+          });
+          const recoverData = await recoverRes.json();
+          if (recoverData.action === 'profile_created') {
+            showToast(
+              "An account with this email already exists. We've linked your voter profile. Please log in with your password (or use Forgot Password if needed).",
+              "success"
+            );
+            setCurrentPage('login');
+            return;
+          }
+          if (recoverData.action === 'already_has_profile') {
+            showToast("An account with this email already exists. Please log in.", "success");
+            setCurrentPage('login');
+            return;
+          }
+        } catch (_) {
+          // fall through to show original error
+        }
+      }
+      showToast(msg || "Something went wrong.", "error");
+    } finally {
+      setIsVerifying(false);
     }
   };
 

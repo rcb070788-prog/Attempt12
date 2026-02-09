@@ -49,6 +49,24 @@
   to = "/assets/:splat"
   status = 200
 
+# Serve root static files from publish dir (so SPA catch-all does not return index.html)
+[[redirects]]
+  from = "/homescreen.png"
+  to = "/homescreen.png"
+  status = 200
+[[redirects]]
+  from = "/icon-192.png"
+  to = "/icon-192.png"
+  status = 200
+[[redirects]]
+  from = "/icon-512.png"
+  to = "/icon-512.png"
+  status = 200
+[[redirects]]
+  from = "/manifest.json"
+  to = "/manifest.json"
+  status = 200
+
 # General SPA redirect (keeps the React app working on refresh)
 # This MUST stay at the bottom
 [[redirects]]

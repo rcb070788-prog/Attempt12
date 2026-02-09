@@ -3,6 +3,7 @@ import { supabase } from '../supabaseClient';
 
 export type UseAuthOptions = {
   onProfileNotFound?: () => void;
+  onVoterRemoved?: () => void;
 };
 
 export const useAuth = (options?: UseAuthOptions) => {
@@ -10,6 +11,7 @@ export const useAuth = (options?: UseAuthOptions) => {
   const [profile, setProfile] = useState<any>(null);
   const [sessionHydrated, setSessionHydrated] = useState(false);
   const onProfileNotFound = options?.onProfileNotFound;
+  const onVoterRemoved = options?.onVoterRemoved;
 
   const fetchProfile = async (userId: string) => {
     if (!supabase) return;
@@ -84,6 +86,32 @@ export const useAuth = (options?: UseAuthOptions) => {
     }
     return () => timers.forEach((t) => clearTimeout(t));
   }, [user?.id, profile, onProfileNotFound]);
+
+  // When profile is loaded, verify voter is still in registry (skip for admins or profiles without voter_id)
+  useEffect(() => {
+    if (!profile?.voter_id || profile?.is_admin === true) return;
+    let cancelled = false;
+    const verifyVoterStatus = async () => {
+      try {
+        const res = await fetch('/.netlify/functions/verify-voter-status', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ voterId: profile.voter_id }),
+        });
+        if (cancelled) return;
+        if (res.status === 401 && supabase) {
+          onVoterRemoved?.();
+          await supabase.auth.signOut();
+          setUser(null);
+          setProfile(null);
+        }
+      } catch {
+        // Network error: allow access to avoid locking out users due to transient failures
+      }
+    };
+    verifyVoterStatus();
+    return () => { cancelled = true; };
+  }, [profile?.id, profile?.voter_id, profile?.is_admin, onVoterRemoved]);
 
   return { user, profile, setProfile, setUser, sessionHydrated };
 };

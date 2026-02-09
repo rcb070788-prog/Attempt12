@@ -80,15 +80,18 @@ import './index.css';
 
 
 export default function App() {
-  // Modal state: profile not found (after sign-out) and signup required (when trying to participate without profile)
+  // Modal state: profile not found (after sign-out), voter removed, and signup required (when trying to participate without profile)
   const [showProfileNotFoundModal, setShowProfileNotFoundModal] = useState(false);
+  const [showVoterRemovedModal, setShowVoterRemovedModal] = useState(false);
   const [signupRequiredModal, setSignupRequiredModal] = useState<{ message: string } | null>(null);
   const showSignupRequiredModal = (message: string) => setSignupRequiredModal({ message });
   const onProfileNotFound = useCallback(() => setShowProfileNotFoundModal(true), []);
+  const onVoterRemoved = useCallback(() => setShowVoterRemovedModal(true), []);
 
   // 1. CORE AUTH (Must come first so others know who the user is)
   const { user, profile, setProfile, setUser, sessionHydrated } = useAuth({
     onProfileNotFound,
+    onVoterRemoved,
   });
 
   // 2. SHARED STATE (Remote controls for UI pieces)
@@ -346,6 +349,17 @@ export default function App() {
             <h3 className="text-xl font-black uppercase mb-4">Profile not found</h3>
             <p className="text-sm text-gray-700 mb-6">Your profile was not found. To login, you must sign up first to create an account. To sign up click here.</p>
             <button onClick={() => { setShowProfileNotFoundModal(false); setCurrentPage('signup'); }} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-sm">To sign up click here</button>
+          </div>
+        </div>
+      )}
+
+      {showVoterRemovedModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => { setShowVoterRemovedModal(false); setCurrentPage('signup'); }} aria-hidden />
+          <div className="relative bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl text-center">
+            <h3 className="text-xl font-black uppercase mb-4">Voter Registration No Longer Valid</h3>
+            <p className="text-sm text-gray-700 mb-6">Your voter ID is no longer found in the Moore County voter registry. Your access has been revoked. If you believe this is an error, please try signing up again or contact us for assistance.</p>
+            <button onClick={() => { setShowVoterRemovedModal(false); setCurrentPage('signup'); }} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-sm">Return to signup</button>
           </div>
         </div>
       )}

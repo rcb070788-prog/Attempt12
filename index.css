@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 /* GLOBAL STYLES */
+/* Homepage background image (desktop only); URL set via --homescreen-url in App.tsx */
+.homescreen-bg { background-color: rgb(249 250 251); }
+@media (min-width: 768px) {
+  .homescreen-bg { background-image: var(--homescreen-url); background-size: cover; background-position: center 35%; background-repeat: no-repeat; }
+}
 .custom-scrollbar::-webkit-scrollbar { width: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
 

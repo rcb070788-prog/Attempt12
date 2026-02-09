@@ -76,6 +76,7 @@ import { Sidebar } from './components/Sidebar';
 import { MainView } from './components/MainView';
 import { Footer } from './components/Footer';
 import CsvViewerPage from './components/CsvViewerPage';
+import homescreenUrl from './src/assets/homescreen.png';
 import './index.css';
 
 
@@ -335,11 +336,12 @@ export default function App() {
   const isHomepage = currentPage === 'home' && !selectedCategory;
 
   return (
-    <div className={`h-screen flex flex-col font-sans overflow-hidden relative ${
-      isHomepage
-        ? 'bg-gray-50 md:bg-[url(\'/homescreen.png\')] md:bg-cover md:bg-[center_35%] md:bg-no-repeat'
-        : 'bg-white'
-    }`}>
+    <div
+      className={`h-screen flex flex-col font-sans overflow-hidden relative ${
+        isHomepage ? 'bg-gray-50 homescreen-bg' : 'bg-white'
+      }`}
+      style={isHomepage ? { ['--homescreen-url' as string]: `url(${homescreenUrl})` } : undefined}
+    >
       {toast && <Toast message={toast.message} type={toast.type} />}
 
       {showProfileNotFoundModal && (
@@ -375,7 +377,7 @@ export default function App() {
       )}
 
       {user && !profile && !showProfileNotFoundModal ? (
-        <div className="fixed inset-0 z-10 flex flex-col items-center justify-center bg-gray-50 md:bg-[url(\'/homescreen.png\')] md:bg-cover md:bg-[center_35%] md:bg-no-repeat font-sans">
+        <div className="fixed inset-0 z-10 flex flex-col items-center justify-center bg-gray-50 homescreen-bg font-sans" style={{ ['--homescreen-url' as string]: `url(${homescreenUrl})` }}>
           <div className="bg-white rounded-[3rem] p-12 shadow-2xl flex flex-col items-center justify-center gap-6 border border-gray-100">
             <i className="fa-solid fa-spinner animate-spin text-4xl text-indigo-600" aria-hidden />
             <p className="text-sm font-black uppercase text-gray-700 tracking-widest">Verifying your account...</p>

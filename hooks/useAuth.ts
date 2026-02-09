@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
-export const useAuth = () => {
+export type UseAuthOptions = {
+  onProfileNotFound?: () => void;
+};
+
+export const useAuth = (options?: UseAuthOptions) => {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [sessionHydrated, setSessionHydrated] = useState(false);
+  const onProfileNotFound = options?.onProfileNotFound;
 
   const fetchProfile = async (userId: string) => {
     if (!supabase) return;
     // Force client to have latest session before first request (helps mobile tab)
     await supabase.auth.getSession();
-    const delays = [0, 800, 1500];
+    const delays = [0, 500, 1000, 2000, 3500];
     for (const delay of delays) {
       if (delay > 0) await new Promise((r) => setTimeout(r, delay));
       const { data } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle();
@@ -54,22 +59,31 @@ export const useAuth = () => {
     };
   }, []);
 
-  // When user exists but profile is still null (e.g. mobile tab race), retry fetch at 1s, 2s, 4s
+  // When user exists but profile is still null (e.g. mobile tab race), retry at 1s, 2s, 4s, 6s, 8s; then sign out if no profile
   useEffect(() => {
     if (!user?.id || profile != null || !supabase) return;
-    const delays = [1000, 2000, 4000];
+    const delays = [1000, 2000, 4000, 6000, 8000];
     const timers: ReturnType<typeof setTimeout>[] = [];
     for (let i = 0; i < delays.length; i++) {
+      const isLast = i === delays.length - 1;
       timers.push(
         setTimeout(() => {
           supabase.from('profiles').select('*').eq('id', user.id).maybeSingle().then(({ data }) => {
-            if (data) setProfile(data);
+            if (data) {
+              setProfile(data);
+            } else if (isLast) {
+              onProfileNotFound?.();
+              supabase.auth.signOut().then(() => {
+                setUser(null);
+                setProfile(null);
+              });
+            }
           });
         }, delays[i])
       );
     }
     return () => timers.forEach((t) => clearTimeout(t));
-  }, [user?.id, profile]);
+  }, [user?.id, profile, onProfileNotFound]);
 
   return { user, profile, setProfile, setUser, sessionHydrated };
 };

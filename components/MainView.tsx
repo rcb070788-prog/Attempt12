@@ -55,6 +55,7 @@ interface MainViewProps {
   
   // UI States
   showToast: any;
+  showSignupRequiredModal: (message: string) => void;
   setShowPollLoginModal: any;
   searchQuery: string;
   setSearchQuery: any;
@@ -119,7 +120,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
     hoveredData, setHoveredData, toggles, setToggles,
     polls, fetchPolls, selectedPoll, setSelectedPoll,
     boardMessages, fetchBoardMessages, suggestions, fetchSuggestions,
-    showToast, setShowPollLoginModal, searchQuery, setSearchQuery,
+    showToast, showSignupRequiredModal, setShowPollLoginModal, searchQuery, setSearchQuery,
     selectedOfficials, setSelectedOfficials, isOfficialDropdownOpen, setIsOfficialDropdownOpen,
     isVerifying, setIsVerifying, setNotFoundModal,
     isUploading, setIsUploading, stagedBoardFiles, setStagedBoardFiles, handleBoardFileUpload,
@@ -206,6 +207,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           setSelectedPoll={setSelectedPoll}
           supabase={supabase}
           showToast={showToast}
+          showSignupRequiredModal={showSignupRequiredModal}
           setCurrentPage={setCurrentPage}
           setShowPollLoginModal={setShowPollLoginModal}
         />
@@ -229,6 +231,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           setIsUploading={setIsUploading}
           handleBoardFileUpload={handleBoardFileUpload}
           showToast={showToast}
+          showSignupRequiredModal={showSignupRequiredModal}
           setCurrentPage={setCurrentPage}
           supabase={supabase}
           supabaseAnonKey={supabaseAnonKey}
@@ -295,6 +298,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           suggestions={suggestions}
           fetchSuggestions={fetchSuggestions}
           showToast={showToast}
+          showSignupRequiredModal={showSignupRequiredModal}
           supabase={supabase}
           setCurrentPage={setCurrentPage}
           setSearchQuery={setSearchQuery}

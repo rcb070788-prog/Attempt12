@@ -60,7 +60,7 @@
 // - useActions.ts: Updated status logic to ensure the "Robot Janitor" knows exactly when a suggestion was closed.
 // - Supabase SQL: Implemented a Trigger and Function to automatically timestamp closed items and move them to the archive after 30 days.
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase, supabaseAnonKey, isAuthStoragePersistent } from './supabaseClient';
 // New Modular Imports
 import { formatDate } from './utils/formatUtils';
@@ -80,8 +80,16 @@ import './index.css';
 
 
 export default function App() {
+  // Modal state: profile not found (after sign-out) and signup required (when trying to participate without profile)
+  const [showProfileNotFoundModal, setShowProfileNotFoundModal] = useState(false);
+  const [signupRequiredModal, setSignupRequiredModal] = useState<{ message: string } | null>(null);
+  const showSignupRequiredModal = (message: string) => setSignupRequiredModal({ message });
+  const onProfileNotFound = useCallback(() => setShowProfileNotFoundModal(true), []);
+
   // 1. CORE AUTH (Must come first so others know who the user is)
-  const { user, profile, setProfile, setUser, sessionHydrated } = useAuth();
+  const { user, profile, setProfile, setUser, sessionHydrated } = useAuth({
+    onProfileNotFound,
+  });
 
   // 2. SHARED STATE (Remote controls for UI pieces)
   const [selectedPoll, setSelectedPoll] = useState<any>(null);
@@ -142,7 +150,8 @@ export default function App() {
     setSelectedAdminEmail,
     setCurrentPage,
     selectedPoll,
-    selectedAdminEmail
+    selectedAdminEmail,
+    showSignupRequiredModal,
   });
   const [selectedFinancialYear, setSelectedFinancialYear] = useState<number | null>(null);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
@@ -320,10 +329,46 @@ export default function App() {
     );
   }
 
+  const isHomepage = currentPage === 'home' && !selectedCategory;
+
   return (
-    <div className="h-screen bg-gray-50 md:bg-[url('/homescreen.png')] md:bg-cover md:bg-[center_35%] md:bg-no-repeat flex flex-col font-sans overflow-hidden relative">
+    <div className={`h-screen flex flex-col font-sans overflow-hidden relative ${
+      isHomepage
+        ? 'bg-gray-50 md:bg-[url(\'/homescreen.png\')] md:bg-cover md:bg-[center_35%] md:bg-no-repeat'
+        : 'bg-white'
+    }`}>
       {toast && <Toast message={toast.message} type={toast.type} />}
 
+      {showProfileNotFoundModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => { setShowProfileNotFoundModal(false); setCurrentPage('signup'); }} aria-hidden />
+          <div className="relative bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl text-center">
+            <h3 className="text-xl font-black uppercase mb-4">Profile not found</h3>
+            <p className="text-sm text-gray-700 mb-6">Your profile was not found. To login, you must sign up first to create an account. To sign up click here.</p>
+            <button onClick={() => { setShowProfileNotFoundModal(false); setCurrentPage('signup'); }} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-sm">To sign up click here</button>
+          </div>
+        </div>
+      )}
+
+      {signupRequiredModal && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={() => { setSignupRequiredModal(null); setCurrentPage('signup'); }} aria-hidden />
+          <div className="relative bg-white w-full max-w-md rounded-[3rem] p-10 shadow-2xl text-center">
+            <p className="text-sm text-gray-700 mb-6">{signupRequiredModal.message}</p>
+            <button onClick={() => { setSignupRequiredModal(null); setCurrentPage('signup'); }} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-sm">To sign up click here</button>
+          </div>
+        </div>
+      )}
+
+      {user && !profile && !showProfileNotFoundModal ? (
+        <div className="fixed inset-0 z-10 flex flex-col items-center justify-center bg-gray-50 md:bg-[url(\'/homescreen.png\')] md:bg-cover md:bg-[center_35%] md:bg-no-repeat font-sans">
+          <div className="bg-white rounded-[3rem] p-12 shadow-2xl flex flex-col items-center justify-center gap-6 border border-gray-100">
+            <i className="fa-solid fa-spinner animate-spin text-4xl text-indigo-600" aria-hidden />
+            <p className="text-sm font-black uppercase text-gray-700 tracking-widest">Verifying your account...</p>
+          </div>
+        </div>
+      ) : (
+        <>
       {user && !isAuthStoragePersistent && !dismissStorageBanner && (
         <div className="flex items-center justify-between gap-3 px-4 py-2 bg-amber-100 border-b border-amber-200 text-amber-800 text-sm">
           <span className="font-medium">Sign-in may not persist on this device. Use normal browsing mode to stay logged in after closing the tab.</span>
@@ -450,6 +495,7 @@ export default function App() {
         suggestions={suggestions}
         fetchSuggestions={fetchSuggestions}
         showToast={showToast}
+        showSignupRequiredModal={showSignupRequiredModal}
         setShowPollLoginModal={setShowPollLoginModal}
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -497,6 +543,8 @@ export default function App() {
       />
 
       <Footer />
+        </>
+      )}
 
     </div>
   );

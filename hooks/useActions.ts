@@ -13,9 +13,11 @@ export function useActions(
     setSelectedAdminEmail: any,
     setCurrentPage: any,
     selectedPoll: any,
-    selectedAdminEmail: any
+    selectedAdminEmail: any,
+    showSignupRequiredModal?: (message: string) => void,
   }
 ) {
+  const showSignupRequiredModal = stateHelpers.showSignupRequiredModal;
   const [isUploading, setIsUploading] = useState(false);
   const [stagedPollFiles, setStagedPollFiles] = useState<{url: string, name: string}[]>([]);
   const [stagedAdminReplyFiles, setStagedAdminReplyFiles] = useState<{url: string, name: string}[]>([]);
@@ -24,6 +26,10 @@ export function useActions(
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user || !supabase) return;
+    if (user && !profile && showSignupRequiredModal) {
+      showSignupRequiredModal('To update your profile photo, you must first sign up. To sign up click here.');
+      return;
+    }
     try {
       setIsUploading(true);
       const filePath = `${user.id}/avatar_image`;
@@ -48,6 +54,10 @@ export function useActions(
 
   const handleBoardFileUpload = async (files: FileList) => {
     if (!files || !user || !supabase) return [];
+    if (user && !profile && showSignupRequiredModal) {
+      showSignupRequiredModal('To message officials, you must first sign up. To sign up click here.');
+      return [];
+    }
     const uploadedUrls = [];
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -112,6 +122,10 @@ export function useActions(
 
   const handleReaction = async (commentId: string, type: 'like' | 'dislike', table: 'comment_reactions' | 'suggestion_reactions' = 'comment_reactions') => {
     if (!user || !supabase) return stateHelpers.setCurrentPage('login');
+    if (user && !profile && showSignupRequiredModal) {
+      showSignupRequiredModal('To react to comments, you must first sign up. To sign up click here.');
+      return;
+    }
     const { error } = await supabase.from(table).upsert({ comment_id: commentId, user_id: user.id, reaction_type: type }, { onConflict: 'comment_id,user_id' });
     if (error) {
       showToast("Reaction failed", "error");

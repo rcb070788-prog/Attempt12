@@ -9,6 +9,28 @@ import type {
   ExhibitBExpenseRow,
 } from './types';
 
+const PAGE_SIZE = 1000;
+
+/**
+ * Fetches all rows from a paginated Supabase query.
+ * PostgREST defaults to 1000 rows; this loops until the full dataset is retrieved.
+ */
+async function fetchAllPages<T>(
+  runQuery: (from: number, to: number) => Promise<{ data: unknown; error: unknown }>
+): Promise<T[]> {
+  const allRows: T[] = [];
+  let offset = 0;
+  let page: T[];
+  do {
+    const { data, error } = await runQuery(offset, offset + PAGE_SIZE - 1);
+    if (error) throw error;
+    page = (data ?? []) as T[];
+    allRows.push(...page);
+    offset += PAGE_SIZE;
+  } while (page.length === PAGE_SIZE);
+  return allRows;
+}
+
 /** Derive normalized form for matching (e.g. label_norm, hierarchy_path_norm). CSV-only tables have no norm columns. */
 function slugify(s: string): string {
   if (!s || typeof s !== 'string') return '';
@@ -99,18 +121,19 @@ const EXHIBIT_B_REVENUE_COLS =
 /**
  * Fetch revenue line-level data from exhibit_b_revenues (row_kind = 'line_item').
  * Maps CSV columns to NormalizedLine in code: section→category_norm, entity→entity_norm, hierarchy_path→hierarchy_path_canon.
+ * Uses pagination to fetch all rows (PostgREST defaults to 1000-row limit).
  */
 export async function fetchExhibitBRevenueLines(): Promise<NormalizedLine[]> {
   if (!supabase) return [];
-  const { data: lines, error: linesError } = await supabase
-    .from('exhibit_b_revenues')
-    .select(EXHIBIT_B_REVENUE_COLS)
-    .eq('row_kind', 'line_item')
-    .order('year', { ascending: true })
-    .order('doc_display_order', { ascending: true });
-
-  if (linesError) throw linesError;
-  const rows = (lines ?? []) as ExhibitBRevenueRow[];
+  const rows = await fetchAllPages<ExhibitBRevenueRow>((from, to) =>
+    supabase
+      .from('exhibit_b_revenues')
+      .select(EXHIBIT_B_REVENUE_COLS)
+      .eq('row_kind', 'line_item')
+      .order('year', { ascending: true })
+      .order('doc_display_order', { ascending: true })
+      .range(from, to)
+  );
   if (rows.length === 0) return [];
 
   const needDocUrls = rows.some((r) => r.storage_url == null || r.storage_url === '');
@@ -157,18 +180,19 @@ export async function fetchExhibitBRevenueLines(): Promise<NormalizedLine[]> {
 /**
  * Fetch revenue total/subtotal rows from exhibit_b_revenues (row_kind in 'subtotal','total').
  * Maps to NormalizedTotalRow; derives hierarchy_path_norm and label_norm in code for matching.
+ * Uses pagination to fetch all rows (PostgREST defaults to 1000-row limit).
  */
 async function fetchExhibitBRevenueTotalsFromTable(): Promise<NormalizedTotalRow[]> {
   if (!supabase) return [];
-  const { data: lines, error: linesError } = await supabase
-    .from('exhibit_b_revenues')
-    .select(EXHIBIT_B_REVENUE_COLS)
-    .in('row_kind', ['subtotal', 'total'])
-    .order('year', { ascending: true })
-    .order('doc_display_order', { ascending: true });
-
-  if (linesError) throw linesError;
-  const rows = (lines ?? []) as ExhibitBRevenueRow[];
+  const rows = await fetchAllPages<ExhibitBRevenueRow>((from, to) =>
+    supabase
+      .from('exhibit_b_revenues')
+      .select(EXHIBIT_B_REVENUE_COLS)
+      .in('row_kind', ['subtotal', 'total'])
+      .order('year', { ascending: true })
+      .order('doc_display_order', { ascending: true })
+      .range(from, to)
+  );
   if (rows.length === 0) return [];
 
   const needDocUrls = rows.some((r) => r.storage_url == null || r.storage_url === '');
@@ -217,18 +241,19 @@ const EXHIBIT_B_EXPENSE_COLS =
 /**
  * Fetch expense line-level data from exhibit_b_expenses (row_kind = 'line_item').
  * Maps CSV columns to NormalizedLine: section→category_norm ('expenses'), entity→entity_norm.
+ * Uses pagination to fetch all rows (PostgREST defaults to 1000-row limit).
  */
 export async function fetchExhibitBExpenseLines(): Promise<NormalizedLine[]> {
   if (!supabase) return [];
-  const { data: lines, error: linesError } = await supabase
-    .from('exhibit_b_expenses')
-    .select(EXHIBIT_B_EXPENSE_COLS)
-    .eq('row_kind', 'line_item')
-    .order('year', { ascending: true })
-    .order('doc_display_order', { ascending: true });
-
-  if (linesError) throw linesError;
-  const rows = (lines ?? []) as ExhibitBExpenseRow[];
+  const rows = await fetchAllPages<ExhibitBExpenseRow>((from, to) =>
+    supabase
+      .from('exhibit_b_expenses')
+      .select(EXHIBIT_B_EXPENSE_COLS)
+      .eq('row_kind', 'line_item')
+      .order('year', { ascending: true })
+      .order('doc_display_order', { ascending: true })
+      .range(from, to)
+  );
   if (rows.length === 0) return [];
 
   const needDocUrls = rows.some((r) => r.storage_url == null || r.storage_url === '');
@@ -288,17 +313,19 @@ const TOTALS_ROW_COLS =
 /**
  * Fetch expense total/subtotal rows from exhibit_b_expenses (row_kind in 'subtotal','total').
  * Derives label_norm in code and filters to EXPENSE_TOTAL_LABEL_NORMS for chart matching.
+ * Uses pagination to fetch all rows (PostgREST defaults to 1000-row limit).
  */
 async function fetchExhibitBExpenseTotalsFromTable(): Promise<NormalizedTotalRow[]> {
-  const { data: lines, error: linesError } = await supabase
-    .from('exhibit_b_expenses')
-    .select(EXHIBIT_B_EXPENSE_COLS)
-    .in('row_kind', ['subtotal', 'total'])
-    .order('year', { ascending: true })
-    .order('doc_display_order', { ascending: true });
-
-  if (linesError) throw linesError;
-  const rows = (lines ?? []) as ExhibitBExpenseRow[];
+  if (!supabase) return [];
+  const rows = await fetchAllPages<ExhibitBExpenseRow>((from, to) =>
+    supabase
+      .from('exhibit_b_expenses')
+      .select(EXHIBIT_B_EXPENSE_COLS)
+      .in('row_kind', ['subtotal', 'total'])
+      .order('year', { ascending: true })
+      .order('doc_display_order', { ascending: true })
+      .range(from, to)
+  );
   if (rows.length === 0) return [];
 
   const needDocUrls = rows.some((r) => r.storage_url == null || r.storage_url === '');

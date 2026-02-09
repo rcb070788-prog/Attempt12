@@ -20,6 +20,7 @@ interface BoardPageProps {
   setIsUploading: (val: boolean) => void;
   handleBoardFileUpload: (files: FileList) => Promise<string[]>;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  showSignupRequiredModal: (message: string) => void;
   setCurrentPage: (page: string) => void;
   supabase: any;
   supabaseAnonKey: string;
@@ -43,6 +44,7 @@ export default function BoardPage({
   setIsUploading,
   handleBoardFileUpload,
   showToast,
+  showSignupRequiredModal,
   setCurrentPage,
   supabase,
   supabaseAnonKey,
@@ -244,6 +246,7 @@ export default function BoardPage({
 
               <form onSubmit={async (e) => {
                 e.preventDefault();
+                if (user && !profile) return showSignupRequiredModal('To message officials, you must first sign up. To sign up click here.');
                 const fd = new FormData(e.currentTarget);
                 if (selectedOfficials.length === 0) return showToast("Select at least one official", "error");
                 if (!fd.get('subject')) return showToast("Please enter a subject", "error");
@@ -375,7 +378,7 @@ export default function BoardPage({
               <div className="w-20 h-20 bg-gray-50 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-200 text-3xl"><i className="fa-solid fa-lock"></i></div>
               <p className="text-gray-900 font-black uppercase text-sm mb-2">Verification Required</p>
               <p className="text-gray-400 font-bold uppercase text-[9px] mb-6">Login as a verified voter to contact officials</p>
-              <button onClick={() => setCurrentPage('login')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg">Login / Register</button>
+              <button onClick={() => setCurrentPage('login')} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase text-xs shadow-lg">Login / Sign Up</button>
             </div>
           )}
         </div>

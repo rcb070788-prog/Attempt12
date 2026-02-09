@@ -9,10 +9,11 @@ interface SuggestionsPageProps {
   suggestions: any[];
   fetchSuggestions: () => void;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  showSignupRequiredModal: (message: string) => void;
   supabase: any;
   setCurrentPage: (page: string) => void;
   setSearchQuery: (query: string) => void;
-  onFocusThread?: (id: string) => void; // Added to the interface
+  onFocusThread?: (id: string) => void;
 }
 
 export default function SuggestionsPage({
@@ -21,6 +22,7 @@ export default function SuggestionsPage({
   suggestions,
   fetchSuggestions,
   showToast,
+  showSignupRequiredModal,
   supabase,
   setCurrentPage,
   setSearchQuery,
@@ -58,6 +60,7 @@ export default function SuggestionsPage({
 
   const handleSuggestionFileUpload = async (files: FileList) => {
     if (!files || !user || !supabase) return;
+    if (user && !profile) return showSignupRequiredModal('To make a suggestion, you must first sign up. To sign up click here.');
     setIsUploading(true);
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -81,6 +84,7 @@ export default function SuggestionsPage({
 
   const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
     if (!user || !supabase) return setCurrentPage('login');
+    if (user && !profile) return showSignupRequiredModal('To react to comments, you must first sign up. To sign up click here.');
     const { error } = await supabase
       .from('suggestion_reactions')
       .upsert({ comment_id: commentId, user_id: user.id, reaction_type: type }, { onConflict: 'comment_id,user_id' });
@@ -91,6 +95,7 @@ export default function SuggestionsPage({
 
   const handlePostReaction = async (suggestionId: string, type: 'like' | 'dislike') => {
     if (!user || !supabase) return setCurrentPage('login');
+    if (user && !profile) return showSignupRequiredModal('To react to this proposal, you must first sign up. To sign up click here.');
     const sug = suggestions.find(s => s.id === suggestionId);
     const postReactions = sug?.suggestion_post_reactions || [];
     const existing = postReactions.find((r: any) => r.user_id === user.id);
@@ -113,6 +118,7 @@ export default function SuggestionsPage({
 
   const handleShare = async (suggestionId: string) => {
     if (!user || !supabase) return setCurrentPage('login');
+    if (user && !profile) return showSignupRequiredModal('To share this proposal, you must first sign up. To sign up click here.');
     const { error } = await supabase
       .from('suggestion_shares')
       .upsert({ suggestion_id: suggestionId, user_id: user.id }, { onConflict: 'suggestion_id,user_id' });
@@ -172,6 +178,7 @@ export default function SuggestionsPage({
             {replyTo === comment.id && (
               <form onSubmit={async (e) => { 
                 e.preventDefault(); 
+                if (user && !profile) return showSignupRequiredModal('To make a comment, you must first sign up. To sign up click here.');
                 const fd = new FormData(e.currentTarget); 
                 const { error } = await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestionId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }) ?? {}; 
                 if (error) { showToast(error.message, 'error'); return; }
@@ -239,6 +246,7 @@ export default function SuggestionsPage({
               {user ? (
                 <form onSubmit={async (e) => {
                   e.preventDefault();
+                  if (user && !profile) return showSignupRequiredModal('To make a suggestion, you must first sign up. To sign up click here.');
                   const fd = new FormData(e.currentTarget);
                   const suggestionText = fd.get('description');
                   const attachmentUrls = stagedSuggestionFiles.map(f => f.url);
@@ -329,6 +337,7 @@ export default function SuggestionsPage({
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault();
+                      if (user && !profile) return showSignupRequiredModal('To make a comment, you must first sign up. To sign up click here.');
                       const fd = new FormData(e.currentTarget);
                       const { error } = await supabase?.from('suggestion_comments').insert({ suggestion_id: suggestion.id, user_id: user.id, content: fd.get('content') }) ?? {};
                       if (error) { showToast(error.message, 'error'); return; }
@@ -377,7 +386,7 @@ export default function SuggestionsPage({
 
                 <div className="mt-auto flex items-center gap-3">
                    <span className={`px-4 py-2 rounded-full text-xs font-black uppercase ${
-                     sug.status === 'Completed' ? 'bg-green-100 text-green-600' : 
+                     sug.status === 'Underway' ? 'bg-green-100 text-green-600' : 
                      sug.status === 'Scheduled' ? 'bg-blue-100 text-blue-600' : 
                      sug.status === 'Closed' ? 'bg-red-100 text-red-600' :
                      'bg-amber-100 text-amber-600'
@@ -402,6 +411,7 @@ export default function SuggestionsPage({
                   {user ? (
                      <form onSubmit={async (e) => { 
                        e.preventDefault(); 
+                       if (user && !profile) return showSignupRequiredModal('To make a comment, you must first sign up. To sign up click here.');
                        const fd = new FormData(e.currentTarget); 
                        const { error } = await supabase?.from('suggestion_comments').insert({ suggestion_id: sug.id, user_id: user.id, content: fd.get('content') }) ?? {}; 
                        if (error) { showToast(error.message, 'error'); return; }

@@ -17,11 +17,14 @@ import {
   getRevenuePieForYear,
   getTaxBreakdownPieForYear,
 } from '../src/lib/revenueTransforms';
-import { buildHierarchyTree, type HierarchyTreeNode, stripRedundantRoot, flattenSingleChildNodes, getHierarchyTreeLeafPaths } from '../src/lib/paths';
+import { buildHierarchyTree, stripRedundantRoot, flattenSingleChildNodes } from '../src/lib/paths';
+import { RevenueHierarchyDropdown } from './RevenueHierarchyDropdown';
+import { CPI_ANNUAL_AVG } from '../constants';
 import {
   formatCurrency,
   pctChangeOverRange,
   formatPctChange,
+  formatVsInflationShort,
   addRealToRevenueYearPoints,
   recomputeRevenueEntityTrendsForSlice,
   calculateTrendLine,
@@ -58,150 +61,6 @@ function ClickableDot<T extends Record<string, unknown>>(props: {
 }
 
 const REVENUE_PIE_COLORS = ['#4f46e5', '#059669', '#d97706', '#7c3aed', '#64748b'];
-
-function RevenueHierarchyDropdown(props: {
-  tree: HierarchyTreeNode[];
-  selectedPaths: string[];
-  onTogglePath: (path: string) => void;
-  onClose: () => void;
-  onSelectAllUnder?: (paths: string[], add: boolean) => void;
-}) {
-  const { tree, selectedPaths, onTogglePath, onSelectAllUnder } = props;
-  const selectedSet = useMemo(() => new Set(selectedPaths), [selectedPaths]);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-
-  const toggleExpand = (key: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
-  const renderNode = (node: HierarchyTreeNode, depth: number, expandKey: string) => {
-    const pl = 4 + depth * 12;
-    if (node.fullPath) {
-      const checked = selectedSet.has(node.fullPath);
-      return (
-        <label
-          key={node.fullPath}
-          className="flex cursor-pointer items-center gap-2 py-2 hover:bg-gray-50"
-          style={{ paddingLeft: pl }}
-        >
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={() => onTogglePath(node.fullPath!)}
-            className="rounded border-gray-300 text-indigo-600"
-          />
-          <span className="text-sm text-gray-800">{node.segment}</span>
-        </label>
-      );
-    }
-    const isExpanded = expanded.has(expandKey);
-    return (
-      <div key={expandKey}>
-        <button
-          type="button"
-          onClick={() => toggleExpand(expandKey)}
-          className="flex w-full items-center gap-2 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
-          style={{ paddingLeft: pl }}
-        >
-          <i
-            className={`fa-solid fa-chevron-right text-[10px] text-gray-400 transition-transform ${
-              isExpanded ? 'rotate-90' : ''
-            }`}
-          />
-          {node.segment}
-        </button>
-        {isExpanded && (
-          <div className="border-l border-gray-100">
-            {node.children.map((child) =>
-              renderNode(
-                child,
-                depth + 1,
-                child.fullPath ?? `${expandKey} > ${child.segment}`
-              )
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div
-      className="absolute left-0 top-full z-50 mt-1 min-w-[280px] max-h-[70vh] overflow-y-auto rounded-xl border border-gray-200 bg-white py-2 shadow-xl"
-      onClick={(e) => e.stopPropagation()}
-    >
-      {tree.length === 0 ? (
-        <div className="px-4 py-3 text-sm text-gray-500">No categories</div>
-      ) : (
-        tree.map((root) => (
-          <div key={root.segment} className="py-0.5">
-            {root.children.length > 0 ? (
-              <>
-                <button
-                  type="button"
-                  onClick={() => toggleExpand(root.segment)}
-                  className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm font-bold uppercase text-gray-700 hover:bg-gray-50"
-                >
-                  <i
-                    className={`fa-solid fa-chevron-right text-[10px] text-gray-400 transition-transform ${
-                      expanded.has(root.segment) ? 'rotate-90' : ''
-                    }`}
-                  />
-                  {root.segment}
-                </button>
-                {expanded.has(root.segment) && (
-                  <div className="border-l border-gray-100 pl-2">
-                    {onSelectAllUnder && (() => {
-                      const leafPaths = getHierarchyTreeLeafPaths([root]);
-                      if (leafPaths.length === 0) return null;
-                      const allSelected = leafPaths.every((p) => selectedSet.has(p));
-                      return (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onSelectAllUnder(leafPaths, !allSelected);
-                          }}
-                          className="text-xs text-indigo-600 hover:underline px-4 py-1.5 text-left w-full"
-                        >
-                          {allSelected ? 'Deselect all' : 'Select all'}
-                        </button>
-                      );
-                    })()}
-                    {root.children.map((child) =>
-                      renderNode(
-                        child,
-                        0,
-                        child.fullPath ?? `${root.segment} > ${child.segment}`
-                      )
-                    )}
-                  </div>
-                )}
-              </>
-            ) : (
-              root.fullPath && (
-                <label className="flex cursor-pointer items-center gap-2 px-4 py-2 hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={selectedSet.has(root.fullPath)}
-                    onChange={() => onTogglePath(root.fullPath!)}
-                    className="rounded border-gray-300 text-indigo-600"
-                  />
-                  <span className="text-sm text-gray-800">{root.segment}</span>
-                </label>
-              )
-            )}
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
 
 const REVENUE_TOGGLE_KEYS = ['total', 'genGov', 'schools', 'emergCommDist', 'mud'] as const;
 const REVENUE_TOGGLE_LABELS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string> = {
@@ -272,6 +131,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
   const [andBeyondOn, setAndBeyondOn] = useState(false);
   const [andBeyondStartYear, setAndBeyondStartYear] = useState<number | null>(null);
   const [andBeyondYearsForward, setAndBeyondYearsForward] = useState(10);
+  const [showMathOpen, setShowMathOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => {
@@ -510,9 +370,9 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
       const endX = clientX ?? rangeDragCurrentX.current ?? rangeDragStartX.current;
       const y1 = clientXToYear(rangeDragStartX.current);
       const y2 = endX != null ? clientXToYear(endX) : null;
-      if (y1 != null && y2 != null) {
-        const minY = Math.min(y1, y2);
-        const maxY = Math.max(y1, y2);
+      if (y1 != null) {
+        const minY = Math.min(y1, y2 ?? y1);
+        const maxY = Math.max(y1, y2 ?? y1);
         if (maxY >= minY) {
           ignoreNextOverlayClick.current = true;
           lastDragEndTime.current = Date.now();
@@ -535,15 +395,21 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
       const endX = clientX ?? rangeDragCurrentX.current ?? rangeDragStartX.current;
       if (endX != null) handleChartPointerUp(endX);
     };
+    const onTouchCancel = () => {
+      const endX = rangeDragCurrentX.current ?? rangeDragStartX.current;
+      if (endX != null) handleChartPointerUp(endX);
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
     window.addEventListener('touchmove', onMove, { passive: true });
     window.addEventListener('touchend', onUp);
+    window.addEventListener('touchcancel', onTouchCancel);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
       window.removeEventListener('touchmove', onMove);
       window.removeEventListener('touchend', onUp);
+      window.removeEventListener('touchcancel', onTouchCancel);
     };
   }, [pendingYearRange]);
 
@@ -845,7 +711,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
         <button onClick={onBack} className="text-[10px] font-black uppercase text-gray-400 hover:text-indigo-600 transition-colors mb-4">
           <i className="fa-solid fa-arrow-left mr-2"></i> Back to reports
         </button>
-        <p className="text-gray-500 font-bold uppercase text-sm">Loading exhibit data…</p>
+        <p className="text-gray-500 font-bold uppercase text-sm">Loading exhibit data (fetching full dataset for accuracy)…</p>
       </div>
     );
   }
@@ -1142,8 +1008,23 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
               : 'h-[300px] landscape:h-[70vh] mb-8 md:flex-1 md:min-h-0 md:min-h-[180px]')
           }
           style={{ touchAction: dragBand ? 'none' : undefined }}
-          onMouseDown={(e) => { if (!pendingYearRange && e.button === 0) handleChartPointerDown(e.clientX); }}
-          onTouchStart={(e) => { if (!pendingYearRange && e.touches[0]) handleChartPointerDown(e.touches[0].clientX); }}
+          onPointerDown={(e) => {
+            if (!pendingYearRange && e.isPrimary && (e.pointerType !== 'mouse' || e.button === 0)) {
+              chartRef.current?.setPointerCapture?.(e.pointerId);
+              handleChartPointerDown(e.clientX);
+            }
+          }}
+          onPointerMove={(e) => {
+            if (e.clientX != null) handleChartPointerMove(e.clientX);
+          }}
+          onPointerUp={(e) => {
+            handleChartPointerUp(e.clientX);
+            chartRef.current?.releasePointerCapture?.(e.pointerId);
+          }}
+          onLostPointerCapture={() => {
+            const endX = rangeDragCurrentX.current ?? rangeDragStartX.current;
+            if (endX != null) handleChartPointerUp(endX);
+          }}
         >
           {/* Mobile peeking left tab - anchored when fullScreen */}
           {(fullScreen || isNativeFullScreen) ? (
@@ -1179,7 +1060,16 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
           {selectedYearRange && (
             <button
               type="button"
-              onClick={() => setSelectedYearRange(null)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedYearRange(null);
+                setPendingYearRange(null);
+                setDragBand(null);
+                rangeDragStartX.current = null;
+                rangeDragCurrentX.current = null;
+                edgeBeingDragged.current = null;
+              }}
               className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-indigo-600 text-white text-xs font-black uppercase rounded-lg hover:bg-indigo-700"
             >
               Back
@@ -1212,8 +1102,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                 className="absolute inset-0 z-[5]"
                 style={{ pointerEvents: 'auto' }}
                 onClick={() => {
-                  if (Date.now() - lastDragEndTime.current < 400) {
-                    ignoreNextOverlayClick.current = false;
+                  if (Date.now() - lastDragEndTime.current < 600) {
                     return;
                   }
                   if (ignoreNextOverlayClick.current) {
@@ -1336,17 +1225,83 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                     const realVal = showReal ? Number(data[`${dataKey}Real`]) : NaN;
                     const hasNominal = Number.isFinite(nominalVal);
                     const hasReal = Number.isFinite(realVal);
-                    if (!hasNominal && !hasReal) return null;
+                    const hasAndBeyond = Number.isFinite(Number(data[AND_BEYOND_NOMINAL_KEY]));
+                    if (!hasNominal && !hasReal) {
+                      if (hasAndBeyond) {
+                        const chartMaxYear = chartData.length ? Number((chartData[chartData.length - 1] as any).year) : 0;
+                        const firstProjectedRow = chartDataWithExtension.find((d: any) => Number(d.year) === chartMaxYear + 1) as any;
+                        const isProjectedYear = Number(data.year) > chartMaxYear;
+                        const hasAndBeyondPct = isProjectedYear && firstProjectedRow && Number.isFinite(Number(firstProjectedRow[AND_BEYOND_NOMINAL_KEY]));
+                        const andBeyondPctNominal = hasAndBeyondPct ? pctChangeOverRange(Number(firstProjectedRow[AND_BEYOND_NOMINAL_KEY]), Number(data[AND_BEYOND_NOMINAL_KEY])) : null;
+                        const andBeyondPctReal = hasAndBeyondPct && Number.isFinite(Number(firstProjectedRow[AND_BEYOND_REAL_KEY])) && Number.isFinite(Number(data[AND_BEYOND_REAL_KEY]))
+                          ? pctChangeOverRange(Number(firstProjectedRow[AND_BEYOND_REAL_KEY]), Number(data[AND_BEYOND_REAL_KEY])) : null;
+                        const fmtAndBeyondNominal = formatPctChange(andBeyondPctNominal);
+                        const fmtAndBeyondReal = formatPctChange(andBeyondPctReal);
+                        const fmtAndBeyondVsInfl = formatVsInflationShort(andBeyondPctNominal, andBeyondPctReal);
+                        const showAndBeyondVsInfl = andBeyondPctNominal !== null && andBeyondPctReal !== null;
+                        return (
+                          <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
+                            <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">
+                              {Number(data.year) > chartMaxYear ? 'Projection' : `${data.year} Records`}
+                            </p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center gap-6">
+                                <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                  <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-gray-500" />
+                                  Trend projection
+                                </span>
+                                <span className="text-sm font-black text-gray-700">
+                                  {formatCurrency(Number(data[AND_BEYOND_NOMINAL_KEY]))}
+                                </span>
+                              </div>
+                              {Number.isFinite(Number(data[AND_BEYOND_REAL_KEY])) && (
+                                <div className="flex justify-between items-center gap-6">
+                                  <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                    <span className="inline-block w-2 h-2 rounded-full shrink-0 border border-gray-500 bg-gray-400" />
+                                    Trend projection (inflation adj.)
+                                  </span>
+                                  <span className="text-sm font-black text-gray-700">
+                                    {formatCurrency(Number(data[AND_BEYOND_REAL_KEY]))}
+                                  </span>
+                                </div>
+                              )}
+                              {hasAndBeyondPct && (
+                                <>
+                                  <div className="flex justify-end">
+                                    <span className={`text-sm font-black ${fmtAndBeyondNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>% Change (trend): {fmtAndBeyondNominal.text}</span>
+                                  </div>
+                                  {andBeyondPctReal !== null && (
+                                    <div className="flex justify-end">
+                                      <span className={`text-sm font-black ${fmtAndBeyondReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>% Change (real, trend): {fmtAndBeyondReal.text}</span>
+                                    </div>
+                                  )}
+                                  {showAndBeyondVsInfl && (
+                                    <div className="flex justify-end">
+                                      <span className={`text-sm font-black ${fmtAndBeyondVsInfl.isPositive ? 'text-green-600' : 'text-red-600'}`} title="Trend % − Inflation %">
+                                        {fmtAndBeyondVsInfl.text}
+                                      </span>
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }
                     const pctNominal =
-                      toggles[trendKey] && latestRow && hasNominal
-                        ? pctChangeOverRange(Number(baselineRow[dataKey]), Number(latestRow[dataKey]))
+                      toggles[trendKey] && hasNominal
+                        ? pctChangeOverRange(Number(baselineRow[dataKey]), Number(data[dataKey]))
                         : null;
                     const pctReal =
-                      toggles[trendKey] && latestRow && hasReal
-                        ? pctChangeOverRange(Number(baselineRow[`${dataKey}Real`]), Number(latestRow[`${dataKey}Real`]))
+                      toggles[trendKey] && hasReal
+                        ? pctChangeOverRange(Number(baselineRow[`${dataKey}Real`]), Number(data[`${dataKey}Real`]))
                         : null;
                     const fmtNominal = formatPctChange(pctNominal);
                     const fmtReal = formatPctChange(pctReal);
+                    const fmtVsInflation = formatVsInflationShort(pctNominal, pctReal);
+                    const showVsInflation = toggles[trendKey] && pctNominal !== null && pctReal !== null;
                     return (
                       <div className="bg-white p-5 rounded-[2rem] shadow-2xl border border-gray-100 min-w-[200px]">
                         <p className="text-[10px] font-black text-indigo-600 mb-3 uppercase tracking-widest">{data.year} Records</p>
@@ -1368,17 +1323,86 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                           {hasReal && (
                             <>
                               <div className="flex justify-between items-center gap-6">
-                                <span className="text-[10px] font-black uppercase text-gray-400">{label} (inflation adj.)</span>
+                                <span className="text-[10px] font-black uppercase text-gray-400">{selectedEntity === 'total' ? 'Total (inflated dollars)' : `${label} (inflation adj.)`}</span>
                                 <span className="text-sm font-black" style={{ color, opacity: 0.9 }}>{formatCurrency(realVal)}</span>
                               </div>
                               {toggles[trendKey] && pctReal !== null && (
-                                <div className="flex justify-between items-center gap-6 pl-3">
-                                  <span className="text-[10px] font-black uppercase text-gray-400">% Change (real)</span>
-                                  <span className={`text-sm font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>{fmtReal.text}</span>
+                                selectedEntity === 'total' ? (
+                                  <div className="flex justify-end pl-3">
+                                    <span className={`text-sm font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>{fmtReal.text}</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex justify-between items-center gap-6 pl-3">
+                                    <span className="text-[10px] font-black uppercase text-gray-400">% Change (real)</span>
+                                    <span className={`text-sm font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>{fmtReal.text}</span>
+                                  </div>
+                                )
+                              )}
+                              {showVsInflation && (
+                                <div className="flex justify-end pl-3">
+                                  <span className={`text-sm font-black ${fmtVsInflation.isPositive ? 'text-green-600' : 'text-red-600'}`} title="Trend % − Inflation %">
+                                    {fmtVsInflation.text}
+                                  </span>
                                 </div>
                               )}
                             </>
                           )}
+                          {hasAndBeyond && (() => {
+                            const chartMaxYear = chartData.length ? Number((chartData[chartData.length - 1] as any).year) : 0;
+                            const firstProjectedRow = chartDataWithExtension.find((d: any) => Number(d.year) === chartMaxYear + 1) as any;
+                            const isProjectedYear = Number(data.year) > chartMaxYear;
+                            const hasAndBeyondPct = isProjectedYear && firstProjectedRow && Number.isFinite(Number(firstProjectedRow[AND_BEYOND_NOMINAL_KEY]));
+                            const andBeyondPctNominal = hasAndBeyondPct ? pctChangeOverRange(Number(firstProjectedRow[AND_BEYOND_NOMINAL_KEY]), Number(data[AND_BEYOND_NOMINAL_KEY])) : null;
+                            const andBeyondPctReal = hasAndBeyondPct && Number.isFinite(Number(firstProjectedRow[AND_BEYOND_REAL_KEY])) && Number.isFinite(Number(data[AND_BEYOND_REAL_KEY]))
+                              ? pctChangeOverRange(Number(firstProjectedRow[AND_BEYOND_REAL_KEY]), Number(data[AND_BEYOND_REAL_KEY])) : null;
+                            const fmtAndBeyondNominal = formatPctChange(andBeyondPctNominal);
+                            const fmtAndBeyondReal = formatPctChange(andBeyondPctReal);
+                            const fmtAndBeyondVsInfl = formatVsInflationShort(andBeyondPctNominal, andBeyondPctReal);
+                            const showAndBeyondVsInfl = andBeyondPctNominal !== null && andBeyondPctReal !== null;
+                            return (
+                              <div className="space-y-1 pt-1 border-t border-gray-100">
+                                <div className="flex justify-between items-center gap-6">
+                                  <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                    <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-gray-500" />
+                                    Trend projection
+                                  </span>
+                                  <span className="text-sm font-black text-gray-700">
+                                    {formatCurrency(Number(data[AND_BEYOND_NOMINAL_KEY]))}
+                                  </span>
+                                </div>
+                                {Number.isFinite(Number(data[AND_BEYOND_REAL_KEY])) && (
+                                  <div className="flex justify-between items-center gap-6">
+                                    <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                      <span className="inline-block w-2 h-2 rounded-full shrink-0 border border-gray-500 bg-gray-400" />
+                                      Trend projection (inflation adj.)
+                                    </span>
+                                    <span className="text-sm font-black text-gray-700">
+                                      {formatCurrency(Number(data[AND_BEYOND_REAL_KEY]))}
+                                    </span>
+                                  </div>
+                                )}
+                                {hasAndBeyondPct && (
+                                  <>
+                                    <div className="flex justify-end">
+                                      <span className={`text-sm font-black ${fmtAndBeyondNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>% Change (trend): {fmtAndBeyondNominal.text}</span>
+                                    </div>
+                                    {andBeyondPctReal !== null && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-sm font-black ${fmtAndBeyondReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>% Change (real, trend): {fmtAndBeyondReal.text}</span>
+                                      </div>
+                                    )}
+                                    {showAndBeyondVsInfl && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-sm font-black ${fmtAndBeyondVsInfl.isPositive ? 'text-green-600' : 'text-red-600'}`} title="Trend % − Inflation %">
+                                          {fmtAndBeyondVsInfl.text}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -1564,7 +1588,14 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
               <div className={`space-y-8 pt-6 px-4 ${fullScreen || isNativeFullScreen ? 'pb-2' : 'pb-4'}`}>
                 <div className={`space-y-4 ${fullScreen || isNativeFullScreen ? '' : 'mb-8'}`}>
                   <div className={`grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] items-end gap-x-2 ${fullScreen || isNativeFullScreen ? 'gap-y-2' : 'gap-y-4'}`}>
-                    <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest pb-2">Toggle Comparison</div>
+                    <button
+                      type="button"
+                      onClick={() => setShowMathOpen(!showMathOpen)}
+                      className="text-[11px] font-black uppercase text-indigo-600 hover:text-indigo-700 tracking-widest flex items-center gap-2"
+                    >
+                      {showMathOpen ? <i className="fa-solid fa-chevron-up" /> : <i className="fa-solid fa-chevron-down" />}
+                      Show Me the Math
+                    </button>
                     {REVENUE_TOGGLE_KEYS.map((key) => (
                       <div key={key} className="text-center">
                         <button
@@ -1666,7 +1697,14 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
               <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Chart Controls</h3>
               <div className="flex-1 overflow-y-auto custom-scrollbar space-y-8">
                 <div>
-                  <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest mb-4">Toggle Comparison</div>
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); setShowMathOpen(!showMathOpen); }}
+                    className="text-[11px] font-black uppercase text-indigo-600 hover:text-indigo-700 tracking-widest flex items-center gap-2 mb-4"
+                  >
+                    {showMathOpen ? <i className="fa-solid fa-chevron-up" /> : <i className="fa-solid fa-chevron-down" />}
+                    Show Me the Math
+                  </button>
                   <div className="grid grid-cols-1 gap-6">
                     {REVENUE_TOGGLE_KEYS.map((key) => (
                       <div key={key} className="text-center">
@@ -1718,6 +1756,72 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                         </div>
                       );
                     })}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show Me the Math modal */}
+        {showMathOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+            onClick={() => setShowMathOpen(false)}
+          >
+            <div
+              className="bg-white w-full max-w-2xl min-w-0 md:min-w-[640px] max-h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="show-math-title"
+            >
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
+                <h2 id="show-math-title" className="text-lg font-black uppercase text-gray-900">Show Me the Math</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowMathOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Close"
+                >
+                  <i className="fa-solid fa-circle-xmark text-2xl" />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="py-2 pr-4 text-[11px] font-black uppercase text-gray-500 tracking-widest">Metric</th>
+                      <th className="py-2 pr-4 text-[11px] font-black uppercase text-gray-500 tracking-widest">Equation</th>
+                      <th className="py-2 text-[11px] font-black uppercase text-gray-500 tracking-widest">Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-3 pr-4 font-bold text-indigo-600">Trend</td>
+                      <td className="py-3 pr-4 text-gray-700">(Latest total − Base year value) ÷ Base year value × 100</td>
+                      <td className="py-3 text-gray-600">Revenue went up X% from the base year to the latest year. We&apos;re measuring in the dollars of each year, so that includes inflation.</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-3 pr-4 font-bold text-indigo-600">Inflation</td>
+                      <td className="py-3 pr-4 text-gray-700">(Latest inflation adjusted − Base year value) ÷ Base year value × 100</td>
+                      <td className="py-3 text-gray-600">The orange line shows what happens if revenue only kept pace with inflation. The X% is how much prices increased from the base year to the latest year.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 pr-4 font-bold text-indigo-600">Vs. inflation</td>
+                      <td className="py-3 pr-4 text-gray-700">Trend % − Inflation %</td>
+                      <td className="py-3 text-gray-600">Revenue grew X percentage points more than inflation. So of the total growth, about Y% was inflation; the extra X points is how much revenue outpaced inflation.</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">CPI-U annual averages (1982–84=100). Source: U.S. Bureau of Labor Statistics.</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 text-xs">
+                    {Object.entries(CPI_ANNUAL_AVG)
+                      .sort((a, b) => Number(a[0]) - Number(b[0]))
+                      .map(([year, cpi]) => (
+                        <div key={year} className="text-gray-600">{year}: {cpi.toLocaleString()}</div>
+                      ))}
                   </div>
                 </div>
               </div>

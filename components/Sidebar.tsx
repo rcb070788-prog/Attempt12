@@ -122,25 +122,34 @@ export const Sidebar = ({
 
         {user && (
           <div className="relative mb-8 flex flex-col items-center text-center">
-            <div className="relative">
-              <UserAvatar url={profile?.avatar_url} size="lg" />
-              <label className="absolute bottom-0 right-0 bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center cursor-pointer border-2 border-white shadow-lg">
-                <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-camera'} text-[10px]`}></i>
-                <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploading} />
-              </label>
-            </div>
-            <div className="mt-4">
-              <p className="text-sm font-black text-gray-900 uppercase">{profile?.full_name}</p>
-              <p className="text-[18.66px] font-black uppercase text-gray-400">District {profile?.district} Voter</p>
-              {profile?.virtual_email && (
-                <div className="mt-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 flex items-center gap-2">
-                  <i className="fa-solid fa-envelope text-indigo-600 text-xs"></i>
-                  <p className="text-[18.66px] font-black uppercase text-indigo-600 truncate max-w-[200px]">
-                    {profile.virtual_email}
-                  </p>
+            {profile ? (
+              <>
+                <div className="relative">
+                  <UserAvatar url={profile.avatar_url} size="lg" />
+                  <label className="absolute bottom-0 right-0 bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center cursor-pointer border-2 border-white shadow-lg">
+                    <i className={`fa-solid ${isUploading ? 'fa-spinner animate-spin' : 'fa-camera'} text-[10px]`}></i>
+                    <input type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} disabled={isUploading} />
+                  </label>
                 </div>
-              )}
-            </div>
+                <div className="mt-4">
+                  <p className="text-sm font-black text-gray-900 uppercase">{profile.full_name}</p>
+                  <p className="text-[18.66px] font-black uppercase text-gray-400">District {profile.district} Voter</p>
+                  {profile.virtual_email && (
+                    <div className="mt-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-100 flex items-center justify-center gap-2">
+                      <i className="fa-solid fa-envelope text-indigo-600 text-xs"></i>
+                      <p className="text-[18.66px] font-black uppercase text-indigo-600 truncate max-w-[200px]">
+                        {profile.virtual_email}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-4">
+                <i className="fa-solid fa-spinner animate-spin text-3xl text-indigo-500" aria-hidden />
+                <p className="text-sm font-black uppercase text-gray-500">Verifying your account...</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -177,7 +186,7 @@ export const Sidebar = ({
             ) : (
               <>
                 <button onClick={() => { setCurrentPage('login'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-green-600 hover:text-green-700 transition-colors">Login</button>
-                <button onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-indigo-600 hover:text-indigo-700 transition-colors">Register</button>
+                <button onClick={() => { setCurrentPage('signup'); setIsMenuOpen(false); }} className="text-xl font-black uppercase block text-indigo-600 hover:text-indigo-700 transition-colors">Sign Up</button>
               </>
             )}
           </div>

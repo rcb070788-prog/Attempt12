@@ -11,6 +11,7 @@ interface PollsPageProps {
   setSelectedPoll: (poll: any) => void;
   supabase: any;
   showToast: (msg: string, type?: 'success' | 'error') => void;
+  showSignupRequiredModal: (message: string) => void;
   setCurrentPage: (page: string) => void;
   setShowPollLoginModal: (show: boolean) => void;
 }
@@ -24,6 +25,7 @@ export default function PollsPage({
   setSelectedPoll,
   supabase,
   showToast,
+  showSignupRequiredModal,
   setCurrentPage,
   setShowPollLoginModal
 }: PollsPageProps) {
@@ -37,6 +39,7 @@ export default function PollsPage({
 
   const handleReaction = async (commentId: string, type: 'like' | 'dislike') => {
     if (!user || !supabase) return setCurrentPage('login');
+    if (user && !profile) return showSignupRequiredModal('To react to comments, you must first sign up. To sign up click here.');
     const { error } = await supabase
       .from('comment_reactions')
       .upsert({ comment_id: commentId, user_id: user.id, reaction_type: type }, { onConflict: 'comment_id,user_id' });
@@ -50,7 +53,7 @@ export default function PollsPage({
 
   const confirmVote = async () => {
     if (!pendingVote || !supabase || !user) return;
-    
+    if (user && !profile) return showSignupRequiredModal('To participate in this poll, you must first sign up. To sign up click here.');
     const cleanVotePayload = {
       poll_id: pendingVote.pollId,
       option_id: pendingVote.optionId,
@@ -99,6 +102,7 @@ export default function PollsPage({
             {replyTo === comment.id && (
               <form onSubmit={async (e) => { 
                 e.preventDefault(); 
+                if (user && !profile) return showSignupRequiredModal('To make a comment, you must first sign up. To sign up click here.');
                 const fd = new FormData(e.currentTarget); 
                 await supabase?.from('poll_comments').insert({ poll_id: pollId, user_id: user.id, content: fd.get('content'), parent_id: comment.id }); 
                 setReplyTo(null); 
@@ -285,6 +289,7 @@ export default function PollsPage({
                           setShowPollLoginModal(true);
                           return;
                         }
+                        if (user && !profile) return showSignupRequiredModal('To participate in this poll, you must first sign up. To sign up click here.');
                         const userExistingVote = selectedPoll.poll_votes?.find((v: any) => v.user_id === user?.id);
                         setPendingVote({ 
                           pollId: selectedPoll.id, 
@@ -332,6 +337,7 @@ export default function PollsPage({
               {user ? (
                  <form onSubmit={async (e) => { 
                    e.preventDefault(); 
+                   if (user && !profile) return showSignupRequiredModal('To make a comment, you must first sign up. To sign up click here.');
                    const fd = new FormData(e.currentTarget); 
                    await supabase?.from('poll_comments').insert({ poll_id: selectedPoll.id, user_id: user.id, content: fd.get('content') }); 
                    (e.target as HTMLFormElement).reset(); 

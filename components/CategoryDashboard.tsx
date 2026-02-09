@@ -1226,7 +1226,6 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                       if (active && payload && payload.length && solvencyDisplayedData.length && solvencyBaselineRow) {
                         const data = payload[0].payload;
                         const baselineRow = solvencyBaselineRow;
-                        const latestRow = solvencyLatestRow;
                         const useEntity = selectedParents.length === 1;
                         const keyBase = useEntity ? selectedParents[0].replace(/\s+/g, '') : '';
                         const netWorthVal = useEntity ? data[`${keyBase}NetWorth`] : (chartLevel === 3 ? data.subNetWorth : data.totalNetWorth);
@@ -1238,9 +1237,9 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                         const nwValueKey = useEntity ? (solvencyTrendToggles.netWorthInf ? `${keyBase}NetWorthReal` : `${keyBase}NetWorth`) : (solvencyTrendToggles.netWorthInf ? 'totalNetWorthReal' : (chartLevel === 3 ? 'subNetWorth' : 'totalNetWorth'));
                         const aValueKey = useEntity ? (solvencyTrendToggles.assetsInf ? `${keyBase}AssetsReal` : `${keyBase}Assets`) : (solvencyTrendToggles.assetsInf ? 'totalAssetsReal' : (chartLevel === 3 ? 'subAssets' : 'totalAssets'));
                         const lValueKey = useEntity ? (solvencyTrendToggles.liabsInf ? `${keyBase}LiabsReal` : `${keyBase}Liabs`) : (solvencyTrendToggles.liabsInf ? 'totalLiabsReal' : (chartLevel === 3 ? 'subLiabs' : 'totalLiabs'));
-                        const netWorthPct = solvencyDisplayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[nwValueKey]), Number(latestRow[nwValueKey])) : null;
-                        const assetsPct = solvencyDisplayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[aValueKey]), Number(latestRow[aValueKey])) : null;
-                        const liabsPct = solvencyDisplayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[lValueKey]), Number(latestRow[lValueKey])) : null;
+                        const netWorthPct = solvencyDisplayedData.length >= 2 ? pctChangeOverRange(Number(baselineRow[nwValueKey]), Number(data[nwValueKey])) : null;
+                        const assetsPct = solvencyDisplayedData.length >= 2 ? pctChangeOverRange(Number(baselineRow[aValueKey]), Number(data[aValueKey])) : null;
+                        const liabsPct = solvencyDisplayedData.length >= 2 ? pctChangeOverRange(Number(baselineRow[lValueKey]), Number(data[lValueKey])) : null;
                         const nwFmt = formatPctChange(netWorthPct);
                         const aFmt = formatPctChange(assetsPct);
                         const lFmt = formatPctChange(liabsPct);

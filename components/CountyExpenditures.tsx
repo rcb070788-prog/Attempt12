@@ -10,10 +10,12 @@ import {
 } from 'recharts';
 import { useExhibitBExpenseLines, useExhibitBExpenseTotals } from '../src/lib/useExhibitBLines';
 import { getExpenseTrendByYearFromTotals } from '../src/lib/expenseTransforms';
+import { CPI_ANNUAL_AVG } from '../constants';
 import {
   formatCurrency,
   pctChangeOverRange,
   formatPctChange,
+  formatVsInflationShort,
   addRealToExpenseYearPoints,
   recomputeExpenseTrendsForSlice,
   getValidAndBeyondStartYears,
@@ -90,6 +92,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   const [dragBand, setDragBand] = useState<{ startX: number; endX: number } | null>(null);
   const rangeDragStartX = useRef<number | null>(null);
   const rangeDragCurrentX = useRef<number | null>(null);
+  const lastDragEndTime = useRef<number>(0);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerDragOffset, setDrawerDragOffset] = useState(0);
   const [isDraggingDrawer, setIsDraggingDrawer] = useState(false);
@@ -111,6 +114,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
   const [andBeyondStartYear, setAndBeyondStartYear] = useState<number | null>(null);
   const [andBeyondYearsForward, setAndBeyondYearsForward] = useState(10);
   const [andBeyondOn, setAndBeyondOn] = useState(false);
+  const [showMathOpen, setShowMathOpen] = useState(false);
 
   useEffect(() => {
     const handler = () => {
@@ -279,6 +283,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
         const maxY = Math.max(y1, y2);
         if (maxY >= minY) {
           ignoreNextOverlayClick.current = true;
+          lastDragEndTime.current = Date.now();
           setPendingYearRange([minY, maxY]);
         }
       }
@@ -583,16 +588,23 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
     const nominal = extendTrendForward(chartData, dataKey, andBeyondStartYearClamped, andBeyondYearsForward);
     const showReal = toggles[toggleInflationKey[selectedEntity]];
     const real = showReal ? extendTrendForward(chartData, realKey, andBeyondStartYearClamped, andBeyondYearsForward) : null;
+    const lastRow = chartData[chartData.length - 1] as any;
+    const chartMaxYear = lastRow && Number.isFinite(Number(lastRow.year)) ? Number(lastRow.year) : 0;
+    const actualNominalLast = lastRow != null && Number.isFinite(Number(lastRow[dataKey])) ? Number(lastRow[dataKey]) : nominal.lastValue;
+    const actualRealLast = showReal && real && lastRow != null && Number.isFinite(Number(lastRow[realKey])) ? Number(lastRow[realKey]) : (showReal && real ? real.lastValue : undefined);
     const base = chartData.map((d, i) => {
       if (i !== chartData.length - 1) return d;
       const out = { ...d } as any;
-      out[AND_BEYOND_NOMINAL_KEY] = nominal.lastValue;
-      if (showReal && real) out[AND_BEYOND_REAL_KEY] = real.lastValue;
+      out[AND_BEYOND_NOMINAL_KEY] = actualNominalLast;
+      if (showReal && real) out[AND_BEYOND_REAL_KEY] = actualRealLast ?? real.lastValue;
       return out;
     });
     const combined = nominal.extendedPoints.map((p, i) => {
-      const row: any = { year: (p as any).year, [AND_BEYOND_NOMINAL_KEY]: (p as any)[trendKey] };
-      if (showReal && real && real.extendedPoints[i]) row[AND_BEYOND_REAL_KEY] = (real.extendedPoints[i] as any)[realTrendKey];
+      const year = Number((p as any).year);
+      const row: any = { year, [AND_BEYOND_NOMINAL_KEY]: actualNominalLast + (year - chartMaxYear) * nominal.slopePerYear };
+      if (showReal && real && real.extendedPoints[i]) {
+        row[AND_BEYOND_REAL_KEY] = (actualRealLast ?? real.lastValue) + (year - chartMaxYear) * real.slopePerYear;
+      }
       return row;
     });
     return [...base, ...combined];
@@ -763,7 +775,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                           <option key={n} value={n}>{n}</option>
                         ))}
                       </select>
-                      <button type="button" onClick={() => { setAndBeyondOn(true); setAndBeyondOpen(false); }} className="mt-2 w-full rounded bg-indigo-600 py-1.5 text-[10px] font-black uppercase text-white hover:bg-indigo-700">Apply</button>
+                      <button type="button" onClick={() => { setAndBeyondOn(true); setAndBeyondOpen(false); setToggles((prev) => ({ ...prev, [toggleTrendKey[selectedEntity]]: true, [toggleInflationKey[selectedEntity]]: true })); }} className="mt-2 w-full rounded bg-indigo-600 py-1.5 text-[10px] font-black uppercase text-white hover:bg-indigo-700">Apply</button>
                       <button type="button" onClick={() => { setAndBeyondOn(false); setAndBeyondOpen(false); }} className="mt-2 w-full rounded border border-gray-300 bg-white py-1.5 text-[10px] font-black uppercase text-gray-600 hover:bg-gray-50">Turn off</button>
                     </div>
                   </>
@@ -883,7 +895,16 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
           {selectedYearRange && (
             <button
               type="button"
-              onClick={() => setSelectedYearRange(null)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedYearRange(null);
+                setPendingYearRange(null);
+                setDragBand(null);
+                rangeDragStartX.current = null;
+                rangeDragCurrentX.current = null;
+                edgeBeingDragged.current = null;
+              }}
               className="absolute top-2 right-2 z-10 px-3 py-1.5 bg-indigo-600 text-white text-xs font-black uppercase rounded-lg hover:bg-indigo-700"
             >
               Back
@@ -910,6 +931,9 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                 className="absolute inset-0 z-[5]"
                 style={{ pointerEvents: 'auto' }}
                 onClick={() => {
+                  if (Date.now() - lastDragEndTime.current < 600) {
+                    return;
+                  }
                   if (ignoreNextOverlayClick.current) {
                     ignoreNextOverlayClick.current = false;
                     return;
@@ -1027,15 +1051,17 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                             const hasReal = Number.isFinite(realVal);
                             if (!hasNominal && !hasReal) return null;
                             const pctNominal =
-                              toggles[trendKey] && latestRow && hasNominal
-                                ? pctChangeOverRange(Number(baselineRow[expenseToggleDataKeys[key]]), Number(latestRow[expenseToggleDataKeys[key]]))
+                              toggles[trendKey] && hasNominal
+                                ? pctChangeOverRange(Number(baselineRow[expenseToggleDataKeys[key]]), Number(data[expenseToggleDataKeys[key]]))
                                 : null;
                             const pctReal =
-                              toggles[trendKey] && latestRow && hasReal
-                                ? pctChangeOverRange(Number(baselineRow[expenseToggleRealKeys[key]]), Number(latestRow[expenseToggleRealKeys[key]]))
+                              toggles[trendKey] && hasReal
+                                ? pctChangeOverRange(Number(baselineRow[expenseToggleRealKeys[key]]), Number(data[expenseToggleRealKeys[key]]))
                                 : null;
                             const fmtNominal = formatPctChange(pctNominal);
                             const fmtReal = formatPctChange(pctReal);
+                            const fmtVsInflation = formatVsInflationShort(pctNominal, pctReal);
+                            const showVsInflation = toggles[trendKey] && pctNominal !== null && pctReal !== null;
                             return (
                               <div key={key} className="flex flex-col gap-0.5">
                                 {hasNominal && (
@@ -1058,7 +1084,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                                     </div>
                                     {toggles[trendKey] && pctNominal !== null && (
                                       <div className="flex justify-end">
-                                        <span className={`text-[10px] font-black ${fmtNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                        <span className={`text-sm font-black ${fmtNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>
                                           {fmtNominal.text}
                                         </span>
                                       </div>
@@ -1070,7 +1096,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                                     <div className="flex justify-between items-center gap-6">
                                       <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
                                         <span className="inline-block w-2 h-2 rounded-full shrink-0 border border-current" style={{ backgroundColor: expenseToggleColors[key], opacity: 0.85 }} />
-                                        {expenseToggleLabels[key]} (inflation adj.)
+                                        {key === 'total' ? 'Total (inflated dollars)' : `${expenseToggleLabels[key]} (inflation adj.)`}
                                       </span>
                                       <span className="text-sm font-black" style={{ color: expenseToggleColors[key], opacity: 0.9 }}>
                                         {formatCurrency(realVal)}
@@ -1078,8 +1104,15 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                                     </div>
                                     {toggles[trendKey] && pctReal !== null && (
                                       <div className="flex justify-end">
-                                        <span className={`text-[10px] font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                          {fmtReal.text} (real)
+                                        <span className={`text-sm font-black ${fmtReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>
+                                          {key === 'total' ? fmtReal.text : `% Change (real): ${fmtReal.text}`}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {showVsInflation && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-sm font-black ${fmtVsInflation.isPositive ? 'text-green-600' : 'text-red-600'}`} title="Trend % − Inflation %">
+                                          {fmtVsInflation.text}
                                         </span>
                                       </div>
                                     )}
@@ -1088,6 +1121,62 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                               </div>
                             );
                           })}
+                          {Number.isFinite(Number(data[AND_BEYOND_NOMINAL_KEY])) && (() => {
+                            const chartMaxYear = chartData.length ? Number((chartData[chartData.length - 1] as any).year) : 0;
+                            const firstProjectedRow = chartDataWithExtension.find((d: any) => Number(d.year) === chartMaxYear + 1) as any;
+                            const isProjectedYear = Number(data.year) > chartMaxYear;
+                            const hasAndBeyondPct = isProjectedYear && firstProjectedRow && Number.isFinite(Number(firstProjectedRow[AND_BEYOND_NOMINAL_KEY]));
+                            const andBeyondPctNominal = hasAndBeyondPct ? pctChangeOverRange(Number(firstProjectedRow[AND_BEYOND_NOMINAL_KEY]), Number(data[AND_BEYOND_NOMINAL_KEY])) : null;
+                            const andBeyondPctReal = hasAndBeyondPct && Number.isFinite(Number(firstProjectedRow[AND_BEYOND_REAL_KEY])) && Number.isFinite(Number(data[AND_BEYOND_REAL_KEY]))
+                              ? pctChangeOverRange(Number(firstProjectedRow[AND_BEYOND_REAL_KEY]), Number(data[AND_BEYOND_REAL_KEY])) : null;
+                            const fmtAndBeyondNominal = formatPctChange(andBeyondPctNominal);
+                            const fmtAndBeyondReal = formatPctChange(andBeyondPctReal);
+                            const fmtAndBeyondVsInfl = formatVsInflationShort(andBeyondPctNominal, andBeyondPctReal);
+                            const showAndBeyondVsInfl = andBeyondPctNominal !== null && andBeyondPctReal !== null;
+                            return (
+                              <div className="space-y-1 pt-1 border-t border-gray-100">
+                                <div className="flex justify-between items-center gap-6">
+                                  <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                    <span className="inline-block w-2 h-2 rounded-full shrink-0 bg-gray-500" />
+                                    Trend projection
+                                  </span>
+                                  <span className="text-sm font-black text-gray-700">
+                                    {formatCurrency(Number(data[AND_BEYOND_NOMINAL_KEY]))}
+                                  </span>
+                                </div>
+                                {Number.isFinite(Number(data[AND_BEYOND_REAL_KEY])) && (
+                                  <div className="flex justify-between items-center gap-6">
+                                    <span className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                                      <span className="inline-block w-2 h-2 rounded-full shrink-0 border border-gray-500 bg-gray-400" />
+                                      Trend projection (inflation adj.)
+                                    </span>
+                                    <span className="text-sm font-black text-gray-700">
+                                      {formatCurrency(Number(data[AND_BEYOND_REAL_KEY]))}
+                                    </span>
+                                  </div>
+                                )}
+                                {hasAndBeyondPct && (
+                                  <>
+                                    <div className="flex justify-end">
+                                      <span className={`text-sm font-black ${fmtAndBeyondNominal.isPositive ? 'text-green-600' : 'text-red-600'}`}>% Change (trend): {fmtAndBeyondNominal.text}</span>
+                                    </div>
+                                    {andBeyondPctReal !== null && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-sm font-black ${fmtAndBeyondReal.isPositive ? 'text-green-600' : 'text-red-600'}`}>% Change (real, trend): {fmtAndBeyondReal.text}</span>
+                                      </div>
+                                    )}
+                                    {showAndBeyondVsInfl && (
+                                      <div className="flex justify-end">
+                                        <span className={`text-sm font-black ${fmtAndBeyondVsInfl.isPositive ? 'text-green-600' : 'text-red-600'}`} title="Trend % − Inflation %">
+                                          {fmtAndBeyondVsInfl.text}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
                         </div>
                       </div>
                     );
@@ -1219,7 +1308,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                       type="monotone"
                       dataKey={AND_BEYOND_REAL_KEY}
                       name="Trend projection (inflation adj.)"
-                      stroke={INFLATION_LINE_COLOR}
+                      stroke="#6b7280"
                       strokeWidth={2}
                       strokeDasharray="5 5"
                       dot={false}
@@ -1276,7 +1365,14 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
             <div className="min-h-0 overflow-hidden">
               <div className={`gap-y-8 items-center px-4 pt-6 ${fullScreen ? 'pb-2' : 'pb-4'}`}>
                 <div className="grid grid-cols-[200px_1fr_1fr_1fr_1fr_1fr] gap-y-8 items-center">
-                  <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest">Toggle Comparison</div>
+                  <button
+                    type="button"
+                    onClick={() => setShowMathOpen(!showMathOpen)}
+                    className="text-[11px] font-black uppercase text-indigo-600 hover:text-indigo-700 tracking-widest flex items-center gap-2"
+                  >
+                    {showMathOpen ? <i className="fa-solid fa-chevron-up" /> : <i className="fa-solid fa-chevron-down" />}
+                    Show Me the Math
+                  </button>
                   {expenseToggleKeys.map((key) => (
                     <div key={key} className="text-center">
                       <button
@@ -1404,11 +1500,18 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
               <button onClick={() => setIsDrawerOpen(false)} className="self-end text-gray-300 hover:text-red-500 mb-8 transition-colors">
                 <i className="fa-solid fa-xmark text-2xl"></i>
               </button>
-              <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Chart Controls</h3>
+                  <h3 className="text-2xl font-black uppercase text-gray-900 mb-6">Chart Controls</h3>
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="space-y-8">
                   <div>
-                    <div className="text-[11px] font-black uppercase text-gray-400 tracking-widest mb-4">Toggle Comparison</div>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); setShowMathOpen(!showMathOpen); }}
+                      className="text-[11px] font-black uppercase text-indigo-600 hover:text-indigo-700 tracking-widest flex items-center gap-2 mb-4"
+                    >
+                      {showMathOpen ? <i className="fa-solid fa-chevron-up" /> : <i className="fa-solid fa-chevron-down" />}
+                      Show Me the Math
+                    </button>
                     <div className="grid grid-cols-1 gap-6">
                       {expenseToggleKeys.map((key) => (
                         <div key={key} className="text-center">
@@ -1481,6 +1584,72 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Show Me the Math modal */}
+        {showMathOpen && (
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[300] flex items-center justify-center p-4"
+            onClick={() => setShowMathOpen(false)}
+          >
+            <div
+              className="bg-white w-full max-w-2xl min-w-0 md:min-w-[640px] max-h-[85vh] rounded-[2rem] shadow-2xl overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="show-math-title"
+            >
+              <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 shrink-0">
+                <h2 id="show-math-title" className="text-lg font-black uppercase text-gray-900">Show Me the Math</h2>
+                <button
+                  type="button"
+                  onClick={() => setShowMathOpen(false)}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  aria-label="Close"
+                >
+                  <i className="fa-solid fa-circle-xmark text-2xl" />
+                </button>
+              </div>
+              <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-6">
+                <table className="w-full text-left text-sm border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="py-2 pr-4 text-[11px] font-black uppercase text-gray-500 tracking-widest">Metric</th>
+                      <th className="py-2 pr-4 text-[11px] font-black uppercase text-gray-500 tracking-widest">Equation</th>
+                      <th className="py-2 text-[11px] font-black uppercase text-gray-500 tracking-widest">Meaning</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-3 pr-4 font-bold text-indigo-600">Trend</td>
+                      <td className="py-3 pr-4 text-gray-700">(Latest total − Base year value) ÷ Base year value × 100</td>
+                      <td className="py-3 text-gray-600">Spending went up X% from the base year to the latest year. We&apos;re measuring in the dollars of each year, so that includes inflation.</td>
+                    </tr>
+                    <tr className="border-b border-gray-100">
+                      <td className="py-3 pr-4 font-bold text-indigo-600">Inflation</td>
+                      <td className="py-3 pr-4 text-gray-700">(Latest inflation adjusted − Base year value) ÷ Base year value × 100</td>
+                      <td className="py-3 text-gray-600">The orange line shows what happens if spending only kept pace with inflation. The X% is how much prices increased from the base year to the latest year.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-3 pr-4 font-bold text-indigo-600">Vs. inflation</td>
+                      <td className="py-3 pr-4 text-gray-700">Trend % − Inflation %</td>
+                      <td className="py-3 text-gray-600">Spending grew X percentage points more than inflation. So of the total growth, about Y% was inflation; the extra X points is how much spending outpaced inflation.</td>
+                    </tr>
+                  </tbody>
+                </table>
+                <div>
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">CPI-U annual averages (1982–84=100). Source: U.S. Bureau of Labor Statistics.</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 text-xs">
+                    {Object.entries(CPI_ANNUAL_AVG)
+                      .sort((a, b) => Number(a[0]) - Number(b[0]))
+                      .map(([year, cpi]) => (
+                        <div key={year} className="text-gray-600">{year}: {cpi.toLocaleString()}</div>
+                      ))}
                   </div>
                 </div>
               </div>

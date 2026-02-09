@@ -473,9 +473,9 @@ export const NetWorthChart: React.FC<NetWorthChartProps> = ({
                   const netWorthValueKey = toggles.netWorthInf ? 'totalNetWorthReal' : 'totalNetWorth';
                   const assetsValueKey = toggles.assetsInf ? 'totalAssetsReal' : 'totalAssets';
                   const liabsValueKey = toggles.liabsInf ? 'totalLiabsReal' : 'totalLiabs';
-                  const netWorthPct = displayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[netWorthValueKey]), Number(latestRow[netWorthValueKey])) : null;
-                  const assetsPct = displayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[assetsValueKey]), Number(latestRow[assetsValueKey])) : null;
-                  const liabsPct = displayedData.length >= 2 && latestRow ? pctChangeOverRange(Number(baselineRow[liabsValueKey]), Number(latestRow[liabsValueKey])) : null;
+                  const netWorthPct = displayedData.length >= 2 ? pctChangeOverRange(Number(baselineRow[netWorthValueKey]), Number(data[netWorthValueKey])) : null;
+                  const assetsPct = displayedData.length >= 2 ? pctChangeOverRange(Number(baselineRow[assetsValueKey]), Number(data[assetsValueKey])) : null;
+                  const liabsPct = displayedData.length >= 2 ? pctChangeOverRange(Number(baselineRow[liabsValueKey]), Number(data[liabsValueKey])) : null;
                   const nwFmt = formatPctChange(netWorthPct);
                   const aFmt = formatPctChange(assetsPct);
                   const lFmt = formatPctChange(liabsPct);

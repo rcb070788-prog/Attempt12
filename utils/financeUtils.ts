@@ -60,6 +60,7 @@ export const formatPctChange = (pct: number | null): { text: string; isPositive:
  * % change from earliest to latest in range. Handles zero-crossing so sign matches direction:
  * line up → positive %, line down → negative %. Uses symmetric (midpoint) formula when
  * earliest is 0 or when earliest and latest have opposite signs.
+ * Uses |earliest| in the denominator so negative values (e.g. refund years) don't flip the result.
  */
 export const pctChangeOverRange = (earliestValue: number, latestValue: number): number | null => {
   const earliest = Number(earliestValue);
@@ -67,11 +68,46 @@ export const pctChangeOverRange = (earliestValue: number, latestValue: number): 
   if (!Number.isFinite(earliest) || !Number.isFinite(latest)) return null;
   const sameSign = (earliest >= 0 && latest >= 0) || (earliest <= 0 && latest <= 0);
   if (earliest !== 0 && sameSign) {
-    return ((latest - earliest) / earliest) * 100;
+    return ((latest - earliest) / Math.abs(earliest)) * 100;
   }
   const midpoint = (Math.abs(earliest) + Math.abs(latest)) / 2;
   if (midpoint === 0) return null;
   return ((latest - earliest) / midpoint) * 100;
+};
+
+/** Format "vs. inflation" for tooltip: "+67.6 pts (128.2% − 60.6%)"; isPositive = spending outpaced inflation. */
+export const formatVsInflation = (
+  pctNominal: number | null,
+  pctInflation: number | null
+): { text: string; isPositive: boolean } => {
+  if (pctNominal == null || pctInflation == null || !Number.isFinite(pctNominal) || !Number.isFinite(pctInflation)) {
+    return { text: '—', isPositive: false };
+  }
+  const vsPts = pctNominal - pctInflation;
+  const isPositive = vsPts >= 0;
+  const prefix = isPositive ? '+' : '';
+  return {
+    text: `${prefix}${vsPts.toFixed(1)} pts (${pctNominal.toFixed(1)}% − ${pctInflation.toFixed(1)}%)`,
+    isPositive,
+  };
+};
+
+/** Short "vs. inflation" for tooltip: "+67.6% more than inflation" / "-12.3% less than inflation". */
+export const formatVsInflationShort = (
+  pctNominal: number | null,
+  pctInflation: number | null
+): { text: string; isPositive: boolean } => {
+  if (pctNominal == null || pctInflation == null || !Number.isFinite(pctNominal) || !Number.isFinite(pctInflation)) {
+    return { text: '—', isPositive: false };
+  }
+  const vsPts = pctNominal - pctInflation;
+  const isPositive = vsPts >= 0;
+  const prefix = isPositive ? '+' : '';
+  const direction = isPositive ? 'more' : 'less';
+  return {
+    text: `${prefix}${vsPts.toFixed(1)}% ${direction} than inflation`,
+    isPositive,
+  };
 };
 
 /** Single source of truth: recompute Trend and RealTrend on a slice (filtered data). */

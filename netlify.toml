@@ -91,13 +91,6 @@
   to = "/node_modules/:splat"
   status = 200
 
-# Proxy API path to serverless function (/.netlify in source is not allowed)
-[[redirects]]
-  from = "/api/send-admin-email"
-  to = "/.netlify/functions/send-admin-email"
-  status = 200
-  force = true
-
 # General SPA redirect (keeps the React app working on refresh)
 # This MUST stay at the bottom
 [[redirects]]

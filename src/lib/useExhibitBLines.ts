@@ -6,7 +6,7 @@ import {
   fetchExhibitBRevenueTotals,
   fetchExhibitBRevenueLines,
 } from './api';
-import type { NormalizedLine, NormalizedTotalRow } from './types';
+import type { NormalizedLine, NormalizedTotalRow } from '../types';
 
 /**
  * Hook that fetches Exhibit B data from tables only (exhibit_b_lines + source_documents).

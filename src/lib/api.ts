@@ -1,4 +1,4 @@
-import { supabase } from '../../supabaseClient';
+import { supabase } from '../supabaseClient';
 import type {
   NormalizedLine,
   ExhibitBLineRow,
@@ -7,7 +7,7 @@ import type {
   NormalizedTotalRow,
   ExhibitBRevenueRow,
   ExhibitBExpenseRow,
-} from './types';
+} from '../types';
 
 const PAGE_SIZE = 1000;
 

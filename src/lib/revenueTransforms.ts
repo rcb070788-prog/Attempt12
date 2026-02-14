@@ -1,4 +1,4 @@
-import type { NormalizedLine, NormalizedTotalRow } from './types';
+import type { NormalizedLine, NormalizedTotalRow } from '../types';
 import { parseHierarchyPath } from './paths';
 
 const TAXES_PREFIX = 'General Revenues > Taxes >';

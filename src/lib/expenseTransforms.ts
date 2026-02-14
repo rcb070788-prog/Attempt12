@@ -1,4 +1,4 @@
-import type { NormalizedLine, NormalizedTotalRow } from './types';
+import type { NormalizedLine, NormalizedTotalRow } from '../types';
 
 /** County expense entities: governmental + School Dept + ECD. Match exhibit_b_lines.entity_norm. In the DB, ECD rows use entity_norm='component_unit'; total_primary_government/component_unit total rows use row_kind='total' and are excluded by row_kind filter. */
 export const COUNTY_EXPENSE_ENTITY_NORMS = [

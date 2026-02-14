@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
+const SITE_URL = Deno.env.get('SITE_URL') || 'https://concernedcitizensofmc.com'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,6 +24,11 @@ serve(async (req) => {
       ? `Your voter verification was successful. You now have full access to vote in polls and message officials.`
       : `We were unable to verify your voter registration with the details provided. Please contact an admin if you believe this is an error.`;
 
+    const signupLink = `${SITE_URL}/#signup`;
+    const signupCtaHtml = isConfirmed
+      ? `<p style="margin-top: 16px;"><a href="${signupLink}" style="display: inline-block; padding: 12px 24px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px; font-weight: bold;">Sign up now to get started</a></p>`
+      : '';
+
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -38,6 +44,7 @@ serve(async (req) => {
           <div style="font-family: sans-serif; padding: 20px;">
             <h2 style="color: #4f46e5;">Hello ${fullName},</h2>
             <p style="font-size: 16px; color: #374151;">${message}</p>
+            ${signupCtaHtml}
             <hr style="border: 1px solid #e5e7eb; margin: 20px 0;" />
             <p style="font-size: 12px; color: #9ca3af; text-transform: uppercase;">© Moore County Transparency Portal</p>
           </div>

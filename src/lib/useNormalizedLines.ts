@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { fetchNormalizedLines } from './api';
-import type { NormalizedLine } from './types';
+import type { NormalizedLine } from '../types';
 
 export function useNormalizedLines(): {
   data: NormalizedLine[];

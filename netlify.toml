@@ -3,6 +3,11 @@
   publish = "dist"
   functions = "netlify/functions"
 
+[dev]
+  command = "npm run dev"
+  targetPort = 5173
+  port = 8888
+
 [build.environment]
   NODE_VERSION = "20"
   VITE_SUPABASE_URL = "https://hovdckksdjofgghaxtif.supabase.co"
@@ -65,6 +70,25 @@
 [[redirects]]
   from = "/manifest.json"
   to = "/manifest.json"
+  status = 200
+
+# Pass through Vite dev server paths (must be before SPA catch-all)
+# Without these, Netlify dev rewrites /src/* and /@vite/* to index.html, causing MIME type errors
+[[redirects]]
+  from = "/src/*"
+  to = "/src/:splat"
+  status = 200
+[[redirects]]
+  from = "/@vite/*"
+  to = "/@vite/:splat"
+  status = 200
+[[redirects]]
+  from = "/@id/*"
+  to = "/@id/:splat"
+  status = 200
+[[redirects]]
+  from = "/node_modules/*"
+  to = "/node_modules/:splat"
   status = 200
 
 # General SPA redirect (keeps the React app working on refresh)

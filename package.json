@@ -10,6 +10,7 @@
     "icons": "node scripts/generate-pwa-icons.mjs public/icon-source.png"
   },
   "dependencies": {
+    "@netlify/functions": "^5.1.2",
     "@supabase/supabase-js": "^2.39.0",
     "papaparse": "^5.5.3",
     "react": "^19.0.0",
@@ -17,11 +18,13 @@
     "recharts": "^3.6.0"
   },
   "devDependencies": {
+    "@netlify/vite-plugin": "^2.9.0",
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.24",
+    "netlify-cli": "^23.15.1",
     "postcss": "^8.5.6",
     "sharp": "^0.34.5",
     "tailwindcss": "^3.4.19",

@@ -24,6 +24,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
 
   const virtualCount = (allUsers || []).filter(u => u.virtual_email && u.virtual_email.includes('@')).length;
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
+  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
   const handleBroadcastSend = async () => {
     if (!broadcastSubject.trim() || !broadcastContent.trim()) {
@@ -45,6 +46,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
+          apikey: supabaseAnonKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -88,6 +90,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
+          apikey: supabaseAnonKey,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({

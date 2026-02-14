@@ -23,16 +23,10 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
   const [oneOffSending, setOneOffSending] = useState(false);
 
   const virtualCount = (allUsers || []).filter(u => u.virtual_email && u.virtual_email.includes('@')).length;
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
   const handleBroadcastSend = async () => {
     if (!broadcastSubject.trim() || !broadcastContent.trim()) {
       showToast('Subject and content are required', 'error');
-      return;
-    }
-    if (!supabaseUrl) {
-      showToast('Supabase URL not configured', 'error');
       return;
     }
     setBroadcastSending(true);
@@ -42,23 +36,16 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const res = await fetch(`${supabaseUrl}/functions/v1/send-admin-broadcast`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: supabaseAnonKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('send-admin-broadcast', {
+        body: {
           mode: broadcastMode,
           subject: broadcastSubject.trim(),
           content: broadcastContent.trim(),
-        }),
+        },
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to send broadcast');
-      if (result?.error) throw new Error(result.error);
-      showToast(`Broadcast sent to ${result?.sent ?? 0} recipients`);
+      if (error) throw new Error(error.message || 'Failed to send broadcast');
+      if (data?.error) throw new Error(data.error);
+      showToast(`Broadcast sent to ${data?.sent ?? 0} recipients`);
       setBroadcastConfirmOpen(false);
       setBroadcastSubject('');
       setBroadcastContent('');
@@ -75,10 +62,6 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
       showToast('Recipients, subject, and content are required', 'error');
       return;
     }
-    if (!supabaseUrl) {
-      showToast('Supabase URL not configured', 'error');
-      return;
-    }
     setOneOffSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -86,23 +69,16 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const res = await fetch(`${supabaseUrl}/functions/v1/send-admin-one-off`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          apikey: supabaseAnonKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('send-admin-one-off', {
+        body: {
           recipients,
           subject: oneOffSubject.trim(),
           content: oneOffContent.trim(),
-        }),
+        },
       });
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Failed to send email');
-      if (result?.error) throw new Error(result.error);
-      showToast(`Email sent to ${result?.sent ?? 0} recipient(s)`);
+      if (error) throw new Error(error.message || 'Failed to send email');
+      if (data?.error) throw new Error(data.error);
+      showToast(`Email sent to ${data?.sent ?? 0} recipient(s)`);
       setOneOffRecipients('');
       setOneOffSubject('');
       setOneOffContent('');

@@ -115,9 +115,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           onToggle={() => setIsAdminSections(prev => ({ ...prev, manageSuggestions: !prev.manageSuggestions }))}
           suggestions={suggestions}
           clearedItems={clearedItems}
+          setClearedItems={setClearedItems}
           toggleClearItem={toggleClearItem}
           handleUpdateSuggestionStatus={handleUpdateSuggestionStatus}
           formatDate={formatDate}
+        />
+
+        <AdminEmailSection
+          isOpen={isAdminSections.adminEmail}
+          onToggle={() => setIsAdminSections(prev => ({ ...prev, adminEmail: !prev.adminEmail }))}
+          allUsers={allUsers}
+          supabase={supabase}
+          showToast={showToast}
         />
 
         <AdminInboxSection
@@ -137,14 +146,6 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           showToast={showToast}
           supabase={supabase}
           fetchAdminMessages={fetchAdminMessages}
-        />
-
-        <AdminEmailSection
-          isOpen={isAdminSections.adminEmail}
-          onToggle={() => setIsAdminSections(prev => ({ ...prev, adminEmail: !prev.adminEmail }))}
-          allUsers={allUsers}
-          supabase={supabase}
-          showToast={showToast}
         />
 
         <ContactInboxSection

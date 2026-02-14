@@ -22,7 +22,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
   const [oneOffContent, setOneOffContent] = useState('');
   const [oneOffSending, setOneOffSending] = useState(false);
 
-  const virtualCount = allUsers.filter(u => u.virtual_email && u.virtual_email.includes('@')).length;
+  const virtualCount = (allUsers || []).filter(u => u.virtual_email && u.virtual_email.includes('@')).length;
 
   const handleBroadcastSend = async () => {
     if (!broadcastSubject.trim() || !broadcastContent.trim()) {

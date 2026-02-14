@@ -1,11 +1,11 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import netlify from '@netlify/vite-plugin';
 
-// Netlify plugin removed: it caused __DEFINES__ and MIME errors on local dev.
-// Production builds still deploy correctly; test admin email on the deployed site.
+// Netlify plugin required for production deploys. For local dev, use npm run dev (may have plugin issues).
 // https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), netlify()],
   define: {
     'process.env.SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL),
     'process.env.SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY),

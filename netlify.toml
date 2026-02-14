@@ -91,6 +91,13 @@
   to = "/node_modules/:splat"
   status = 200
 
+# Ensure function requests reach the serverless runtime (before SPA catch-all)
+[[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+  force = true
+
 # General SPA redirect (keeps the React app working on refresh)
 # This MUST stay at the bottom
 [[redirects]]

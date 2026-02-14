@@ -1,3 +1,4 @@
+// Requires SUPABASE_URL or VITE_SUPABASE_URL in Netlify Site settings > Environment variables
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || '';
 
 export const handler = async (event: any) => {

@@ -23,10 +23,15 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
   const [oneOffSending, setOneOffSending] = useState(false);
 
   const virtualCount = (allUsers || []).filter(u => u.virtual_email && u.virtual_email.includes('@')).length;
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 
   const handleBroadcastSend = async () => {
     if (!broadcastSubject.trim() || !broadcastContent.trim()) {
       showToast('Subject and content are required', 'error');
+      return;
+    }
+    if (!supabaseUrl) {
+      showToast('Supabase URL not configured', 'error');
       return;
     }
     setBroadcastSending(true);
@@ -36,14 +41,13 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const res = await fetch('/.netlify/functions/send-admin-email', {
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-admin-broadcast`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: 'broadcast',
           mode: broadcastMode,
           subject: broadcastSubject.trim(),
           content: broadcastContent.trim(),
@@ -69,6 +73,10 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
       showToast('Recipients, subject, and content are required', 'error');
       return;
     }
+    if (!supabaseUrl) {
+      showToast('Supabase URL not configured', 'error');
+      return;
+    }
     setOneOffSending(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -76,14 +84,13 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const res = await fetch('/.netlify/functions/send-admin-email', {
+      const res = await fetch(`${supabaseUrl}/functions/v1/send-admin-one-off`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          type: 'one-off',
           recipients,
           subject: oneOffSubject.trim(),
           content: oneOffContent.trim(),

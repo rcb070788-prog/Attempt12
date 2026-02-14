@@ -139,7 +139,7 @@ export default function SignupPage({
             <input 
               name="voterId" 
               required 
-              placeholder="VOTER ID # (MANDATORY)" 
+              placeholder="STATE VOTER ID (MANDATORY)" 
               className="w-full p-6 bg-white border-2 border-transparent focus:border-indigo-600 outline-none rounded-2xl font-black text-base md:text-sm shadow-sm transition-all placeholder:text-gray-300" 
             />
           </div>

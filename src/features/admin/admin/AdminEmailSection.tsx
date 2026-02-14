@@ -36,7 +36,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const res = await fetch('/.netlify/functions/send-admin-email', {
+      const res = await fetch('/api/send-admin-email', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -76,7 +76,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const res = await fetch('/.netlify/functions/send-admin-email', {
+      const res = await fetch('/api/send-admin-email', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,

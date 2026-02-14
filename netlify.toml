@@ -91,10 +91,10 @@
   to = "/node_modules/:splat"
   status = 200
 
-# Ensure function requests reach the serverless runtime (before SPA catch-all)
+# Proxy API path to serverless function (/.netlify in source is not allowed)
 [[redirects]]
-  from = "/.netlify/functions/*"
-  to = "/.netlify/functions/:splat"
+  from = "/api/send-admin-email"
+  to = "/.netlify/functions/send-admin-email"
   status = 200
   force = true
 

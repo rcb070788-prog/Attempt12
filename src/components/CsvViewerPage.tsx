@@ -96,12 +96,20 @@ export default function CsvViewerPage({ bucket, path, name }: CsvViewerPageProps
           >
             <i className="fa-solid fa-download"></i> Download
           </a>
-          <a
-            href={typeof window !== 'undefined' ? window.location.origin + (window.location.pathname || '/') : '#'}
+          <button
+            type="button"
+            onClick={() => {
+              window.close();
+              setTimeout(() => {
+                window.location.href = typeof window !== 'undefined'
+                  ? window.location.origin + (window.location.pathname || '/')
+                  : '/';
+              }, 100);
+            }}
             className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-black uppercase text-xs rounded-xl transition-colors"
           >
             Close
-          </a>
+          </button>
         </div>
       </header>
 

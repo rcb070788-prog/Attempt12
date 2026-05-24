@@ -4568,3 +4568,729 @@ Functions/Programs,Fiscal Year,Department Code,Department Description,Line Item 
 76000 Capital Outlay,FY24,76100,Regular Capital Outlay,707,Building Improvements,"144,384.66",,fund141FY24.pdf,33
 76000 Capital Outlay,FY24,76100,Regular Capital Outlay,,Department Total,,"144,384.66",fund141FY24.pdf,33
 ,FY24,,Fund 141 Total,,,,"10,622,419.02",fund141FY24.pdf,
+71000 Instruction,FY25,71100,Regular Instruction Program,116,Teachers,"3,199,368",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,117,Career Ladder Program,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,128,Homebound Teachers,"1,632",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,163,Educational Assistants,"120,518",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,189,Other Salaries & Wages,"31,083",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,195,Certified Substitute Teachers,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,198,Non-Certified Substitute Teachers,"68,275",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,201,Social Security,"197,438",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,204,State Retirement,"233,610",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,207,Medical Insurance,"589,143",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,212,Employer Medicare,"46,388",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,217,Retirement - Hybrid Stabilization,"12,389",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,336,Maintenance And Repair Services-Equipr,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,429,Instructional Supplies And Materials,"30,009",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,449,Textbooks,414,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,471,Software,"53,747",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,499,Other Supplies And Materials,"11,863",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,595,ACT,"13,131",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,599,Other Charges,477,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,722,Regular Instruction Equipment,"128,120",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71100,Regular Instruction Program,,Department Total,,"4,739,605","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,116,Teachers,"43,917",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,201,Social Security,"2,574",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,204,State Retirement,"3,513",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,207,Medical Insurance,"6,404",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,212,Employer Medicare,602,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,217,Retirement - Hybrid Stabilization,439,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71150,Alternative Instruction Program,,Department Total,,"57,449","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY25,71200,Special Education Program,116,Teachers,"358,770",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,128,Homebound Teachers,"2,976",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,163,Educational Assistants,"159,545",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,171,Speech Pathologist,"53,873",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,195,Certified Substitute Teachers,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,198,Non-Certified Substitute Teachers,80,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,201,Social Security,"33,681",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,204,State Retirement,"42,037",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,207,Medical Insurance,"123,849",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,212,Employer Medicare,"7,877",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,217,Retirement - Hybrid Stabilization,"1,696",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,312,Contracts With Private Agencies,"6,135",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,429,Instructional Supplies And Materials,50,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71200,Special Education Program,,Department Total,,"790,569","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,116,Teachers,"214,153",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,189,Other Salaries & Wages,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,201,Social Security,"12,910",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,204,State Retirement,"17,132",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,207,Medical Insurance,"27,064",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,212,Employer Medicare,"3,019",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,217,Retirement - Hybrid Stabilization,"2,142",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,336,Maintenance And Repair Services-Equipr,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,356,Tuition,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,429,Instructional Supplies And Materials,"25,566",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,471,Software,"4,990",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,499,Other Supplies And Materials,800,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,524,In-Service/Staff Development,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,599,Other Charges,"5,190",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,730,Vocational Instruction Equipment,"72,058",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY25,71300,Vocational Education Program,,Department Total,,"385,024","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+72000 Support Services,FY25,72110,Attendance,105,Supervisor/Director,"36,458",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72110,Attendance,201,Social Security,"1,988",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72110,Attendance,204,State Retirement,"2,319",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72110,Attendance,207,Medical Insurance,"7,394",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72110,Attendance,212,Employer Medicare,465,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72110,Attendance,471,Software,"6,195",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72110,Attendance,,Department Total,,"54,819","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,105,Supervisor/Director,"42,305",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,131,Medical Personnel,"47,036",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,162,Clerical Personnel,"12,174",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,201,Social Security,"5,827",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,204,State Retirement,"6,664",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,207,Medical Insurance,"19,088",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,212,Employer Medicare,"1,363",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,499,Other Supplies And Materials,"3,074",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,524,In-Service/Staff Development,"5,008",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,735,Health Equipment,"1,440",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72120,Health Services,,Department Total,,"143,979","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY25,72130,Other Student Support,123,Guidance Personnel,"150,286",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,124,Phsycological Personnel,"36,699",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,189,Other Salaries & Wages,580,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,201,Social Security,"10,613",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,204,State Retirement,"12,538",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,207,Medical Insurance,"29,851",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,212,Employer Medicare,"2,482",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,217,Retirement - Hybrid Stabilization,366,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,307,Communication,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,322,Evaluation And Testing,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,355,Travel,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,399,Other Contracted Services,"26,926",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,499,Other Supplies And Materials,99,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,524,In-Service/Staff Development,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,599,Other Charges,"14,006",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72130,Other Student Support,,Department Total,,"284,446","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,105,Supervisor/Director,"159,343",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,117,Career Ladder Program,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,129,Librarians,"143,981",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,163,Educational Assistants,"17,680",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,189,Other Salaries & Wages,"6,960",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,201,Social Security,"19,639",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,204,State Retirement,"21,528",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,207,Medical Insurance,"45,544",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,212,Employer Medicare,"4,593",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,217,Retirement - Hybrid Stabilization,23,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,336,Maintenance And Repair Services-Equipr,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,355,Travel,"1,187",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,432,Library Books/Media,950,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,471,Software,"2,638",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,499,Other Supplies And Materials,288,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,524,In-Service/Staff Development,"1,283",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72210,Regular Instruction Program,,Department Total,,"426,637","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY25,72220,Special Education Program,105,Supervisor/Director,"55,659",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,124,Phsycological Personnel,"36,699",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,131,Medical Personnel,"42,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,201,Social Security,"7,768",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,204,State Retirement,"9,837",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,207,Medical Insurance,"28,037",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,212,Employer Medicare,"1,817",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,217,Retirement - Hybrid Stabilization,786,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,355,Travel,609,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,399,Other Contracted Services,"14,648",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,499,Other Supplies And Materials,73,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72220,Special Education Program,,Department Total,,"197,933","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,105,Supervisor/Director,"36,458",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,189,Other Salaries & Wages,"6,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,201,Social Security,"2,360",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,204,State Retirement,"2,700",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,207,Medical Insurance,"7,394",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,212,Employer Medicare,552,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72230,Vocational Education Program,,Department Total,,"55,464","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,105,Supervisor/Director,"59,511",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,189,Other Salaries & Wages,"48,684",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,201,Social Security,"6,570",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,204,State Retirement,"8,699",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,207,Medical Insurance,"15,733",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,212,Employer Medicare,"1,537",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,350,Internet Connectivity,"25,329",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,790,Other Equipment,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72250,Technology,,Department Total,,"166,063","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY25,72310,Board Of Education,191,Board And Committee Members Fees,"2,970",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,201,Social Security,184,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,207,Medical Insurance,"22,929",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,210,Unemployment Compensation,"2,218",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,212,Employer Medicare,43,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,305,Audit Services,"8,595",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,320,Dues And Memberships,"7,984",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,355,Travel,203,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,506,Liability Insurance,"42,819",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,510,Trustee's Commission,"91,237",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,513,Workman's Compensation Insurance,"70,825",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,524,In-Service/Staff Development,897,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,599,Other Charges,804,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72310,Board Of Education,,Department Total,,"251,708","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,101,County Official/Administrative Officer,"108,445",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,162,Clerical Personnel,"36,255",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,189,Other Salaries & Wages,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,201,Social Security,"8,819",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,204,State Retirement,"9,876",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,207,Medical Insurance,"10,885",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,212,Employer Medicare,"2,062",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,307,Communication,"14,194",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,320,Dues And Memberships,"3,496",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,355,Travel,"3,677",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,435,Office Supplies,"4,847",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,471,Software,"17,877",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,599,Other Charges,"4,895",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,701,Administration Equipment,"1,222",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72320,Director Of Schools,,Department Total,,"227,550","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY25,72410,Office Of The Principal,104,Principals,"182,894",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,139,Assistant Principals,"228,490",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,161,Secretary(s),"85,959",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,162,Clerical Personnel,"86,367",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,201,Social Security,"32,801",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,204,State Retirement,"40,019",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,207,Medical Insurance,"129,933",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,212,Employer Medicare,"7,671",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,307,Communication,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,599,Other Charges,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,701,Administration Equipment,"11,843",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72410,Office Of The Principal,,Department Total,,"805,977","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,105,Supervisor/Director,"68,875",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,119,Accountants/Bookkeepers,"37,722",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,201,Social Security,"6,411",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,204,State Retirement,"8,571",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,207,Medical Insurance,"16,391",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,212,Employer Medicare,"1,499",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72510,Fiscal Services,,Department Total,,"139,469","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY25,72610,Operation Of Plant,166,Custodial Personnel,"241,690",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,201,Social Security,"13,990",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,204,State Retirement,"19,432",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,207,Medical Insurance,"84,303",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,212,Employer Medicare,"3,272",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,410,Custodial Supplies,"50,558",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,415,Electricity,"279,093",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,434,Natural Gas,"35,473",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,454,Water And Sewer,"82,262",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,499,Other Supplies And Materials,"9,746",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,502,Building And Contents Insurance,"119,406",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72610,Operation Of Plant,,Department Total,,"939,225","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,167,Maintenance Personnel,"162,251",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,201,Social Security,"9,672",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,204,State Retirement,"13,045",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,207,Medical Insurance,"27,318",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,212,Employer Medicare,"2,262",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,335,Maintenance And Repair Services-Buildir,"2,727",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,336,Maintenance And Repair Services-Equipr,"30,521",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,347,Pest Control,"3,540",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,499,Other Supplies And Materials,"18,127",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,599,Other Charges,746,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,717,Maintenance Equipment,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72620,Maintenance Of Plant,,Department Total,,"270,209","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY25,72710,Transportation,142,Mechanic(s),"41,533",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,146,Bus Drivers,"245,824",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,189,Other Salaries & Wages,"12,185",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,201,Social Security,"17,512",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,204,State Retirement,"22,486",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,207,Medical Insurance,"73,236",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,212,Employer Medicare,"4,110",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,217,Retirement - Hybrid Stabilization,329,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,340,Medical And Dental Services,"3,542",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,412,Diesel Fuel,"49,421",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,450,Tires And Tubes,"11,313",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,453,Vehicle Parts,"26,153",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,471,Software,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,499,Other Supplies And Materials,"6,714",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,511,Vehicle And Equipment Insurance,"26,961",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,599,Other Charges,"7,425",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,729,Transportation Equipment,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY25,72710,Transportation,,Department Total,,"548,744","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,165,Cafeteria Personnel,"5,920",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,201,Social Security,367,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,204,State Retirement,476,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,212,Employer Medicare,85,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,217,Retirement - Hybrid Stabilization,17,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,422,Food Supplies,"4,849",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,499,Other Supplies And Materials,301,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73100,Food Service,,Department Total,,"12,015","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,189,Other Salaries & Wages,"24,733",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,201,Social Security,"1,533",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,204,State Retirement,515,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,207,Medical Insurance,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,212,Employer Medicare,359,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,499,Other Supplies And Materials,"4,940",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,599,Other Charges,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73300,Community Services,,Department Total,,"32,080","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,105,Supervisor/Director,"9,277",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,116,Teachers,"59,641",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,163,Educational Assistants,"21,158",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,201,Social Security,"5,251",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,204,State Retirement,"6,084",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,207,Medical Insurance,"20,671",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,212,Employer Medicare,"1,228",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY25,73400,Early Childhood Education,,Department Total,,"123,310","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY25,76100,Regular Capital Outlay,399,Other Capital Outlay,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY25,76100,Regular Capital Outlay,707,Building Improvements,"93,722",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY25,76100,Regular Capital Outlay,799,Other Capital Outlay,"7,800",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY25,76100,Regular Capital Outlay,,Department Total,,"101,522","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+,FY25,,Fund 141 Total,,,,"10,753,805","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",
+71000 Instruction,FY26,71100,Regular Instruction Program,116,Teachers,"3,450,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,117,Career Ladder Program,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,128,Homebound Teachers,"7,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,163,Educational Assistants,"121,800",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,188,Bonus Payments,"148,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,189,Other Salaries & Wages,"27,900",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,195,Certified Substitute Teachers,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,198,Non-Certified Substitute Teachers,"80,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,201,Social Security,"227,069",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,204,State Retirement,"256,274",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,207,Medical Insurance,"585,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,212,Employer Medicare,"53,105",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,217,Retirement - Hybrid Stabilization,"16,050",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,336,Maintenance And Repair Services-Equipr,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,429,Instructional Supplies And Materials,"40,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,471,Software,"80,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,499,Other Supplies And Materials,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,599,Other Charges,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,722,Regular Instruction Equipment,"150,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71100,Regular Instruction Program,,Department Total,,"5,263,198","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,116,Teachers,"57,303",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,201,Social Security,"3,553",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,204,State Retirement,"4,580",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,207,Medical Insurance,"7,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,212,Employer Medicare,831,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,217,Retirement - Hybrid Stabilization,600,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71150,Alternative Instruction Program,,Department Total,,"73,867","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY26,71200,Special Education Program,116,Teachers,"352,663",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,128,Homebound Teachers,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,163,Educational Assistants,"143,848",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,171,Speech Pathologist,"63,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,195,Certified Substitute Teachers,700,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,198,Non-Certified Substitute Teachers,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,201,Social Security,"35,013",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,204,State Retirement,"42,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,207,Medical Insurance,"114,789",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,212,Employer Medicare,"8,189",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,217,Retirement - Hybrid Stabilization,"2,700",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,312,Contracts With Private Agencies,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,429,Instructional Supplies And Materials,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71200,Special Education Program,,Department Total,,"781,402","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,116,Teachers,"240,397",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,201,Social Security,"14,981",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,204,State Retirement,"19,232",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,207,Medical Insurance,"30,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,212,Employer Medicare,"3,486",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,217,Retirement - Hybrid Stabilization,"1,700",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,356,Tuition,"1,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,429,Instructional Supplies And Materials,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,499,Other Supplies And Materials,"5,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,730,Vocational Instruction Equipment,"4,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY26,71300,Vocational Education Program,,Department Total,,"321,796","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+72000 Support Services,FY26,72110,Attendance,405,Supervisor/Director,"41,430",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72110,Attendance,201,Social Security,"2,491",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72110,Attendance,204,State Retirement,"2,400",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72110,Attendance,207,Medical Insurance,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72110,Attendance,212,Employer Medicare,583,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72110,Attendance,471,Software,"7,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72110,Attendance,,Department Total,,"61,904","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,105,Supervisor/Director,"44,327",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,131,Medical Personnel,"50,941",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,162,Clerical Personnel,"14,106",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,201,Social Security,"6,684",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,204,State Retirement,"8,491",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,207,Medical Insurance,"20,350",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,212,Employer Medicare,"1,563",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,355,Travel,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,499,Other Supplies And Materials,"6,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,524,In-Service/Staff Development,"4,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,735,Health Equipment,0,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72120,Health Services,,Department Total,,"161,962","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY26,72130,Other Student Support,123,Guidance Personnel,"161,984",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,124,Phsycological Personnel,"39,702",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,201,Social Security,"12,505",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,204,State Retirement,"12,920",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,207,Medical Insurance,"31,251",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,212,Employer Medicare,"2,924",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,217,Retirement - Hybrid Stabilization,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,307,Communication,790,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,322,Evaluation And Testing,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,355,Travel,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,399,Other Contracted Services,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,499,Other Supplies And Materials,"6,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,524,In-Service/Staff Development,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,599,Other Charges,"13,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72130,Other Student Support,,Department Total,,"318,575","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,405,Supervisor/Director,"171,418",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,117,Career Ladder Program,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,129,Librarians,"156,780",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,163,Educational Assistants,"22,131",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,201,Social Security,"22,200",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,204,State Retirement,"22,200",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,207,Medical Insurance,"45,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,212,Employer Medicare,"5,200",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,217,Retirement - Hybrid Stabilization,100,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,336,Maintenance And Repair Services-Equipr,400,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,355,Travel,"1,750",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,432,Library Books/Media,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,471,Software,"3,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,499,Other Supplies And Materials,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,524,In-Service/Staff Development,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72210,Regular Instruction Program,,Department Total,,"470,329","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY26,72220,Special Education Program,105,Supervisor/Director,"60,100",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,124,Phsycological Personnel,"39,702",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,131,Medical Personnel,"43,259",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,201,Social Security,"8,870",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,204,State Retirement,"11,250",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,207,Medical Insurance,"30,004",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,212,Employer Medicare,"2,074",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,217,Retirement - Hybrid Stabilization,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,355,Travel,"3,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,399,Other Contracted Services,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,499,Other Supplies And Materials,600,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72220,Special Education Program,,Department Total,,"235,360","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,105,Supervisor/Director,"40,175",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,189,Other Salaries & Wages,"6,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,201,Social Security,"2,700",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,204,State Retirement,"2,800",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,207,Medical Insurance,"7,760",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,212,Employer Medicare,630,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72230,Vocational Education Program,,Department Total,,"60,065","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,105,Supervisor/Director,"61,297",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,189,Other Salaries & Wages,"47,879",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,201,Social Security,"6,769",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,204,State Retirement,"10,623",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,207,Medical Insurance,"20,043",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,212,Employer Medicare,"1,583",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,350,Internet Connectivity,"30,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,790,Other Equipment,"12,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72250,Technology,,Department Total,,"190,193","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY26,72310,Board Of Education,191,Board And Committee Members Fees,"4,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,201,Social Security,248,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,207,Medical Insurance,"29,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,210,Unemployment Compensation,"1,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,212,Employer Medicare,58,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,305,Audit Services,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,320,Dues And Memberships,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,355,Travel,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,506,Liability Insurance,"47,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,510,Trustee's Commission,"115,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,513,Workman's Compensation Insurance,"75,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,524,In-Service/Staff Development,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,599,Other Charges,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72310,Board Of Education,,Department Total,,"302,306","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,101,County Official/Administrative Officer,"111,698",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,162,Clerical Personnel,"37,343",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,189,Other Salaries & Wages,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,201,Social Security,"9,241",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,204,State Retirement,"10,078",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,207,Medical Insurance,"11,421",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,212,Employer Medicare,"2,161",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,307,Communication,"15,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,320,Dues And Memberships,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,355,Travel,"4,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,435,Office Supplies,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,471,Software,"20,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,599,Other Charges,"6,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,701,Administration Equipment,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72320,Director Of Schools,,Department Total,,"249,942","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY26,72410,Office Of The Principal,104,Principals,"196,866",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,139,Assistant Principals,"249,323",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,161,Secretary(s),"90,081",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,162,Clerical Personnel,"94,960",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,201,Social Security,"39,136",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,204,State Retirement,"44,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,207,Medical Insurance,"135,807",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,212,Employer Medicare,"9,153",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,307,Communication,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,599,Other Charges,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,701,Administration Equipment,"15,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72410,Office Of The Principal,,Department Total,,"875,076","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,105,Supervisor/Director,"70,941",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,119,Accountants/Bookkeepers,"39,200",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,201,Social Security,"6,743",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,204,State Retirement,"10,725",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,207,Medical Insurance,"17,188",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,212,Employer Medicare,"1,577",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72510,Fiscal Services,,Department Total,,"146,374","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY26,72610,Operation Of Plant,166,Custodial Personnel,"263,336",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,201,Social Security,"16,327",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,204,State Retirement,"25,428",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,207,Medical Insurance,"87,894",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,212,Employer Medicare,"3,818",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,410,Custodial Supplies,"60,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,415,Electricity,"297,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,434,Natural Gas,"40,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,454,Water And Sewer,"100,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,499,Other Supplies And Materials,"17,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,502,Building And Contents Insurance,"132,800",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72610,Operation Of Plant,,Department Total,,"1,043,603","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,167,Maintenance Personnel,"171,326",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,201,Social Security,"10,622",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,204,State Retirement,"16,670",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,207,Medical Insurance,"29,525",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,212,Employer Medicare,"2,484",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,335,Maintenance And Repair Services-Buildir,"3,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,336,Maintenance And Repair Services-Equipr,"60,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,347,Pest Control,"4,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,499,Other Supplies And Materials,"25,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,599,Other Charges,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,717,Maintenance Equipment,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72620,Maintenance Of Plant,,Department Total,,"332,627","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY26,72710,Transportation,142,Mechanic(s),"42,832",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,146,Bus Drivers,"281,781",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,189,Other Salaries & Wages,"22,016",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,201,Social Security,"20,126",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,204,State Retirement,"30,321",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,207,Medical Insurance,"83,196",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,212,Employer Medicare,"4,707",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,217,Retirement - Hybrid Stabilization,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,340,Medical And Dental Services,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,412,Diesel Fuel,"60,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,450,Tires And Tubes,"11,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,453,Vehicle Parts,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,471,Software,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,499,Other Supplies And Materials,"12,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,511,Vehicle And Equipment Insurance,"30,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,599,Other Charges,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY26,72710,Transportation,,Department Total,,"650,479","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,105,Supervisor/Director,"4,670",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,189,Other Salaries & Wages,"30,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,201,Social Security,"1,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,204,State Retirement,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,212,Employer Medicare,508,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,499,Other Supplies And Materials,"6,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,599,Other Charges,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73300,Community Services,,Department Total,,"44,678","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,105,Supervisor/Director,"10,017",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,116,Teachers,"62,938",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,163,Educational Assistants,"21,793",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,201,Social Security,"5,874",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,204,State Retirement,"6,450",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,207,Medical Insurance,"21,068",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,212,Employer Medicare,"1,374",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY26,73400,Early Childhood Education,,Department Total,,"129,514","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY26,76100,Regular Capital Outlay,707,Building Improvements,"100,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY26,76100,Regular Capital Outlay,,Department Total,,"100,000","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+,FY26,,Fund 141 Total,,,,"11,813,250","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",
+71000 Instruction,FY27,71100,Regular Instruction Program,116,Teachers,"3,565,274",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,117,Career Ladder Program,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,128,Homebound Teachers,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,163,Educational Assistants,"130,034",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,189,Other Salaries & Wages,"27,100",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,195,Certified Substitute Teachers,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,198,Non-Certified Substitute Teachers,"80,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,201,Social Security,"236,493",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,204,State Retirement,"265,602",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,207,Medical Insurance,"605,745",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,212,Employer Medicare,"55,309",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,217,Retirement - Hybrid Stabilization,"15,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,336,Maintenance And Repair Services-Equipr,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,429,Instructional Supplies And Materials,"40,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,449,Textbooks,"75,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,471,Software,"54,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,499,Other Supplies And Materials,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,599,Other Charges,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,722,Regular Instruction Equipment,"150,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71100,Regular Instruction Program,,Department Total,,"5,330,557","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,116,Teachers,"58,744",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,201,Social Security,"3,642",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,204,State Retirement,"3,390",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,207,Medical Insurance,"9,274",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,212,Employer Medicare,852,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,217,Retirement - Hybrid Stabilization,600,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71150,Alternative Instruction Program,,Department Total,,"76,501","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",41
+71000 Instruction,FY27,71200,Special Education Program,116,Teachers,"422,553",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,128,Homebound Teachers,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,163,Educational Assistants,"124,158",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,171,Speech Pathologist,"64,900",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,195,Certified Substitute Teachers,700,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,198,Non-Certified Substitute Teachers,"2,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,201,Social Security,"38,428",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,204,State Retirement,"46,304",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,207,Medical Insurance,"123,725",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,212,Employer Medicare,"8,987",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,217,Retirement - Hybrid Stabilization,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,312,Contracts With Private Agencies,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,429,Instructional Supplies And Materials,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71200,Special Education Program,,Department Total,,"842,256","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,116,Teachers,"246,251",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,201,Social Security,"15,268",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,204,State Retirement,"22,163",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,207,Medical Insurance,"33,415",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,212,Employer Medicare,"3,571",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,217,Retirement - Hybrid Stabilization,"2,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+71000 Instruction,FY27,71300,Vocational Education Program,,Department Total,,"323,167","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",42
+72000 Support Services,FY27,72110,Attendance,405,Supervisor/Director,"41,223",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72110,Attendance,201,Social Security,"2,556",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72110,Attendance,204,State Retirement,"2,379",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72110,Attendance,207,Medical Insurance,"8,348",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72110,Attendance,212,Employer Medicare,598,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72110,Attendance,471,Software,"7,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72110,Attendance,,Department Total,,"62,103","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,105,Supervisor/Director,"46,213",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,131,Medical Personnel,"52,433",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,162,Clerical Personnel,"12,902",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,201,Social Security,"6,916",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,204,State Retirement,"8,945",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,207,Medical Insurance,"19,993",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,212,Employer Medicare,"1,617",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,355,Travel,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,499,Other Supplies And Materials,"6,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,524,In-Service/Staff Development,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,735,Health Equipment,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72120,Health Services,,Department Total,,"170,020","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",43
+72000 Support Services,FY27,72130,Other Student Support,123,Guidance Personnel,"167,439",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,124,Phsycological Personnel,"40,417",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,201,Social Security,"12,887",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,204,State Retirement,"13,299",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,207,Medical Insurance,"33,617",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,212,Employer Medicare,"3,014",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,217,Retirement - Hybrid Stabilization,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,307,Communication,790,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,322,Evaluation And Testing,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,355,Travel,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,399,Other Contracted Services,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,499,Other Supplies And Materials,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,524,In-Service/Staff Development,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,599,Other Charges,"13,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72130,Other Student Support,,Department Total,,"328,462","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,405,Supervisor/Director,"176,971",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,117,Career Ladder Program,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,129,Librarians,"160,264",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,163,Educational Assistants,"22,795",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,201,Social Security,"22,384",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,204,State Retirement,"21,676",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,207,Medical Insurance,"40,478",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,212,Employer Medicare,"5,235",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,336,Maintenance And Repair Services-Equipr,400,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,355,Travel,"1,750",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,432,Library Books/Media,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,471,Software,"3,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,499,Other Supplies And Materials,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,524,In-Service/Staff Development,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72210,Regular Instruction Program,,Department Total,,"471,952","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",44
+72000 Support Services,FY27,72220,Special Education Program,105,Supervisor/Director,"61,818",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,124,Phsycological Personnel,"40,417",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,131,Medical Personnel,"44,557",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,201,Social Security,"9,101",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,204,State Retirement,"11,660",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,207,Medical Insurance,"32,275",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,212,Employer Medicare,"2,128",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,217,Retirement - Hybrid Stabilization,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,355,Travel,"3,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,399,Other Contracted Services,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,499,Other Supplies And Materials,600,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72220,Special Education Program,,Department Total,,"242,057","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72230,Vocational Education Program,105,Supervisor/Director,"41,223",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72230,Vocational Education Program,201,Social Security,"2,556",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72230,Vocational Education Program,204,State Retirement,"2,379",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72230,Vocational Education Program,207,Medical Insurance,"8,348",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72230,Vocational Education Program,212,Employer Medicare,598,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72230,Vocational Education Program,,Department Total,,"55,103","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,105,Supervisor/Director,"63,136",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,189,Other Salaries & Wages,"49,315",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,201,Social Security,"6,972",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,204,State Retirement,"11,245",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,207,Medical Insurance,"21,559",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,212,Employer Medicare,"1,631",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,350,Internet Connectivity,"30,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,790,Other Equipment,"12,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72250,Technology,,Department Total,,"195,857","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",45
+72000 Support Services,FY27,72310,Board Of Education,191,Board And Committee Members Fees,"4,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,201,Social Security,248,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,207,Medical Insurance,"29,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,210,Unemployment Compensation,"4,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,212,Employer Medicare,58,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,305,Audit Services,"12,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,320,Dues And Memberships,"9,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,355,Travel,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,506,Liability Insurance,"48,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,510,Trustee's Commission,"120,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,513,Workman's Compensation Insurance,"75,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,524,In-Service/Staff Development,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,599,Other Charges,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72310,Board Of Education,,Department Total,,"313,306","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,101,County Official/Administrative Officer,"115,049",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,162,Clerical Personnel,"38,407",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,189,Other Salaries & Wages,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,201,Social Security,"9,514",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,204,State Retirement,"10,479",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,207,Medical Insurance,"12,285",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,212,Employer Medicare,"2,225",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,307,Communication,"20,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,320,Dues And Memberships,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,355,Travel,"4,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,435,Office Supplies,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,471,Software,"20,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,599,Other Charges,"6,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,701,Administration Equipment,"8,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72320,Director Of Schools,,Department Total,,"260,960","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",46
+72000 Support Services,FY27,72410,Office Of The Principal,104,Principals,"203,967",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,139,Assistant Principals,"258,764",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,161,Secretary(s),"92,603",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,162,Clerical Personnel,"97,513",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,201,Social Security,"40,476",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,204,State Retirement,"45,711",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,207,Medical Insurance,"146,084",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,212,Employer Medicare,"9,466",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,307,Communication,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,599,Other Charges,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,701,Administration Equipment,"15,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72410,Office Of The Principal,,Department Total,,"910,585","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,105,Supervisor/Director,"70,941",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,119,Accountants/Bookkeepers,"38,905",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,201,Social Security,"6,810",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,204,State Retirement,"10,985",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,207,Medical Insurance,"18,487",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,212,Employer Medicare,"1,593",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72510,Fiscal Services,,Department Total,,"147,721","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",47
+72000 Support Services,FY27,72610,Operation Of Plant,166,Custodial Personnel,"271,176",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,201,Social Security,"16,813",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,204,State Retirement,"26,918",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,207,Medical Insurance,"94,538",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,212,Employer Medicare,"3,932",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,410,Custodial Supplies,"50,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,415,Electricity,"285,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,434,Natural Gas,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,454,Water And Sewer,"100,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,499,Other Supplies And Materials,"17,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,502,Building And Contents Insurance,"125,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72610,Operation Of Plant,,Department Total,,"1,025,377","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,167,Maintenance Personnel,"176,466",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,201,Social Security,"10,941",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,204,State Retirement,"17,647",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,207,Medical Insurance,"30,832",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,212,Employer Medicare,"2,559",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,335,Maintenance And Repair Services-Buildir,"3,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,336,Maintenance And Repair Services-Equipr,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,347,Pest Control,"4,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,499,Other Supplies And Materials,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,599,Other Charges,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,717,Maintenance Equipment,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72620,Maintenance Of Plant,,Department Total,,"325,444","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",48
+72000 Support Services,FY27,72710,Transportation,142,Mechanic(s),"44,116",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,146,Bus Drivers,"268,368",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,189,Other Salaries & Wages,"22,676",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,201,Social Security,"19,373",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,204,State Retirement,"30,015",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,207,Medical Insurance,"94,588",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,212,Employer Medicare,"4,531",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,217,Retirement - Hybrid Stabilization,500,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,340,Medical And Dental Services,"5,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,412,Diesel Fuel,"60,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,450,Tires And Tubes,"11,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,453,Vehicle Parts,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,471,Software,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,499,Other Supplies And Materials,"7,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,511,Vehicle And Equipment Insurance,"27,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,599,Other Charges,"10,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,729,Transportation Equipment,"165,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+72000 Support Services,FY27,72710,Transportation,,Department Total,,"806,158","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",49
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,189,Other Salaries & Wages,"35,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,201,Social Security,"2,170",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,204,State Retirement,"3,500",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,212,Employer Medicare,508,,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,499,Other Supplies And Materials,"6,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,599,Other Charges,"1,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73300,Community Services,,Department Total,,"48,178","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,105,Supervisor/Director,"10,303",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,116,Teachers,"64,071",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,163,Educational Assistants,"22,447",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,201,Social Security,"6,003",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,204,State Retirement,"6,475",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,207,Medical Insurance,"23,228",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,212,Employer Medicare,"1,404",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+73000 Operation Of Non-Instructional Services,FY27,73400,Early Childhood Education,,Department Total,,"133,931","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY27,76100,Regular Capital Outlay,707,Building Improvements,"100,000",,"May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+76000 Capital Outlay,FY27,76100,Regular Capital Outlay,,Department Total,,"100,000","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",50
+,FY27,,Fund 141 Total,,,,"12,169,693","May 18, 2026 Council Meeting Agenda with Budget(8).pdf",

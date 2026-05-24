@@ -39,7 +39,7 @@ Functions/Programs,Fiscal Year,Department Code,Department Description,Line Item 
 54000 - Public Safety,FY07,54150,Drug Enforcement,790,Other Equipment,739.46,,fund122FY07.pdf,1
 54000 - Public Safety,FY07,54150,Drug Enforcement,,,,"35,916.00",fund122FY07.pdf,1
 55000 - Public Health and Welfare,FY07,55150,Maternal And Child Health Services,599,Other Charges,0,,fund122FY07.pdf,1
-55000 - Public Health and Welfare,FY07,55150,Maternal And Child Health Services,,,,0.00,fund122FY07.pdf,1
+55000 - Public Health and Welfare,FY07,55150,Maternal And Child Health Services,,,,0,fund122FY07.pdf,1
 ,FY07,,Fund 122 Total,,,,"35,916.00",fund122FY07.pdf,1
 54000 - Public Safety,FY08,54150,Drug Enforcement,196,In-Service Training,475.2,,fund122FY08.pdf,1
 54000 - Public Safety,FY08,54150,Drug Enforcement,307,Communication,"4,874.84",,fund122FY08.pdf,1
@@ -239,3 +239,19 @@ Functions/Programs,Fiscal Year,Department Code,Department Description,Line Item 
 54000 - Public Safety,FY25,54150,Drug Enforcement,790,Other Equipment,"11,000.00",,fund122FY25.pdf,1
 54000 - Public Safety,FY25,54150,Drug Enforcement,,,,"11,000.00",fund122FY25.pdf,1
 ,FY25,,Fund 122 Total,,,,"11,000.00",fund122FY25.pdf,1
+54000 - Public Safety,FY26,54150,Drug Enforcement,196,In-Service Training,0,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY26,54150,Drug Enforcement,319,Confidential Drug Enforcement Payment,0,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY26,54150,Drug Enforcement,431,Law Enforcement Supplies,0,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY26,54150,Drug Enforcement,716,Law Enforcement Equipment,0,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY26,54150,Drug Enforcement,718,Motor Vehicles,"60,329",,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY26,54150,Drug Enforcement,790,Other Equipment,0,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY26,54150,Drug Enforcement,,,,"60,329","May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+,FY26,,Fund 122 Total,,,,"60,329","May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,196,In-Service Training,500,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,319,Confidential Drug Enforcement Payment,"3,000",,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,431,Law Enforcement Supplies,500,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,716,Law Enforcement Equipment,"1,500",,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,718,Motor Vehicles,0,,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,790,Other Equipment,"2,000",,"May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+54000 - Public Safety,FY27,54150,Drug Enforcement,,,,"7,500","May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30
+,FY27,,Fund 122 Total,,,,"7,500","May 18, 2026 Council Meeting Agenda with Budget(4).pdf",30

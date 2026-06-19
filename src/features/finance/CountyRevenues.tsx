@@ -68,7 +68,7 @@ const REVENUE_TOGGLE_LABELS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string
   genGov: 'Gen Gov',
   schools: 'Schools',
   emergCommDist: 'Emerg Comm Dist',
-  mud: 'MUD',
+  mud: 'Water & Sewer',
 };
 const REVENUE_TOGGLE_COLORS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string> = {
   total: '#dc2626',
@@ -981,15 +981,21 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
               )}
             </div>
           )}
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeBusinessType}
-              onChange={(e) => setIncludeBusinessType(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm font-bold uppercase text-gray-700">Include Water &amp; Sewer</span>
-          </label>
+          <div className="flex flex-col gap-0.5">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeBusinessType}
+                onChange={(e) => setIncludeBusinessType(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm font-bold uppercase text-gray-700">Include Water &amp; Sewer</span>
+            </label>
+            <p className="text-[10px] text-gray-500 max-w-xs leading-snug pl-6">
+              Adds enterprise-fund revenues to <span className="font-semibold">Total</span> and the{' '}
+              <span className="font-semibold">Water &amp; Sewer</span> line. Does not change Gen Gov or Schools.
+            </p>
+          </div>
         </div>
 
         <div

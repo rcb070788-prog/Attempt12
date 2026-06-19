@@ -164,17 +164,22 @@ export const CountyRevenuesPiePage: React.FC<CountyRevenuesPiePageProps> = ({
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeBusinessType}
-              onChange={(e) => setIncludeBusinessType(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm font-bold uppercase text-gray-700">
-              Include Water & Sewer
-            </span>
-          </label>
+          <div className="flex flex-col gap-0.5">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeBusinessType}
+                onChange={(e) => setIncludeBusinessType(e.target.checked)}
+                className="rounded border-gray-300"
+              />
+              <span className="text-sm font-bold uppercase text-gray-700">
+                Include Water & Sewer
+              </span>
+            </label>
+            <p className="text-[10px] text-gray-500 max-w-xs leading-snug pl-6">
+              Includes enterprise-fund program and general revenues in the pie. Does not affect Gen Gov totals on the chart.
+            </p>
+          </div>
         </div>
 
         <div

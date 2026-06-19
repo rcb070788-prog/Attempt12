@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 interface AdminEmailSectionProps {
   isOpen: boolean;
@@ -8,12 +8,28 @@ interface AdminEmailSectionProps {
   showToast: (msg: string, type?: 'success' | 'error') => void;
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function parseRecipientList(raw: string): string[] {
+  const seen = new Set<string>();
+  const valid: string[] = [];
+  for (const entry of raw.split(/[\s,;]+/)) {
+    const email = entry.trim().toLowerCase();
+    if (email && email.includes('@') && EMAIL_REGEX.test(email) && !seen.has(email)) {
+      seen.add(email);
+      valid.push(email);
+    }
+  }
+  return valid;
+}
+
 export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
   isOpen, onToggle, allUsers, supabase, showToast
 }) => {
-  const [broadcastMode, setBroadcastMode] = useState<'real' | 'virtual'>('real');
+  const [broadcastMode, setBroadcastMode] = useState<'real' | 'virtual' | 'external'>('real');
   const [broadcastSubject, setBroadcastSubject] = useState('');
   const [broadcastContent, setBroadcastContent] = useState('');
+  const [externalRecipients, setExternalRecipients] = useState('');
   const [broadcastConfirmOpen, setBroadcastConfirmOpen] = useState(false);
   const [broadcastSending, setBroadcastSending] = useState(false);
 
@@ -23,10 +39,21 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
   const [oneOffSending, setOneOffSending] = useState(false);
 
   const virtualCount = (allUsers || []).filter(u => u.virtual_email && u.virtual_email.includes('@')).length;
+  const externalRecipientCount = useMemo(
+    () => parseRecipientList(externalRecipients).length,
+    [externalRecipients]
+  );
+
+  const broadcastReady = broadcastSubject.trim() && broadcastContent.trim()
+    && (broadcastMode !== 'external' || externalRecipientCount > 0);
 
   const handleBroadcastSend = async () => {
     if (!broadcastSubject.trim() || !broadcastContent.trim()) {
       showToast('Subject and content are required', 'error');
+      return;
+    }
+    if (broadcastMode === 'external' && externalRecipientCount === 0) {
+      showToast('At least one valid external recipient is required', 'error');
       return;
     }
     setBroadcastSending(true);
@@ -36,19 +63,22 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         showToast('Session expired. Please log in again.', 'error');
         return;
       }
-      const { data, error } = await supabase.functions.invoke('send-admin-broadcast', {
-        body: {
-          mode: broadcastMode,
-          subject: broadcastSubject.trim(),
-          content: broadcastContent.trim(),
-        },
-      });
+      const body: Record<string, unknown> = {
+        mode: broadcastMode,
+        subject: broadcastSubject.trim(),
+        content: broadcastContent.trim(),
+      };
+      if (broadcastMode === 'external') {
+        body.recipients = parseRecipientList(externalRecipients);
+      }
+      const { data, error } = await supabase.functions.invoke('send-admin-broadcast', { body });
       if (error) throw new Error(error.message || 'Failed to send broadcast');
       if (data?.error) throw new Error(data.error);
       showToast(`Broadcast sent to ${data?.sent ?? 0} recipients`);
       setBroadcastConfirmOpen(false);
       setBroadcastSubject('');
       setBroadcastContent('');
+      setExternalRecipients('');
     } catch (err: any) {
       showToast(err?.message || 'Failed to send broadcast', 'error');
     } finally {
@@ -88,6 +118,12 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
       setOneOffSending(false);
     }
   };
+
+  const broadcastTargetLabel = broadcastMode === 'virtual'
+    ? `~${virtualCount} users`
+    : broadcastMode === 'external'
+      ? `${externalRecipientCount} external address${externalRecipientCount === 1 ? '' : 'es'}`
+      : 'all registered users';
 
   return (
     <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
@@ -130,12 +166,35 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
                 />
                 <span className="font-bold uppercase text-sm">Virtual emails (@concernedcitizensofmc.com)</span>
               </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="broadcastMode"
+                  checked={broadcastMode === 'external'}
+                  onChange={() => setBroadcastMode('external')}
+                  className="text-indigo-600"
+                />
+                <span className="font-bold uppercase text-sm">External emails (non-users)</span>
+              </label>
             </div>
             <p className="text-sm text-gray-500">
               {broadcastMode === 'virtual'
                 ? `Will send to ~${virtualCount} users`
-                : 'Will send to all registered users'}
+                : broadcastMode === 'external'
+                  ? externalRecipientCount > 0
+                    ? `Will send to ${externalRecipientCount} external address${externalRecipientCount === 1 ? '' : 'es'} (no-reply)`
+                    : 'Paste external addresses below (informational, no-reply from noreply@concernedcitizensofmc.com)'
+                  : 'Will send to all registered users'}
             </p>
+            {broadcastMode === 'external' && (
+              <textarea
+                placeholder="External recipients (e.g. official@county.gov, contact@example.org)"
+                value={externalRecipients}
+                onChange={e => setExternalRecipients(e.target.value)}
+                rows={3}
+                className="w-full p-4 bg-gray-50 rounded-xl border border-gray-100 font-bold outline-none focus:ring-2 ring-indigo-500/20 resize-y"
+              />
+            )}
             <input
               type="text"
               placeholder="Subject"
@@ -152,7 +211,7 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
             />
             <button
               onClick={() => setBroadcastConfirmOpen(true)}
-              disabled={!broadcastSubject.trim() || !broadcastContent.trim()}
+              disabled={!broadcastReady}
               className="px-8 py-4 bg-indigo-600 text-white rounded-xl font-black uppercase text-sm hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Send broadcast
@@ -199,7 +258,9 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
               <div className="bg-white rounded-[2rem] p-8 max-w-md w-full shadow-2xl">
                 <h4 className="text-xl font-black uppercase mb-4">Confirm broadcast</h4>
                 <p className="text-gray-600 mb-6">
-                  Send this email to {broadcastMode === 'virtual' ? `~${virtualCount} users` : 'all registered users'}?
+                  {broadcastMode === 'external'
+                    ? `Send this informational no-reply email to ${broadcastTargetLabel}?`
+                    : `Send this email to ${broadcastTargetLabel}?`}
                 </p>
                 <div className="flex gap-4">
                   <button

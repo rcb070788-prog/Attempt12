@@ -7,3 +7,4 @@ export { ContactInboxSection } from './ContactInboxSection';
 export { ManualRequestsSection } from './ManualRequestsSection';
 export { AdminEmailSection } from './AdminEmailSection';
 export { SyncRegistrySection } from './SyncRegistrySection';
+export { EventAttendanceSection } from './EventAttendanceSection';

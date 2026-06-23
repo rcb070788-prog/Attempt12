@@ -9,6 +9,7 @@ import {
   ManualRequestsSection,
   AdminEmailSection,
   SyncRegistrySection,
+  EventAttendanceSection,
 } from './admin';
 
 interface AdminPanelProps {
@@ -48,6 +49,10 @@ interface AdminPanelProps {
   formatDate: (date: any) => string;
   contactSubmissions: any[];
   fetchContactSubmissions: () => void;
+  publicEvents: any[];
+  fetchPublicEvents: () => void;
+  eventAttendees: any[];
+  fetchEventAttendees: () => void;
   supabase: any;
   UserAvatar: any;
   fetchUsers: () => void;
@@ -61,7 +66,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
   selectedAdminEmail, setSelectedAdminEmail, handleDeleteAdminEmail,
   stagedAdminReplyFiles, setStagedAdminReplyFiles, handleAdminInboxFileUpload,
   fetchAdminMessages, manualRequests, setPendingAction, pendingAction,
-  fetchManualRequests, formatDate, contactSubmissions, fetchContactSubmissions, supabase, UserAvatar, adminEmailDeletionVotes, fetchUsers
+  fetchManualRequests, formatDate, contactSubmissions, fetchContactSubmissions,
+  publicEvents, fetchPublicEvents, eventAttendees, fetchEventAttendees,
+  supabase, UserAvatar, adminEmailDeletionVotes, fetchUsers
 }) => {
   return (
     <div className="max-w-6xl mx-auto space-y-6 pb-20 animate-slide-up">
@@ -155,6 +162,19 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
           clearedItems={clearedItems}
           toggleClearItem={toggleClearItem}
           formatDate={formatDate}
+        />
+
+        <EventAttendanceSection
+          isOpen={isAdminSections.eventAttendance}
+          onToggle={() => setIsAdminSections(prev => ({ ...prev, eventAttendance: !prev.eventAttendance }))}
+          publicEvents={publicEvents}
+          eventAttendees={eventAttendees}
+          allUsers={allUsers}
+          formatDate={formatDate}
+          supabase={supabase}
+          showToast={showToast}
+          fetchPublicEvents={fetchPublicEvents}
+          fetchEventAttendees={fetchEventAttendees}
         />
 
         <ManualRequestsSection

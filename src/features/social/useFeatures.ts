@@ -11,6 +11,8 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
   const [adminEmailDeletionVotes, setAdminEmailDeletionVotes] = useState<any[]>([]);
   const [deletionVotes, setDeletionVotes] = useState<any[]>([]);
   const [contactSubmissions, setContactSubmissions] = useState<any[]>([]);
+  const [publicEvents, setPublicEvents] = useState<any[]>([]);
+  const [eventAttendees, setEventAttendees] = useState<any[]>([]);
 
   const fetchPolls = async () => {
     if (!supabase) return;
@@ -71,6 +73,21 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     setContactSubmissions(data || []);
   };
 
+  const fetchPublicEvents = async () => {
+    if (!supabase || !profile?.is_admin) return;
+    const { data } = await supabase.from('public_events').select('*').order('event_date', { ascending: false });
+    setPublicEvents(data || []);
+  };
+
+  const fetchEventAttendees = async () => {
+    if (!supabase || !profile?.is_admin) return;
+    const { data } = await supabase
+      .from('event_attendees')
+      .select('*, public_events(event_date)')
+      .order('created_at', { ascending: false });
+    setEventAttendees(data || []);
+  };
+
   const fetchAllData = () => {
     fetchPolls();
     fetchSuggestions();
@@ -81,6 +98,8 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     fetchAdminMessages();
     fetchAdminEmailDeletionVotes();
     fetchContactSubmissions();
+    fetchPublicEvents();
+    fetchEventAttendees();
   };
 
   // Live Update "Listener" (Real-time). Fetch only after session has been restored so RLS sees auth.
@@ -99,6 +118,8 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_messages' }, () => fetchAdminMessages())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_email_deletion_votes' }, () => fetchAdminEmailDeletionVotes())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'contact_submissions' }, () => fetchContactSubmissions())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'event_attendees' }, () => fetchEventAttendees())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'public_events' }, () => fetchPublicEvents())
       .subscribe();
 
     fetchAllData();
@@ -116,6 +137,8 @@ export function useFeatures(user: any, profile: any, sessionHydrated: boolean = 
     adminEmailDeletionVotes, fetchAdminEmailDeletionVotes,
     deletionVotes, fetchDeletionVotes,
     contactSubmissions, fetchContactSubmissions,
+    publicEvents, fetchPublicEvents,
+    eventAttendees, fetchEventAttendees,
     fetchAllData
   };
 }

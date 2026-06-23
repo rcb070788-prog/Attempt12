@@ -21,6 +21,10 @@ export interface FeaturesContextValue {
   fetchDeletionVotes: () => void;
   contactSubmissions: any[];
   fetchContactSubmissions: () => void;
+  publicEvents: any[];
+  fetchPublicEvents: () => void;
+  eventAttendees: any[];
+  fetchEventAttendees: () => void;
   fetchAllData: () => void;
 }
 

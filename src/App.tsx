@@ -76,6 +76,7 @@ import { Sidebar } from './components/Sidebar';
 import { MainView } from './components/MainView';
 import { Footer } from './components/Footer';
 import CsvViewerPage from './components/CsvViewerPage';
+import EventSignInPage from './components/EventSignInPage';
 import { AppContextProvider } from './contexts/AppContext';
 import { FeaturesContextProvider } from './contexts/FeaturesContext';
 import homescreenUrl from './assets/homescreen.png';
@@ -128,6 +129,8 @@ export default function App() {
     adminEmailDeletionVotes, fetchAdminEmailDeletionVotes,
     deletionVotes, fetchDeletionVotes,
     contactSubmissions, fetchContactSubmissions,
+    publicEvents, fetchPublicEvents,
+    eventAttendees, fetchEventAttendees,
     fetchAllData
   } = features;
 
@@ -184,7 +187,7 @@ export default function App() {
   const [showPollLoginModal, setShowPollLoginModal] = useState(false);
   const [showContactModal, setShowContactModal] = useState(false);
   const [isSubmittingContact, setIsSubmittingContact] = useState(false);
-  const [isAdminSections, setIsAdminSections] = useState({ poll: false, registry: false, syncRegistry: false, managePolls: false, manageSuggestions: false, manualRequests: false, adminInbox: true, contactInbox: false, adminEmail: true });
+  const [isAdminSections, setIsAdminSections] = useState({ poll: false, registry: false, syncRegistry: false, managePolls: false, manageSuggestions: false, manualRequests: false, adminInbox: true, contactInbox: false, adminEmail: true, eventAttendance: false });
   const [notFoundModal, setNotFoundModal] = useState(false);
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
   const [clearedItems, setClearedItems] = useState<string[]>(() => {
@@ -222,6 +225,8 @@ export default function App() {
       fetchManualRequests();
       fetchAdminMessages();
       fetchAdminEmailDeletionVotes();
+      fetchPublicEvents();
+      fetchEventAttendees();
     }
   }, [currentPage, profile]);
 
@@ -260,6 +265,11 @@ export default function App() {
   }
 
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const signInSlug = searchParams.get('signin');
+  if (signInSlug) {
+    return <EventSignInPage slug={signInSlug} />;
+  }
+
   const viewCsv = searchParams.get('view') === 'csv' && searchParams.get('bucket') && searchParams.get('path') && searchParams.get('name');
   if (viewCsv) {
     return (
@@ -302,6 +312,10 @@ export default function App() {
     fetchDeletionVotes,
     contactSubmissions,
     fetchContactSubmissions,
+    publicEvents,
+    fetchPublicEvents,
+    eventAttendees,
+    fetchEventAttendees,
     fetchAllData,
   };
 

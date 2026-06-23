@@ -92,6 +92,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
     polls, fetchPolls, suggestions, fetchSuggestions, boardMessages, fetchBoardMessages,
     allUsers, fetchUsers, adminMessages, fetchAdminMessages, manualRequests, fetchManualRequests,
     adminEmailDeletionVotes, deletionVotes, contactSubmissions, fetchContactSubmissions,
+    publicEvents, fetchPublicEvents, eventAttendees, fetchEventAttendees,
   } = useFeaturesContext();
 
   const [focusedThreadId, setFocusedThreadId] = React.useState<string | null>(null);
@@ -329,6 +330,10 @@ export const MainView: React.FC<MainViewProps> = (props) => {
           formatDate={formatDate}
           contactSubmissions={contactSubmissions}
           fetchContactSubmissions={fetchContactSubmissions}
+          publicEvents={publicEvents}
+          fetchPublicEvents={fetchPublicEvents}
+          eventAttendees={eventAttendees}
+          fetchEventAttendees={fetchEventAttendees}
           supabase={supabase}
           UserAvatar={UserAvatar}
           fetchUsers={fetchUsers}

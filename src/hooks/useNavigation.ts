@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react';
 import { DashboardConfig } from '../types';
 
+const DEFAULT_MEETING_TAB = 'meeting-notes';
+
+type HistoryState = {
+  page?: string;
+  category?: string | null;
+  poll?: unknown;
+  dashboard?: DashboardConfig | null;
+  documentsStack?: string[];
+  activeMeetingTab?: string;
+};
+
 // The "Traffic Control" hook
 export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (poll: any) => void) {
   const [currentPage, setCurrentPage] = useState(() => {
@@ -10,6 +21,7 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [activeDashboard, setActiveDashboard] = useState<DashboardConfig | null>(null);
   const [documentsStack, setDocumentsStack] = useState<string[]>([]);
+  const [activeMeetingTab, setActiveMeetingTab] = useState(DEFAULT_MEETING_TAB);
 
   // 1. Reset to home if user logs out
   useEffect(() => {
@@ -23,6 +35,13 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
   useEffect(() => {
     if (selectedCategory !== 'documents') {
       setDocumentsStack([]);
+    }
+  }, [selectedCategory]);
+
+  // Reset meeting tab when leaving Meetings
+  useEffect(() => {
+    if (selectedCategory !== 'meetings') {
+      setActiveMeetingTab(DEFAULT_MEETING_TAB);
     }
   }, [selectedCategory]);
 
@@ -42,21 +61,43 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
     const handlePopState = (event: PopStateEvent) => {
       if (activeDashboard) {
         setActiveDashboard(null);
-        window.history.pushState({ page: 'home', category: null, poll: null, dashboard: null, documentsStack: [] }, '');
+        window.history.pushState({
+          page: 'home',
+          category: null,
+          poll: null,
+          dashboard: null,
+          documentsStack: [],
+          activeMeetingTab: DEFAULT_MEETING_TAB,
+        }, '');
         return;
       }
 
-      const state = event.state || { page: 'home', category: null, poll: null, dashboard: null, documentsStack: [] };
+      const state = (event.state || {
+        page: 'home',
+        category: null,
+        poll: null,
+        dashboard: null,
+        documentsStack: [],
+        activeMeetingTab: DEFAULT_MEETING_TAB,
+      }) as HistoryState;
       setCurrentPage(state.page || 'home');
       setSelectedCategory(state.category || null);
       setSelectedPoll(state.poll || null);
       setActiveDashboard(state.dashboard || null);
       setDocumentsStack(Array.isArray(state.documentsStack) ? state.documentsStack : []);
+      setActiveMeetingTab(state.activeMeetingTab || DEFAULT_MEETING_TAB);
     };
 
     window.addEventListener('popstate', handlePopState);
     if (!window.history.state) {
-      window.history.replaceState({ page: currentPage, category: null, poll: null, dashboard: null, documentsStack: [] }, '');
+      window.history.replaceState({
+        page: currentPage,
+        category: null,
+        poll: null,
+        dashboard: null,
+        documentsStack: [],
+        activeMeetingTab: DEFAULT_MEETING_TAB,
+      }, '');
     }
     return () => window.removeEventListener('popstate', handlePopState);
   }, [activeDashboard, setSelectedPoll, currentPage]);
@@ -72,15 +113,16 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
 
   // 5. Sync the App State with the Browser URL/History
   useEffect(() => {
-    const hState = window.history.state;
+    const hState = window.history.state as HistoryState | null;
     const isDifferent = !hState ||
       hState.page !== currentPage ||
       hState.category !== selectedCategory ||
-      (hState.poll && hState.poll.id !== selectedPoll?.id) ||
+      (hState.poll && (hState.poll as { id?: string }).id !== selectedPoll?.id) ||
       (!hState.poll && selectedPoll) ||
       (hState.dashboard && hState.dashboard.id !== activeDashboard?.id) ||
       (!hState.dashboard && activeDashboard) ||
-      (Array.isArray(hState.documentsStack) ? (hState.documentsStack.length !== documentsStack.length || hState.documentsStack.some((id: string, i: number) => id !== documentsStack[i])) : documentsStack.length > 0);
+      (Array.isArray(hState.documentsStack) ? (hState.documentsStack.length !== documentsStack.length || hState.documentsStack.some((id: string, i: number) => id !== documentsStack[i])) : documentsStack.length > 0) ||
+      (hState.activeMeetingTab ?? DEFAULT_MEETING_TAB) !== activeMeetingTab;
 
     if (isDifferent) {
       window.history.pushState({
@@ -89,14 +131,16 @@ export function useNavigation(user: any, selectedPoll: any, setSelectedPoll: (po
         poll: selectedPoll,
         dashboard: activeDashboard,
         documentsStack,
+        activeMeetingTab,
       }, '');
     }
-  }, [currentPage, selectedCategory, selectedPoll, activeDashboard, documentsStack]);
+  }, [currentPage, selectedCategory, selectedPoll, activeDashboard, documentsStack, activeMeetingTab]);
 
   return {
     currentPage, setCurrentPage,
     selectedCategory, setSelectedCategory,
     activeDashboard, setActiveDashboard,
     documentsStack, setDocumentsStack,
+    activeMeetingTab, setActiveMeetingTab,
   };
 }

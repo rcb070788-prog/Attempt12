@@ -33,6 +33,15 @@ export const CATEGORIES = [
   { id: 'assets', label: 'Assets', icon: 'fa-building-columns', color: 'bg-blue-500' },
   { id: 'solvency', label: 'County Net Worth', icon: 'fa-chart-line', color: 'bg-blue-500' },
   { id: 'documents', label: 'Documents', icon: 'fa-book-open', color: 'bg-yellow-500' },
+  { id: 'meetings', label: 'Meetings', icon: 'fa-users', color: 'bg-purple-500' },
+];
+
+export const MEETING_TABS: { id: string; title: string; bucketName: string }[] = [
+  {
+    id: 'meeting-notes',
+    title: 'Meeting Notes',
+    bucketName: 'cc_meeting_notes',
+  },
 ];
 
 /**

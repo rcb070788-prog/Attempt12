@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { CATEGORIES, DASHBOARDS, DOCUMENT_SECTIONS, INTERNAL_REPORTS } from '../../constants';
+import { CATEGORIES, DASHBOARDS, DOCUMENT_SECTIONS, INTERNAL_REPORTS, MEETING_TABS } from '../../constants';
 import { formatCurrency, pctChangeOverRange, formatPctChange, recomputeTrendsForSlice } from './financeUtils';
 import { fetchAsHtmlBlobUrl } from '../../utils/fileUtils';
 import { NetWorthChart } from './NetWorthChart';
@@ -17,6 +17,8 @@ interface CategoryDashboardProps {
   setActiveDashboard: (dash: any) => void;
   documentsStack: string[];
   setDocumentsStack: (stack: string[] | ((prev: string[]) => string[])) => void;
+  activeMeetingTab: string;
+  setActiveMeetingTab: (tab: string) => void;
   chartData: any[];
   yearDetailData: any[];
   fetchYearDetails: (year: number) => void;
@@ -56,6 +58,23 @@ function compareMetroCouncilMeetingFiles(a: string, b: string): number {
   return pa.suffix.localeCompare(pb.suffix);
 }
 
+function parseMeetingDateFromFilename(name: string): number {
+  const m = name.match(/(\d{2})-(\d{2})-(\d{4})/);
+  if (!m) return 0;
+  const [, month, day, year] = m;
+  return new Date(Number(year), Number(month) - 1, Number(day)).getTime();
+}
+
+function sortMeetingListItems(items: { kind: 'folder' | 'file'; name: string; path: string }[]): void {
+  items.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
+    if (a.kind === 'file') {
+      const dateDiff = parseMeetingDateFromFilename(b.name) - parseMeetingDateFromFilename(a.name);
+      if (dateDiff !== 0) return dateDiff;
+    }
+    return b.name.localeCompare(a.name, undefined, { sensitivity: 'base' });
+  });
+}
 function sortDocumentListItems(
   items: { kind: 'folder' | 'file'; name: string; path: string }[],
   sectionId?: string
@@ -76,6 +95,8 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   setActiveDashboard,
   documentsStack,
   setDocumentsStack,
+  activeMeetingTab,
+  setActiveMeetingTab,
   chartData,
   yearDetailData,
   fetchYearDetails,
@@ -146,6 +167,11 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   const [documentListItems, setDocumentListItems] = useState<{ kind: 'folder' | 'file'; name: string; path: string }[]>([]);
   const [selectedWageCsvPath, setSelectedWageCsvPath] = useState<string | null>(null);
 
+  const [meetingStoragePathStack, setMeetingStoragePathStack] = useState<string[]>([]);
+  const [meetingListLoading, setMeetingListLoading] = useState(false);
+  const [meetingListError, setMeetingListError] = useState<string | null>(null);
+  const [meetingListItems, setMeetingListItems] = useState<{ kind: 'folder' | 'file'; name: string; path: string }[]>([]);
+
   const openCsvInNewTab = React.useCallback((bucketName: string, path: string, filename: string) => {
     const base = typeof window !== 'undefined' ? `${window.location.origin}${window.location.pathname || '/'}` : '/';
     const url = `${base}?view=csv&bucket=${encodeURIComponent(bucketName)}&path=${encodeURIComponent(path)}&name=${encodeURIComponent(filename)}`;
@@ -182,6 +208,11 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   React.useEffect(() => {
     setDocumentStoragePathStack([]);
   }, [documentsStack[0]]);
+
+  // Reset meeting folder path when tab changes
+  React.useEffect(() => {
+    setMeetingStoragePathStack([]);
+  }, [activeMeetingTab]);
 
   // Reset selected wage CSV when list or folder changes
   React.useEffect(() => {
@@ -258,6 +289,64 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
       });
     return () => { cancelled = true; };
   }, [selectedCategory, documentsStack, documentStoragePathStack, supabase]);
+
+  // Fetch bucket list for Meetings tabs
+  React.useEffect(() => {
+    const tab = MEETING_TABS.find(t => t.id === activeMeetingTab);
+    const bucketName = tab?.bucketName;
+    if (selectedCategory !== 'meetings' || !bucketName || !supabase) {
+      setMeetingListItems([]);
+      setMeetingListError(null);
+      return;
+    }
+    const prefix = meetingStoragePathStack.length ? meetingStoragePathStack.join('/') + '/' : '';
+    let cancelled = false;
+    setMeetingListLoading(true);
+    setMeetingListError(null);
+    supabase.storage.from(bucketName).list(prefix, { limit: 500 })
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setMeetingListLoading(false);
+        if (error) {
+          setMeetingListError(error.message || 'Unable to load meeting files');
+          setMeetingListItems([]);
+          return;
+        }
+        const isPlaceholderName = (n: string) => /^\.?emptyfolderplaceholder$/i.test(n?.trim() ?? '');
+        const items: { kind: 'folder' | 'file'; name: string; path: string }[] = [];
+        const folderNames = new Set<string>();
+        (data || []).forEach((item: { name: string }) => {
+          const name = item.name;
+          const relative = prefix && name.startsWith(prefix) ? name.slice(prefix.length) : name;
+          if (isPlaceholderName(relative)) return;
+          if (relative.includes('/')) {
+            const segment = relative.split('/')[0];
+            if (segment && !isPlaceholderName(segment) && !folderNames.has(segment)) {
+              folderNames.add(segment);
+              items.push({ kind: 'folder', name: segment, path: prefix + segment });
+            }
+          } else {
+            const hasExtension = /\.[a-zA-Z0-9]+$/.test(relative);
+            if (!hasExtension && relative && !folderNames.has(relative)) {
+              folderNames.add(relative);
+              items.push({ kind: 'folder', name: relative, path: prefix + relative });
+            } else if (relative) {
+              items.push({ kind: 'file', name: relative, path: prefix + relative });
+            }
+          }
+        });
+        sortMeetingListItems(items);
+        setMeetingListItems(items);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setMeetingListLoading(false);
+          setMeetingListError('Unable to load meeting files');
+          setMeetingListItems([]);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [selectedCategory, activeMeetingTab, meetingStoragePathStack, supabase]);
 
   const solvencyDisplayedData = useMemo(() => {
     if (!chartData.length) return [];
@@ -623,6 +712,117 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             }}
             fullScreen
           />
+        </div>
+      </div>
+    );
+  }
+
+  /* Meetings: tabbed meeting notes from Supabase storage */
+  if (selectedCategory === 'meetings') {
+    const activeTab = MEETING_TABS.find(t => t.id === activeMeetingTab) ?? MEETING_TABS[0];
+    const bucketName = activeTab.bucketName;
+
+    return (
+      <div className="max-w-4xl mx-auto space-y-8 py-10 animate-slide-up">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-4xl font-black uppercase text-gray-900 leading-tight">Meetings</h2>
+          <p className="text-indigo-600 font-bold text-[10px] uppercase tracking-widest">
+            Concerned Citizens of Moore County public meetings
+          </p>
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className="text-[10px] font-black uppercase text-gray-400 hover:text-purple-600 transition-colors w-fit"
+          >
+            <i className="fa-solid fa-arrow-left mr-2"></i> Back to Main Menu
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {MEETING_TABS.map(tab => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveMeetingTab(tab.id)}
+              className={`px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-colors ${
+                activeMeetingTab === tab.id
+                  ? 'bg-purple-500 text-white shadow-md'
+                  : 'bg-white text-gray-500 hover:text-purple-600 hover:bg-purple-50 border-2 border-gray-100'
+              }`}
+            >
+              {tab.title}
+            </button>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 mt-4">
+          {meetingStoragePathStack.length > 0 && (
+            <button
+              onClick={() => setMeetingStoragePathStack(prev => prev.slice(0, -1))}
+              className="text-[10px] font-black uppercase text-gray-400 hover:text-purple-600 transition-colors w-fit mb-2"
+            >
+              <i className="fa-solid fa-arrow-left mr-2"></i> Back to {meetingStoragePathStack.length === 1 ? 'list' : 'folder'}
+            </button>
+          )}
+          {meetingListLoading && (
+            <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+              <i className="fa-solid fa-spinner fa-spin text-purple-500 text-4xl mb-4"></i>
+              <p className="text-gray-400 font-black uppercase text-xs">Loading meeting files…</p>
+            </div>
+          )}
+          {!meetingListLoading && meetingListError && (
+            <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+              <i className="fa-solid fa-triangle-exclamation text-amber-400 text-4xl mb-4"></i>
+              <p className="text-gray-600 font-bold mb-4">{meetingListError}</p>
+            </div>
+          )}
+          {!meetingListLoading && !meetingListError && meetingListItems.length === 0 && (
+            <div className="p-20 text-center bg-white rounded-[3rem] border-4 border-dashed border-gray-100">
+              <i className="fa-solid fa-folder-open text-purple-200 text-4xl mb-4"></i>
+              <p className="text-gray-400 font-black uppercase text-xs">No meeting files yet.</p>
+            </div>
+          )}
+          {!meetingListLoading && !meetingListError && meetingListItems.length > 0 && (
+            <div className="grid grid-cols-1 gap-4">
+              {meetingListItems.map(item => (
+                item.kind === 'folder' ? (
+                  <div
+                    key={item.path}
+                    onClick={() => setMeetingStoragePathStack(prev => [...prev, item.name])}
+                    className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-purple-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-purple-600 transition-colors">
+                        <i className="fa-solid fa-folder"></i>
+                      </div>
+                      <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-purple-600 tracking-tighter">{item.name}</h3>
+                    </div>
+                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors">
+                      <i className="fa-solid fa-chevron-right"></i>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    key={item.path}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleOpenDocument(item, bucketName)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleOpenDocument(item, bucketName)}
+                    className="bg-white p-8 rounded-[2.5rem] border-2 border-transparent hover:border-purple-500 cursor-pointer shadow-sm hover:shadow-xl transition-all flex justify-between items-center group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-400 group-hover:text-purple-600 transition-colors">
+                        <i className={`fa-solid ${item.name.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf' : 'fa-file'}`}></i>
+                      </div>
+                      <h3 className="text-[18.66px] font-black uppercase text-gray-900 group-hover:text-purple-600 tracking-tighter">{item.name}</h3>
+                    </div>
+                    <div className="w-12 h-12 bg-gray-50 rounded-2xl flex items-center justify-center text-gray-300 group-hover:bg-purple-50 group-hover:text-purple-600 transition-colors">
+                      <i className="fa-solid fa-arrow-up-right-from-square"></i>
+                    </div>
+                  </div>
+                )
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );

@@ -116,6 +116,7 @@ export default function App() {
     selectedCategory, setSelectedCategory,
     activeDashboard, setActiveDashboard,
     documentsStack, setDocumentsStack,
+    activeMeetingTab, setActiveMeetingTab,
   } = useNavigation(user, selectedPoll, setSelectedPoll);
 
   // 4. FEATURE DATA (The "Social Hub") — fetch after session hydrated so RLS sees auth
@@ -472,6 +473,8 @@ export default function App() {
         setActiveDashboard={setActiveDashboard}
         documentsStack={documentsStack}
         setDocumentsStack={setDocumentsStack}
+        activeMeetingTab={activeMeetingTab}
+        setActiveMeetingTab={setActiveMeetingTab}
         chartData={chartData}
         yearDetailData={yearDetailData}
         fetchYearDetails={fetchYearDetails}

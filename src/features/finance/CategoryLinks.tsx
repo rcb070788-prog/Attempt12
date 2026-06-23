@@ -49,6 +49,7 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
   const expenses = CATEGORIES.find(c => c.id === 'expenses')!;
   const revenues = CATEGORIES.find(c => c.id === 'revenues')!;
   const documents = CATEGORIES.find(c => c.id === 'documents')!;
+  const meetings = CATEGORIES.find(c => c.id === 'meetings')!;
 
   const leftCards = [
     { ...expenses, subtitle: 'View Operational Logs' as const },
@@ -56,6 +57,7 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
     { id: 'solvency', label: 'County Net Worth', icon: 'fa-chart-line', color: 'bg-blue-500', subtitle: 'View Financial Trends' as const },
   ];
   const documentsCard = { ...documents, subtitle: 'View Documents' as const };
+  const meetingsCard = { ...meetings, subtitle: 'View Public Meetings' as const };
 
   const leftColRef = useRef<HTMLDivElement>(null);
   const [leftColWidth, setLeftColWidth] = useState<number | null>(null);
@@ -75,14 +77,14 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
     <div className="flex flex-col gap-4">
       {/* Mobile: single column of 4 cards */}
       <div className="flex flex-col gap-6 md:hidden">
-        {CATEGORIES.filter(c => ['revenues', 'expenses', 'documents'].includes(c.id)).map(cat => (
+        {CATEGORIES.filter(c => ['revenues', 'expenses', 'documents', 'meetings'].includes(c.id)).map(cat => (
           <Card
             key={cat.id}
             id={cat.id}
             label={cat.label}
             icon={cat.icon}
             color={cat.color}
-            subtitle={cat.id === 'documents' ? 'View Documents' : 'View Operational Logs'}
+            subtitle={cat.id === 'documents' ? 'View Documents' : cat.id === 'meetings' ? 'View Public Meetings' : 'View Operational Logs'}
             onClick={() => setSelectedCategory(cat.id)}
           />
         ))}
@@ -111,7 +113,7 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
             />
           ))}
         </div>
-        <div className="min-w-0" style={leftColWidth != null ? { width: leftColWidth } : undefined}>
+        <div className="min-w-0 flex flex-col gap-6" style={leftColWidth != null ? { width: leftColWidth } : undefined}>
           <Card
             key={documentsCard.id}
             id={documentsCard.id}
@@ -120,6 +122,16 @@ export const CategoryLinks: React.FC<CategoryLinksProps> = ({ setSelectedCategor
             color={documentsCard.color}
             subtitle={documentsCard.subtitle}
             onClick={() => setSelectedCategory(documentsCard.id)}
+            className="w-full"
+          />
+          <Card
+            key={meetingsCard.id}
+            id={meetingsCard.id}
+            label={meetingsCard.label}
+            icon={meetingsCard.icon}
+            color={meetingsCard.color}
+            subtitle={meetingsCard.subtitle}
+            onClick={() => setSelectedCategory(meetingsCard.id)}
             className="w-full"
           />
         </div>

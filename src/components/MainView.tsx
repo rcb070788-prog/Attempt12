@@ -21,6 +21,8 @@ interface MainViewProps {
   setActiveDashboard: any;
   documentsStack: string[];
   setDocumentsStack: any;
+  activeMeetingTab: string;
+  setActiveMeetingTab: (tab: string) => void;
   chartData: any[];
   yearDetailData: any[];
   fetchYearDetails: any;
@@ -102,6 +104,7 @@ export const MainView: React.FC<MainViewProps> = (props) => {
   const {
     currentPage, setCurrentPage,
     selectedCategory, setSelectedCategory, setActiveDashboard, documentsStack, setDocumentsStack,
+    activeMeetingTab, setActiveMeetingTab,
     chartData, yearDetailData, fetchYearDetails, selectedFinancialYear, setSelectedFinancialYear,
     expandedChart, setExpandedChart, chartLevel, setChartLevel,
     selectedParents, setSelectedParents, selectedParent, setSelectedParent,
@@ -163,6 +166,8 @@ export const MainView: React.FC<MainViewProps> = (props) => {
         setActiveDashboard={setActiveDashboard}
         documentsStack={documentsStack}
         setDocumentsStack={setDocumentsStack}
+        activeMeetingTab={activeMeetingTab}
+        setActiveMeetingTab={setActiveMeetingTab}
         chartData={chartData}
         yearDetailData={yearDetailData}
         fetchYearDetails={fetchYearDetails}

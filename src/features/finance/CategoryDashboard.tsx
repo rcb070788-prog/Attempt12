@@ -38,6 +38,37 @@ interface CategoryDashboardProps {
   supabase: any;
 }
 
+const MONTH_ORDER: Record<string, number> = {
+  january: 1, february: 2, march: 3, april: 4, may: 5, june: 6,
+  july: 7, august: 8, september: 9, october: 10, november: 11, december: 12,
+};
+
+function compareMetroCouncilMeetingFiles(a: string, b: string): number {
+  const parse = (name: string) => {
+    const m = name.match(/^(\w+)\s+\d{4}(?:\s+([AB]))?\s/i);
+    const month = m?.[1]?.toLowerCase() ?? '';
+    const suffix = (m?.[3] ?? '').toUpperCase();
+    return { monthOrder: MONTH_ORDER[month] ?? 99, suffix };
+  };
+  const pa = parse(a);
+  const pb = parse(b);
+  if (pa.monthOrder !== pb.monthOrder) return pa.monthOrder - pb.monthOrder;
+  return pa.suffix.localeCompare(pb.suffix);
+}
+
+function sortDocumentListItems(
+  items: { kind: 'folder' | 'file'; name: string; path: string }[],
+  sectionId?: string
+): void {
+  items.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
+    if (sectionId === 'metro-council-meeting-minutes' && a.kind === 'file') {
+      return compareMetroCouncilMeetingFiles(a.name, b.name);
+    }
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  });
+}
+
 const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
   currentPage,
   selectedCategory,
@@ -215,11 +246,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
             }
           }
         });
-        // Sort: folders first then files, each group alphabetically
-        items.sort((a, b) => {
-          if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
-          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-        });
+        sortDocumentListItems(items, section?.id);
         setDocumentListItems(items);
       })
       .catch(() => {
@@ -743,10 +770,7 @@ const CategoryDashboard: React.FC<CategoryDashboardProps> = ({
                               }
                             }
                           });
-                          items.sort((a, b) => {
-                            if (a.kind !== b.kind) return a.kind === 'folder' ? -1 : 1;
-                            return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
-                          });
+                          sortDocumentListItems(items, section?.id);
                           setDocumentListItems(items);
                         })
                         .catch(() => {

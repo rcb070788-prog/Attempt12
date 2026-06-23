@@ -60,6 +60,16 @@ export const DOCUMENT_SECTIONS: { id: string; title: string; bucketName?: string
     bucketPathPrefix: 'originals/',
   },
   { id: 'tax-rolls-by-assessment', title: 'Tax Rolls by Assessment', bucketName: 'tax_rolls_by_assessment' },
+  {
+    id: 'metro-council-meeting-minutes',
+    title: 'Metro Council Meeting Minutes',
+    bucketName: 'metro_council_meeting_minutes',
+    children: [
+      { id: '2025', title: '2025', folderPath: '2025' },
+      { id: '2024', title: '2024', folderPath: '2024' },
+      { id: '2023', title: '2023', folderPath: '2023' },
+    ],
+  },
 ];
 
 // Re-export from config for backward compatibility

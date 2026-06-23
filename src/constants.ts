@@ -22,7 +22,9 @@ export const CPI_ANNUAL_AVG: Record<number, number> = {
   2022: 292.655,
   2023: 304.702,
   2024: 313.689,
-  2025: 321.943
+  2025: 321.943,
+  // Partial-year estimate: mean of available monthly CPI-U (CUUR0000SA0)
+  2026: 330.079
 };
 
 export const CATEGORIES = [

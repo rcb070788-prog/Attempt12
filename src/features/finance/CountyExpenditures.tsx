@@ -1643,7 +1643,7 @@ export const CountyExpenditures: React.FC<CountyExpendituresProps> = ({ onBack, 
                   </tbody>
                 </table>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">CPI-U annual averages (1982–84=100). Source: U.S. Bureau of Labor Statistics.</p>
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">CPI-U annual averages (1982–84=100). 2026 is a partial-year estimate (mean of available monthly values). Source: U.S. Bureau of Labor Statistics, series CUUR0000SA0.</p>
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 text-xs">
                     {Object.entries(CPI_ANNUAL_AVG)
                       .sort((a, b) => Number(a[0]) - Number(b[0]))

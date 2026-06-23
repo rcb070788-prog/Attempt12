@@ -475,7 +475,7 @@
           <input id="trendToggle" type="checkbox" aria-label="Trend" style="width:16px;height:16px;margin:0;" />
           <b>Trend</b>
         </label>
-        <label class="chip" id="inflationToggleWrap" style="cursor:pointer;" title="CPI source: U.S. Bureau of Labor Statistics, CPI-U, all items, U.S. city average, annual averages (2005–2024).">
+        <label class="chip" id="inflationToggleWrap" style="cursor:pointer;" title="CPI source: U.S. Bureau of Labor Statistics, CPI-U, all items, U.S. city average, annual averages (1982–84=100). 2026 is a partial-year estimate (mean of available monthly values). Series CUUR0000SA0.">
           <input id="inflationToggle" type="checkbox" aria-label="Inflation overlay" style="width:16px;height:16px;margin:0;" />
           <b>Inflation</b>
         </label>
@@ -652,8 +652,8 @@ function pdfPathForFundYear(fundCode, yy){
 
 // Optional: if all PDFs live in a subfolder (e.g. ./pdf/FY05.pdf), set this to "./pdf/".
 // CPI + Population macro overlay data
-// CPI source: U.S. Bureau of Labor Statistics, CPI-U, all items, U.S. city average, annual averages (1982-84=100), 2005–2024. 
-// Values are the annual-average CPI for each calendar year.
+// CPI source: U.S. Bureau of Labor Statistics, CPI-U, all items, U.S. city average, annual averages (1982-84=100), 2005–2026.
+// Values are the annual-average CPI for each calendar year; 2026 is a partial-year estimate (mean of available monthly values).
 const CPI_ANNUAL_AVG = {
   2005: 195.3,
   2006: 201.6,
@@ -675,7 +675,8 @@ const CPI_ANNUAL_AVG = {
   2022: 292.655,
   2023: 304.702,
   2024: 313.689,
-  2025: 321.943
+  2025: 321.943,
+  2026: 330.079 // partial-year estimate: mean of available monthly CPI-U (CUUR0000SA0)
 };
 
 // Moore County, TN population anchors (total population):

@@ -68,7 +68,7 @@ const REVENUE_TOGGLE_LABELS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string
   genGov: 'Gen Gov',
   schools: 'Schools',
   emergCommDist: 'Emerg Comm Dist',
-  mud: 'Water & Sewer',
+  mud: 'MUD',
 };
 const REVENUE_TOGGLE_COLORS: Record<(typeof REVENUE_TOGGLE_KEYS)[number], string> = {
   total: '#dc2626',
@@ -981,21 +981,15 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
               )}
             </div>
           )}
-          <div className="flex flex-col gap-0.5">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={includeBusinessType}
-                onChange={(e) => setIncludeBusinessType(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <span className="text-sm font-bold uppercase text-gray-700">Include Water &amp; Sewer</span>
-            </label>
-            <p className="text-[10px] text-gray-500 max-w-xs leading-snug pl-6">
-              Adds enterprise-fund revenues to <span className="font-semibold">Total</span> and the{' '}
-              <span className="font-semibold">Water &amp; Sewer</span> line. Does not change Gen Gov or Schools.
-            </p>
-          </div>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={includeBusinessType}
+              onChange={(e) => setIncludeBusinessType(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            <span className="text-sm font-bold uppercase text-gray-700">Include Water &amp; Sewer</span>
+          </label>
         </div>
 
         <div
@@ -1821,7 +1815,7 @@ export const CountyRevenues: React.FC<CountyRevenuesProps> = ({ onBack, onOpenPi
                   </tbody>
                 </table>
                 <div>
-                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">CPI-U annual averages (1982–84=100). Source: U.S. Bureau of Labor Statistics.</p>
+                  <p className="text-[10px] font-bold uppercase text-gray-400 tracking-widest mb-2">CPI-U annual averages (1982–84=100). 2026 is a partial-year estimate (mean of available monthly values). Source: U.S. Bureau of Labor Statistics, series CUUR0000SA0.</p>
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2 text-xs">
                     {Object.entries(CPI_ANNUAL_AVG)
                       .sort((a, b) => Number(a[0]) - Number(b[0]))

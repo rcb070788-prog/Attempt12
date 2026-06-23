@@ -77,6 +77,7 @@ import { MainView } from './components/MainView';
 import { Footer } from './components/Footer';
 import CsvViewerPage from './components/CsvViewerPage';
 import EventSignInPage from './components/EventSignInPage';
+import EventSignInPrintPage from './components/EventSignInPrintPage';
 import { AppContextProvider } from './contexts/AppContext';
 import { FeaturesContextProvider } from './contexts/FeaturesContext';
 import homescreenUrl from './assets/homescreen.png';
@@ -266,6 +267,10 @@ export default function App() {
 
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
   const signInSlug = searchParams.get('signin');
+  const isPrintHandout = searchParams.get('print') === '1';
+  if (signInSlug && isPrintHandout) {
+    return <EventSignInPrintPage slug={signInSlug} />;
+  }
   if (signInSlug) {
     return <EventSignInPage slug={signInSlug} />;
   }

@@ -8,6 +8,37 @@
 @media (min-width: 768px) {
   .homescreen-bg { background-image: var(--homescreen-url); background-size: cover; background-position: center 35%; background-repeat: no-repeat; }
 }
+
+/* Event sign-in page: homescreen background on all viewports (mobile + desktop) */
+.event-signin-bg {
+  background-color: rgb(249 250 251);
+  background-image: var(--homescreen-url);
+  background-size: cover;
+  background-position: center 35%;
+  background-repeat: no-repeat;
+  min-height: 100dvh;
+}
+
+/* Printable event sign-in handout */
+.event-signin-print-no-print {
+  display: block;
+}
+@media print {
+  .event-signin-print-no-print {
+    display: none !important;
+  }
+  .event-signin-print-page {
+    background: white !important;
+    min-height: auto !important;
+    padding: 0 !important;
+  }
+  .event-signin-print-sheet {
+    box-shadow: none !important;
+    border: none !important;
+    max-width: none !important;
+    page-break-inside: avoid;
+  }
+}
 .custom-scrollbar::-webkit-scrollbar { width: 10px; }
 .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 20px; border: 3px solid transparent; background-clip: content-box; }
 

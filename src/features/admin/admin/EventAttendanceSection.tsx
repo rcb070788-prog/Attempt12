@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import QRCode from 'qrcode';
+import { signInUrl, signInPrintUrl } from '../../../utils/eventSignIn';
 
 interface PublicEvent {
   id: string;
@@ -32,13 +33,6 @@ interface EventAttendanceSectionProps {
   showToast: (msg: string, type?: 'success' | 'error') => void;
   fetchPublicEvents: () => void;
   fetchEventAttendees: () => void;
-}
-
-function signInUrl(slug: string) {
-  const base = typeof window !== 'undefined'
-    ? `${window.location.origin}${window.location.pathname || '/'}`
-    : 'https://concernedcitizensofmc.com/';
-  return `${base}?signin=${encodeURIComponent(slug)}`;
 }
 
 export const EventAttendanceSection: React.FC<EventAttendanceSectionProps> = ({
@@ -168,6 +162,11 @@ export const EventAttendanceSection: React.FC<EventAttendanceSectionProps> = ({
     );
   };
 
+  const openPrintHandout = () => {
+    if (!selectedEvent) return;
+    window.open(signInPrintUrl(selectedEvent.slug), '_blank');
+  };
+
   return (
     <section className="bg-white rounded-[2.5rem] border border-gray-100 shadow-sm overflow-hidden">
       <button
@@ -256,6 +255,9 @@ export const EventAttendanceSection: React.FC<EventAttendanceSectionProps> = ({
                   <div className="flex flex-wrap gap-2">
                     <button onClick={copySignInLink} className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-xl text-[10px] font-black uppercase">
                       Copy Link
+                    </button>
+                    <button onClick={openPrintHandout} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase">
+                      Print Handout
                     </button>
                     <button
                       onClick={() => handleToggleOpen(selectedEvent)}

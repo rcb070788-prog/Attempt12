@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import homescreenUrl from '../assets/homescreen.png';
 
 interface PublicEvent {
   id: string;
@@ -82,7 +83,10 @@ export default function EventSignInPage({ slug }: EventSignInPageProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-gray-50 flex flex-col overflow-y-auto h-[100dvh]">
+    <div
+      className="fixed inset-0 z-[100] event-signin-bg flex flex-col overflow-y-auto h-[100dvh]"
+      style={{ ['--homescreen-url' as string]: `url(${homescreenUrl})` }}
+    >
       <div className="flex-grow flex flex-col justify-center px-4 py-8 max-w-lg mx-auto w-full">
         {pageState === 'loading' && (
           <div className="text-center py-20">

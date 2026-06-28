@@ -72,7 +72,29 @@ export const AdminEmailSection: React.FC<AdminEmailSectionProps> = ({
         body.recipients = parseRecipientList(externalRecipients);
       }
       const { data, error } = await supabase.functions.invoke('send-admin-broadcast', { body });
-      if (error) throw new Error(error.message || 'Failed to send broadcast');
+      if (error) {
+        let responseBody: unknown = data;
+        if (typeof error === 'object' && 'context' in error) {
+          const ctx = (error as { context?: Response }).context;
+          if (ctx && typeof ctx.clone === 'function') {
+            try {
+              responseBody = await ctx.clone().json();
+            } catch {
+              try {
+                responseBody = await ctx.clone().text();
+              } catch {
+                responseBody = data;
+              }
+            }
+          }
+        }
+        const detail =
+          (responseBody && typeof responseBody === 'object' && 'error' in responseBody && (responseBody as { error?: string }).error)
+          || (responseBody && typeof responseBody === 'object' && 'message' in responseBody && (responseBody as { message?: string }).message)
+          || error.message
+          || 'Failed to send broadcast';
+        throw new Error(String(detail));
+      }
       if (data?.error) throw new Error(data.error);
       showToast(`Broadcast sent to ${data?.sent ?? 0} recipients`);
       setBroadcastConfirmOpen(false);
